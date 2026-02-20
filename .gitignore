@@ -1,0 +1,3 @@
+# Ignore build artifacts (also systemlink)
+build_artifacts/
+build_artifacts

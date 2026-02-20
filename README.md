@@ -1,0 +1,25 @@
+# Compile, Run, and Package Tool
+
+This repository includes a small Python utility that compiles a project folder, runs the resulting binary, captures its output, and produces a zip bundle containing the source code, binary, logs, and (for CUDA) PTX output.
+
+## Usage
+
+Stay at the repository root and run:
+
+python3 tools/compile_run_package.py ./apps/<app_dir>
+
+### Optional flags
+
+- `--output-dir <path>`: where to write the build artifacts and bundle (default: `build_artifacts`).
+- `--run-args ...`: arguments passed to the compiled binary.
+
+## Outputs
+
+The tool creates a folder under the output directory named after the target folder (e.g., `build_artifacts/app`) and a timestamped zip bundle in the output directory. The bundle includes:
+
+- Source code from the target folder
+- Compiled binary
+- `compile.log`
+- `output.txt`
+- `manifest.json`
+- `ptx.log` and `.ptx` files (when using `nvcc`)
