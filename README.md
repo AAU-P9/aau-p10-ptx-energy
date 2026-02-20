@@ -8,6 +8,13 @@ Stay at the repository root and run:
 
 python3 tools/compile_run_package.py ./apps/<app_dir>
 
+## Sambashare
+
+You may often want to review your artifacts locally, for this using sambashare is a good option.
+Simply add a system link to your build artifacts on your sambashare and it does the synchronization.
+
+ln -s /home/p10/sambashare/build_artifacts build_artifacts
+
 ### Optional flags
 
 - `--output-dir <path>`: where to write the build artifacts and bundle (default: `build_artifacts`).
