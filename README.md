@@ -35,4 +35,4 @@ The tool creates a folder under the output directory named after the target fold
 
 Their is an additional tool to draw a graph of the outputs. This tool can be... TODO finish this
 
-uv python3 tools/plotter.py ./apps/<app_dir>
+uv python3 tools/plotter.py ./build/<app_dir>
