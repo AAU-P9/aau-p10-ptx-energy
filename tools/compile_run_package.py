@@ -58,7 +58,7 @@ def main():
     parser.add_argument(
         "--output-dir",
         default="build_artifacts",
-        help="Directory to place binary, logs, and zip bundle",
+        help="Directory to place zip bundles",
     )
     parser.add_argument(
         "--run-args",
@@ -85,8 +85,11 @@ def main():
     output_dir = Path(args.output_dir).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    build_root = Path("build").resolve()
+    build_root.mkdir(parents=True, exist_ok=True)
+
     binary_name = folder.name
-    build_dir = output_dir / binary_name
+    build_dir = build_root / binary_name
     build_dir.mkdir(parents=True, exist_ok=True)
     binary_path = build_dir / binary_name
 
@@ -163,8 +166,10 @@ def main():
                         "pmd2-cli",
                         "-p",
                         "/dev/ttyACM0",
+                        "-c",
                         "-i",
                         "100",
+                        "monitor"
                     ],
                     stdout=pmd2_file,
                     stderr=subprocess.PIPE,
