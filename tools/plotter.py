@@ -49,7 +49,9 @@ def load_pmd2(path: Path) -> pd.DataFrame:
     df = df.dropna(subset=["timestamp_us"]).copy()
     t0 = df["timestamp_us"].iloc[0]
     df["t_s"] = (df["timestamp_us"] - t0) / 1_000_000.0
-    df["total_power_w"] = pd.to_numeric(df["total_power_mw"], errors="coerce") / 1000.0
+    df["total_power_w"] = pd.to_numeric(df["total_power_w"], errors="coerce")
+    df["sensor4_power_w"] = pd.to_numeric(df["sensor4_power_mw"], errors="coerce") / 1000.0
+    df["sensor7_power_w"] = pd.to_numeric(df["sensor7_power_mw"], errors="coerce") / 1000.0
     return df
 
 
@@ -75,6 +77,22 @@ def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame) -> go.Figure:
                 name="pmd2 total_power [W]",
             )
         )
+        fig.add_trace(
+            go.Scatter(
+                x=pmd2["t_s"],
+                y=pmd2["sensor4_power_w"],
+                mode="lines",
+                name="pmd2 sensor4_power [W]",
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=pmd2["t_s"],
+                y=pmd2["sensor7_power_w"],
+                mode="lines",
+                name="pmd2 sensor7_power [W]",
+            )
+        )
 
     fig.update_layout(
         title="Combined GPU Power Metrics",
@@ -93,10 +111,7 @@ def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame) -> go.Figure:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Plot combined CSV data with Plotly")
-    parser.add_argument("--nvidia", type=Path, default=NVIDIA_DEFAULT)
-    parser.add_argument("--pmd2", type=Path, default=PMD2_DEFAULT)
-    parser.add_argument("--out", type=Path, default=Path("build/example/combined_plot.html"))
-    parser.add_argument("--path", type=Path, default=Path("build/example"), help="Path to the directory containing CSV files")
+    parser.add_argument("path", type=Path, help="Path to the directory containing CSV files")
     args = parser.parse_args()
 
     timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
@@ -123,7 +138,7 @@ def main() -> int:
     )
     temp_fig.update_layout(title="Temperature Metrics", xaxis_title="Time since start [s]", yaxis_title="Temperature [C]")
     temp_fig.write_html(output_dir / "temperature_metrics.html", include_plotlyjs="cdn")
-    print(f"Wrote {args.out}")
+    print(f"Wrote plots to {output_dir}")
     return 0
 
 

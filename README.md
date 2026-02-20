@@ -6,7 +6,7 @@ This repository includes a small Python utility that compiles a project folder, 
 
 Stay at the repository root and run:
 
-uv python3 tools/runner.py ./apps/<app_dir>
+uv run tools/runner.py ./apps/<app_dir>
 
 ## Sambashare
 
@@ -14,6 +14,7 @@ You may often want to review your artifacts locally, for this using sambashare i
 Simply add a system link to your build artifacts on your sambashare and it does the synchronization.
 
 ln -s /home/p10/sambashare/artifacts artifacts
+ln -s /home/p10/sambashare/plots plots
 
 ### Optional flags
 
@@ -35,4 +36,4 @@ The tool creates a folder under the output directory named after the target fold
 
 Their is an additional tool to draw a graph of the outputs. This tool can be... TODO finish this
 
-uv python3 tools/plotter.py ./build/<app_dir>
+uv run tools/plotter.py ./build/<app_dir>
