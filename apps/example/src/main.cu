@@ -10,6 +10,8 @@
 #define ALIGN_BUFFER(buffer, align_size) (((uintptr_t) (buffer) + (align_size) - 1) & ~((align_size) - 1))
 
 static uint64_t kernel_duration = 0;
+static uint64_t start_time = 0;
+static uint64_t end_time = 0;
 
 void bufferRequested(uint8_t **buffer, size_t *size, size_t *maxNumRecords) {
     uint8_t *bfr = (uint8_t *)malloc(BUF_SIZE + ALIGN_SIZE);
@@ -28,6 +30,9 @@ void bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t s
                 // end timestamp is at offset 3*8 = 24 bytes
                 uint64_t *start_ptr = (uint64_t *)((uint8_t*)record + 16);
                 uint64_t *end_ptr = (uint64_t *)((uint8_t*)record + 24);
+
+                start_time = *start_ptr;
+                end_time = *end_ptr;
                 kernel_duration = *end_ptr - *start_ptr;
             }
         }
@@ -54,7 +59,7 @@ int main()
 {
     int h[4] = {0}; 
     int *d;
-    int iterations = 1000000;
+    int iterations = 10000000;
 
     // Initialize CUPTI profiling
     cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL);
@@ -73,11 +78,10 @@ int main()
     cuptiActivityFlushAll(0);
 
     if (kernel_duration > 0) {
+        printf("Kernel Start Time: %lu ns\n", start_time);
+        printf("Kernel End Time: %lu ns\n", end_time);
         printf("Kernel Duration: %lu ns (%.6f ms)\n", kernel_duration, kernel_duration / 1000000.0);
     }
-    
-    for(int i=0;i<4;i++)
-        printf("%d\n", h[i]);
 
     cudaFree(d);
     

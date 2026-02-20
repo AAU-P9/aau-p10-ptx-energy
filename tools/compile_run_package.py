@@ -8,6 +8,7 @@ import sys
 import time
 import zipfile
 from pathlib import Path
+import datetime
 
 
 def find_sources(root: Path):
@@ -184,6 +185,10 @@ def main():
         time.sleep(1)
 
     run_result = run_command(run_cmd)
+
+    # Give monitors a moment to capture final data
+    if monitor_process is not None or pmd2_process is not None:
+        time.sleep(1)
 
     # Stop nvidia-smi monitoring
     if monitor_process is not None:
