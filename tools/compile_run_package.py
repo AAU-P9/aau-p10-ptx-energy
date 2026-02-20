@@ -57,7 +57,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        default="build_artifacts",
+        default="artifacts",
         help="Directory to place zip bundles",
     )
     parser.add_argument(
