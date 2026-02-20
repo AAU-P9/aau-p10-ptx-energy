@@ -59,7 +59,7 @@ int main()
 {
     int h[4] = {0}; 
     int *d;
-    int iterations = 10000000;
+    int iterations = 100000000; // 100 million iterations
 
     // Initialize CUPTI profiling
     cuptiActivityEnable(CUPTI_ACTIVITY_KIND_KERNEL);

@@ -6,7 +6,7 @@ This repository includes a small Python utility that compiles a project folder, 
 
 Stay at the repository root and run:
 
-python3 tools/compile_run_package.py ./apps/<app_dir>
+uv python3 tools/runner.py ./apps/<app_dir>
 
 ## Sambashare
 
@@ -30,3 +30,9 @@ The tool creates a folder under the output directory named after the target fold
 - `output.txt`
 - `manifest.json`
 - `ptx.log` and `.ptx` files (when using `nvcc`)
+
+## Graphs
+
+Their is an additional tool to draw a graph of the outputs. This tool can be... TODO finish this
+
+uv python3 tools/plotter.py ./apps/<app_dir>
