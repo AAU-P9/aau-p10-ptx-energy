@@ -13,16 +13,16 @@ python3 tools/compile_run_package.py ./apps/<app_dir>
 You may often want to review your artifacts locally, for this using sambashare is a good option.
 Simply add a system link to your build artifacts on your sambashare and it does the synchronization.
 
-ln -s /home/p10/sambashare/build_artifacts build_artifacts
+ln -s /home/p10/sambashare/artifacts artifacts
 
 ### Optional flags
 
-- `--output-dir <path>`: where to write the build artifacts and bundle (default: `build_artifacts`).
+- `--output-dir <path>`: where to write the build artifacts and bundle (default: `artifacts`).
 - `--run-args ...`: arguments passed to the compiled binary.
 
 ## Outputs
 
-The tool creates a folder under the output directory named after the target folder (e.g., `build_artifacts/app`) and a timestamped zip bundle in the output directory. The bundle includes:
+The tool creates a folder under the output directory named after the target folder (e.g., `artifacts/app`) and a timestamped zip bundle in the output directory. The bundle includes:
 
 - Source code from the target folder
 - Compiled binary
