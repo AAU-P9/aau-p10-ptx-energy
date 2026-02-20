@@ -5,3 +5,7 @@ build
 # Ignore build artifacts (also systemlink)
 artifacts/
 artifacts
+
+# Ignore plots (also systemlink)
+plots/
+plots

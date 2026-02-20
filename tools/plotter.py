@@ -65,15 +65,6 @@ def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame) -> go.Figure:
                 name="nvidia-smi power.draw [W]",
             )
         )
-        fig.add_trace(
-            go.Scatter(
-                x=nv["t_s"],
-                y=nv["temperature_c"],
-                mode="lines",
-                name="nvidia-smi temperature [C]",
-                yaxis="y2",
-            )
-        )
 
     if not pmd2.empty:
         fig.add_trace(
@@ -105,12 +96,33 @@ def main() -> int:
     parser.add_argument("--nvidia", type=Path, default=NVIDIA_DEFAULT)
     parser.add_argument("--pmd2", type=Path, default=PMD2_DEFAULT)
     parser.add_argument("--out", type=Path, default=Path("build/example/combined_plot.html"))
+    parser.add_argument("--path", type=Path, default=Path("build/example"), help="Path to the directory containing CSV files")
     args = parser.parse_args()
 
-    nv = load_nvidia_smi(args.nvidia)
-    pmd2 = load_pmd2(args.pmd2)
-    fig = build_figure(nv, pmd2)
-    fig.write_html(args.out, include_plotlyjs="cdn")
+    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
+    output_dir = Path(f"plots/{timestamp}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    nv_path = args.path / "nvidia-smi.csv"
+    pmd2_path = args.path / "pmd2.csv"
+    nv = load_nvidia_smi(nv_path)
+    pmd2 = load_pmd2(pmd2_path)
+    
+    # Create separate figures for power and temperature
+    power_fig = build_figure(nv, pmd2)
+    power_fig.update_layout(title="Power Metrics")
+    power_fig.write_html(output_dir / "power_metrics.html", include_plotlyjs="cdn")
+    
+    temp_fig = go.Figure()
+    temp_fig.add_trace(
+        go.Scatter(
+            x=nv["t_s"],
+            y=nv["temperature_c"],
+            mode="lines",
+            name="nvidia-smi temperature [C]",
+        )
+    )
+    temp_fig.update_layout(title="Temperature Metrics", xaxis_title="Time since start [s]", yaxis_title="Temperature [C]")
+    temp_fig.write_html(output_dir / "temperature_metrics.html", include_plotlyjs="cdn")
     print(f"Wrote {args.out}")
     return 0
 
