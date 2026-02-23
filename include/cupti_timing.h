@@ -66,9 +66,9 @@ inline void collectTimestampOffsets() {
     for (int i = 0; i < OFFSET_SAMPLES; ++i) {
         uint64_t cuptiTimestamp = 0;
         struct timespec cpuInitial, cpuFinal;
-        clock_gettime(CLOCK_REALTIME, &cpuInitial);
+        clock_gettime(CLOCK_MONOTONIC, &cpuInitial);
         cuptiGetTimestamp(&cuptiTimestamp);
-        clock_gettime(CLOCK_REALTIME, &cpuFinal);
+        clock_gettime(CLOCK_MONOTONIC, &cpuFinal);
 
         uint64_t cpuInitialNs = (uint64_t)cpuInitial.tv_sec * 1000000000ULL + (uint64_t)cpuInitial.tv_nsec;
         uint64_t cpuFinalNs = (uint64_t)cpuFinal.tv_sec * 1000000000ULL + (uint64_t)cpuFinal.tv_nsec;

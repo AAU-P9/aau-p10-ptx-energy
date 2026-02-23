@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import re
 from pathlib import Path
+from dataclasses import dataclass
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,6 +13,45 @@ import plotly.graph_objects as go
 
 NVIDIA_DEFAULT = Path("build/example/nvidia-smi.csv")
 PMD2_DEFAULT = Path("build/example/pmd2.csv")
+
+
+@dataclass
+class IncrementalRegression:
+    """Incremental linear regression for timestamp conversion."""
+    n: int = 0
+    x_mean: float = 0.0
+    y_mean: float = 0.0
+    x_svar: float = 0.0
+    y_svar: float = 0.0
+    xy_scov: float = 0.0
+
+    def add_sample(self, x: float, y: float) -> None:
+        """Add a sample to the regression."""
+        self.n += 1
+        x_mean_prev = self.x_mean
+        y_mean_prev = self.y_mean
+        self.x_mean += (x - self.x_mean) / self.n
+        self.y_mean += (y - self.y_mean) / self.n
+        self.x_svar += (x - x_mean_prev) * (x - self.x_mean)
+        self.y_svar += (y - y_mean_prev) * (y - self.y_mean)
+        self.xy_scov += (x - x_mean_prev) * (y - self.y_mean)
+
+    def parameters(self) -> tuple[float, float]:
+        """Get linear regression parameters (slope, intercept)."""
+        if self.x_svar == 0:
+            return 0.0, self.y_mean
+        slope = self.xy_scov / self.x_svar
+        intercept = self.y_mean - slope * self.x_mean
+        return slope, intercept
+
+    def orthogonal(self) -> tuple[float, float]:
+        """Get orthogonal (Deming) regression parameters with delta=1."""
+        import math
+        delta = 1.0
+        k = self.y_svar - delta * self.x_svar
+        slope = (k + math.sqrt(k * k + 4 * delta * self.xy_scov * self.xy_scov)) / (2 * self.xy_scov)
+        intercept = self.y_mean - slope * self.x_mean
+        return slope, intercept
 
 
 def _to_float(series: pd.Series) -> pd.Series:
@@ -45,17 +85,65 @@ def load_nvidia_smi(path: Path) -> pd.DataFrame:
 
 def load_pmd2(path: Path) -> pd.DataFrame:
     df = pd.read_csv(path)
-    df["timestamp_us"] = pd.to_numeric(df["timestamp_us"], errors="coerce")
-    df = df.dropna(subset=["timestamp_us"]).copy()
-    t0 = df["timestamp_us"].iloc[0]
-    df["t_s"] = (df["timestamp_us"] - t0) / 1_000_000.0
+    df["timestamp_ns"] = pd.to_numeric(df["timestamp_ns"], errors="coerce")
+    df = df.dropna(subset=["timestamp_ns"]).copy()
+    t0 = df["timestamp_ns"].iloc[0]
+    df["t_s"] = (df["timestamp_ns"] - t0) / 1_000_000_000.0
     df["total_power_w"] = pd.to_numeric(df["total_power_w"], errors="coerce")
     df["sensor4_power_w"] = pd.to_numeric(df["sensor4_power_mw"], errors="coerce") / 1000.0
     df["sensor7_power_w"] = pd.to_numeric(df["sensor7_power_mw"], errors="coerce") / 1000.0
     return df
 
 
-def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame) -> go.Figure:
+def parse_output_txt(path: Path) -> dict:
+    """Parse output.txt for OFFSET and KERNEL timing information."""
+    result = {
+        "offsets": [],
+        "kernel_start": None,
+        "kernel_end": None,
+        "kernel_duration": None,
+    }
+    
+    if not path.exists():
+        return result
+    
+    with open(path, "r") as f:
+        for line in f:
+            # Parse OFFSET lines
+            offset_match = re.match(
+                r"\[OFFSET\] CUPTI Timestamp: (\d+), CPU Timestamp #1: (\d+), CPU Timestamp #2: (\d+)",
+                line,
+            )
+            if offset_match:
+                cupti_ts = int(offset_match.group(1))
+                cpu_ts1 = int(offset_match.group(2))
+                cpu_ts2 = int(offset_match.group(3))
+                # Use average of CPU timestamps
+                cpu_ts_avg = (cpu_ts1 * 3.0 + cpu_ts2 * 5.0) / 8.0
+                result["offsets"].append((cupti_ts, cpu_ts_avg))
+            
+            # Parse KERNEL lines
+            kernel_start = re.match(r"\[KERNEL\] Start Time: (\d+)", line)
+            if kernel_start:
+                result["kernel_start"] = int(kernel_start.group(1))
+            
+            kernel_end = re.match(r"\[KERNEL\] End Time: (\d+)", line)
+            if kernel_end:
+                result["kernel_end"] = int(kernel_end.group(1))
+            
+            kernel_duration = re.match(r"\[KERNEL\] Duration: (\d+)", line)
+            if kernel_duration:
+                result["kernel_duration"] = int(kernel_duration.group(1))
+    
+    return result
+
+
+def gpu_to_cpu_time(gpu_timestamp: float, slope: float, intercept: float) -> float:
+    """Convert GPU timestamp to CPU timestamp using linear regression."""
+    return slope * gpu_timestamp + intercept
+
+
+def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame, timing_data: dict | None = None, t0_cpu_ns: float = 0) -> go.Figure:
     fig = go.Figure()
 
     if not nv.empty:
@@ -94,6 +182,26 @@ def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame) -> go.Figure:
             )
         )
 
+    # Add kernel start/end lines if timing data is available
+    if timing_data and timing_data.get("kernel_start_cpu_s") is not None:
+        kernel_start_s = timing_data["kernel_start_cpu_s"]
+        kernel_end_s = timing_data["kernel_end_cpu_s"]
+        
+        fig.add_vline(
+            x=kernel_start_s,
+            line_dash="dash",
+            line_color="green",
+            annotation_text="Kernel Start",
+            annotation_position="top",
+        )
+        fig.add_vline(
+            x=kernel_end_s,
+            line_dash="dash",
+            line_color="red",
+            annotation_text="Kernel End",
+            annotation_position="top",
+        )
+
     fig.update_layout(
         title="Combined GPU Power Metrics",
         xaxis_title="Time since start [s]",
@@ -119,11 +227,59 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     nv_path = args.path / "nvidia-smi.csv"
     pmd2_path = args.path / "pmd2.csv"
+    output_txt_path = args.path / "output.txt"
+    
     nv = load_nvidia_smi(nv_path)
     pmd2 = load_pmd2(pmd2_path)
     
+    # Parse timing information and calibrate GPU->CPU timestamp conversion
+    timing_info = parse_output_txt(output_txt_path)
+    timing_data = None
+
+    # Print the GPU timestamps for debugging (Note that the start and end timestamp are not normalized, but the duration should be fine.)
+    print("(CUPTI GPU) Kernel start timestamp: ", timing_info["kernel_start"] / 1_000_000_000)
+    print("(CUPTI GPU) Kernel end timestamp: ", timing_info["kernel_end"] / 1_000_000_000)    
+    print("(CUPTI GPU) Kernel duration: ", timing_info["kernel_duration"] / 1_000_000_000)
+    
+    if timing_info["offsets"] and timing_info["kernel_start"] is not None:
+        # Build incremental regression model
+        regression = IncrementalRegression()
+        for gpu_ts, cpu_ts in timing_info["offsets"]:
+            regression.add_sample(float(gpu_ts), float(cpu_ts))
+        
+        # Get regression parameters (using orthogonal regression for better accuracy)
+        slope, intercept = regression.orthogonal()
+        
+        print(f"Timestamp conversion model: CPU = {slope:.10f} * GPU + {intercept:.2f}")
+        print(f"Samples used: {len(timing_info['offsets'])}")
+        
+        # Convert kernel GPU timestamps to CPU timestamps
+        kernel_start_cpu_ns = gpu_to_cpu_time(float(timing_info["kernel_start"]), slope, intercept)
+        kernel_end_cpu_ns = gpu_to_cpu_time(float(timing_info["kernel_end"]), slope, intercept)
+        
+        # pmd2's first timestamp in microseconds
+        pmd2_t0_ns = pmd2["timestamp_ns"].iloc[0]       
+        
+        # Normalize to pmd2's time axis (relative time since first sample)
+        kernel_start_pmd2_ns = kernel_start_cpu_ns - pmd2_t0_ns
+        kernel_end_pmd2_ns = kernel_end_cpu_ns - pmd2_t0_ns
+
+        # Convert to seconds for plotting
+        kernel_start_cpu_s = (kernel_start_cpu_ns - pmd2_t0_ns) / 1e9
+        kernel_end_cpu_s = (kernel_end_cpu_ns - pmd2_t0_ns) / 1e9
+        
+        timing_data = {
+            "kernel_start_cpu_s": kernel_start_cpu_s,
+            "kernel_end_cpu_s": kernel_end_cpu_s,
+            "kernel_duration_s": kernel_end_cpu_s - kernel_start_cpu_s,
+        }
+        
+        print(f"(Estimated CPU) Kernel start: {timing_data['kernel_start_cpu_s']:.6f} s")
+        print(f"(Estimated CPU) Kernel end: {timing_data['kernel_end_cpu_s']:.6f} s")
+        print(f"(Estimated CPU) Kernel duration: {timing_data['kernel_duration_s']:.6f} s")
+    
     # Create separate figures for power and temperature
-    power_fig = build_figure(nv, pmd2)
+    power_fig = build_figure(nv, pmd2, timing_data)
     power_fig.update_layout(title="Power Metrics")
     power_fig.write_html(output_dir / "power_metrics.html", include_plotlyjs="cdn")
     
