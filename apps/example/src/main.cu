@@ -4,11 +4,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <chrono>
 
+using namespace std;
+
+// Number of samples to collect for CPU/GPU timestamp offsets
+#define OFFSET_SAMPLES 10
+
+// Cupti buffer management parameters
 #define BUF_SIZE (32 * 1024)
 #define ALIGN_SIZE (8)
 #define ALIGN_BUFFER(buffer, align_size) (((uintptr_t) (buffer) + (align_size) - 1) & ~((align_size) - 1))
 
+// Global variables to store kernel timing information
 static uint64_t kernel_duration = 0;
 static uint64_t start_time = 0;
 static uint64_t end_time = 0;
@@ -68,23 +76,39 @@ int main()
     cudaMalloc(&d, 4*sizeof(int));
     cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
 
+    // Get CPU/GPU offsets
+    for (int i = 0; i < OFFSET_SAMPLES; ++i) {
+        uint64_t cuptiTimestamp = 0;
+        auto cpuInitial = chrono::high_resolution_clock::now();
+        cuptiGetTimestamp(&cuptiTimestamp);
+        auto cpuFinal = chrono::high_resolution_clock::now();
+
+        printf("[OFFSET] CUPTI Timestamp: %lu ns, CPU Timestamp #1: %lu, CPU Timestamp #2: %lu\n", 
+            cuptiTimestamp, 
+            chrono::duration_cast<chrono::nanoseconds>(cpuInitial.time_since_epoch()).count(),
+            chrono::duration_cast<chrono::nanoseconds>(cpuFinal.time_since_epoch()).count()
+        );
+
+    }
+
     // Run kernel
     ptx_kernel<<<1,4>>>(d, iterations);
     cudaDeviceSynchronize();
 
-    cudaMemcpy(h, d, 4*sizeof(int), cudaMemcpyDeviceToHost);
+    // Possibly read back results (not necessary for timing, but included for completeness)
+    // cudaMemcpy(h, d, 4*sizeof(int), cudaMemcpyDeviceToHost);
 
     // Flush all activity buffers
     cuptiActivityFlushAll(0);
 
     if (kernel_duration > 0) {
-        printf("Kernel Start Time: %lu ns\n", start_time);
-        printf("Kernel End Time: %lu ns\n", end_time);
-        printf("Kernel Duration: %lu ns (%.6f ms)\n", kernel_duration, kernel_duration / 1000000.0);
+        printf("[KERNEL] Start Time: %lu\n", start_time);
+        printf("[KERNEL] End Time: %lu\n", end_time);
+        printf("[KERNEL] Duration: %lu\n", kernel_duration);
     }
 
+    // Clean up
     cudaFree(d);
     
-    // Clean up
     cuptiActivityDisable(CUPTI_ACTIVITY_KIND_KERNEL);
 }
