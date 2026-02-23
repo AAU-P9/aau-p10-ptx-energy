@@ -233,50 +233,57 @@ def main() -> int:
     pmd2 = load_pmd2(pmd2_path)
     
     # Parse timing information and calibrate GPU->CPU timestamp conversion
-    timing_info = parse_output_txt(output_txt_path)
+    output_info = parse_output_txt(output_txt_path)
     timing_data = None
 
     # Print the GPU timestamps for debugging (Note that the start and end timestamp are not normalized, but the duration should be fine.)
-    print("(CUPTI GPU) Kernel start timestamp: ", timing_info["kernel_start"] / 1_000_000_000)
-    print("(CUPTI GPU) Kernel end timestamp: ", timing_info["kernel_end"] / 1_000_000_000)    
-    print("(CUPTI GPU) Kernel duration: ", timing_info["kernel_duration"] / 1_000_000_000)
-    
-    if timing_info["offsets"] and timing_info["kernel_start"] is not None:
-        # Build incremental regression model
-        regression = IncrementalRegression()
-        for gpu_ts, cpu_ts in timing_info["offsets"]:
-            regression.add_sample(float(gpu_ts), float(cpu_ts))
-        
-        # Get regression parameters (using orthogonal regression for better accuracy)
-        slope, intercept = regression.orthogonal()
-        
-        print(f"Timestamp conversion model: CPU = {slope:.10f} * GPU + {intercept:.2f}")
-        print(f"Samples used: {len(timing_info['offsets'])}")
-        
-        # Convert kernel GPU timestamps to CPU timestamps
-        kernel_start_cpu_ns = gpu_to_cpu_time(float(timing_info["kernel_start"]), slope, intercept)
-        kernel_end_cpu_ns = gpu_to_cpu_time(float(timing_info["kernel_end"]), slope, intercept)
-        
-        # pmd2's first timestamp in microseconds
-        pmd2_t0_ns = pmd2["timestamp_ns"].iloc[0]       
-        
-        # Normalize to pmd2's time axis (relative time since first sample)
-        kernel_start_pmd2_ns = kernel_start_cpu_ns - pmd2_t0_ns
-        kernel_end_pmd2_ns = kernel_end_cpu_ns - pmd2_t0_ns
+    print("(CUPTI GPU) Kernel start timestamp: ", output_info["kernel_start"] / 1_000_000_000)
+    print("(CUPTI GPU) Kernel end timestamp: ", output_info["kernel_end"] / 1_000_000_000)
+    print("(CUPTI GPU) Kernel duration: ", output_info["kernel_duration"] / 1_000_000_000)
 
-        # Convert to seconds for plotting
-        kernel_start_cpu_s = (kernel_start_cpu_ns - pmd2_t0_ns) / 1e9
-        kernel_end_cpu_s = (kernel_end_cpu_ns - pmd2_t0_ns) / 1e9
-        
-        timing_data = {
-            "kernel_start_cpu_s": kernel_start_cpu_s,
-            "kernel_end_cpu_s": kernel_end_cpu_s,
-            "kernel_duration_s": kernel_end_cpu_s - kernel_start_cpu_s,
-        }
-        
-        print(f"(Estimated CPU) Kernel start: {timing_data['kernel_start_cpu_s']:.6f} s")
-        print(f"(Estimated CPU) Kernel end: {timing_data['kernel_end_cpu_s']:.6f} s")
-        print(f"(Estimated CPU) Kernel duration: {timing_data['kernel_duration_s']:.6f} s")
+    # Build incremental regression model
+    regression = IncrementalRegression()
+    for gpu_ts, cpu_ts in output_info["offsets"]:
+        regression.add_sample(float(gpu_ts), float(cpu_ts))
+
+    # Get regression parameters (using orthogonal regression for better accuracy)
+    slope, intercept = regression.orthogonal()
+
+    print(f"\n[DEBUG] Regression parameters:")
+    print(f"  Slope: {slope:.10f}")
+    print(f"  Intercept: {intercept:.2f}")
+    print(f"  Samples used: {len(output_info['offsets'])}")
+
+    # Convert kernel GPU timestamps to CPU timestamps
+    kernel_start_gpu = float(output_info["kernel_start"])
+    kernel_end_gpu = float(output_info["kernel_end"])
+    kernel_start_cpu_ns = gpu_to_cpu_time(kernel_start_gpu, slope, intercept)
+    kernel_end_cpu_ns = gpu_to_cpu_time(kernel_end_gpu, slope, intercept)
+
+    # pmd2's first timestamp in microseconds
+    pmd2_t0_ns = pmd2["timestamp_ns"].iloc[0]
+
+    # Normalize to pmd2's time axis (relative time since first sample)
+    kernel_start_pmd2_ns = kernel_start_cpu_ns - pmd2_t0_ns
+    kernel_end_pmd2_ns = kernel_end_cpu_ns - pmd2_t0_ns
+
+    # Convert to seconds for plotting
+    kernel_start_cpu_s = (kernel_start_cpu_ns - pmd2_t0_ns) / 1e9
+    kernel_end_cpu_s = (kernel_end_cpu_ns - pmd2_t0_ns) / 1e9
+
+    timing_data = {
+        "kernel_start_cpu_s": kernel_start_cpu_s,
+        "kernel_end_cpu_s": kernel_end_cpu_s,
+        "kernel_duration_s": kernel_end_cpu_s - kernel_start_cpu_s,
+    }
+
+    print(f"\n(Estimated CPU) Kernel start: {timing_data['kernel_start_cpu_s']:.6f} s")
+    print(f"(Estimated CPU) Kernel end: {timing_data['kernel_end_cpu_s']:.6f} s")
+    print(f"(Estimated CPU) Kernel duration: {timing_data['kernel_duration_s']:.6f} s")
+
+    # Print the duration error
+    duration_error_s = abs(timing_data["kernel_duration_s"] - output_info["kernel_duration"] / 1e9)
+    print(f"Duration error: {duration_error_s:.6f} s")
     
     # Create separate figures for power and temperature
     power_fig = build_figure(nv, pmd2, timing_data)

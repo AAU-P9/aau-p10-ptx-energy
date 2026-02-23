@@ -10,7 +10,7 @@
 #include <time.h>
 
 // Number of samples to collect for CPU/GPU timestamp offsets
-#define OFFSET_SAMPLES 10
+#define OFFSET_SAMPLES 100
 
 // Cupti buffer management parameters
 #define BUF_SIZE (32 * 1024)
@@ -78,6 +78,10 @@ inline void collectTimestampOffsets() {
             cpuInitialNs,
             cpuFinalNs
         );
+
+        // Sleep for a short time to avoid overwhelming the system
+        struct timespec sleepTime = {0, 1000000 * 10}; // 10 ms
+        nanosleep(&sleepTime, NULL);
     }
 }
 
