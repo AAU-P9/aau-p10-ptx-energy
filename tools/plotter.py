@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 import plotly.graph_objects as go
+from scipy import integrate
 
 
 NVIDIA_DEFAULT = Path("build/example/nvidia-smi.csv")
@@ -284,6 +285,24 @@ def main() -> int:
     # Print the duration error
     duration_error_s = abs(timing_data["kernel_duration_s"] - output_info["kernel_duration"] / 1e9)
     print(f"Duration error: {duration_error_s:.6f} s")
+
+    # Calculate energy consumed during kernel execution using trapezoidal integration
+    print(f"\n[Energy Consumption]")
+    kernel_mask = (pmd2["t_s"] >= kernel_start_cpu_s) & (pmd2["t_s"] <= kernel_end_cpu_s)
+    pmd2_kernel = pmd2[kernel_mask].copy()
+    
+    if len(pmd2_kernel) > 1:
+        # Integrate power over time to get energy (Joules = Watts * seconds)
+        energy_total_j = integrate.trapezoid(pmd2_kernel["total_power_w"], pmd2_kernel["t_s"])
+        energy_sensor4_j = integrate.trapezoid(pmd2_kernel["sensor4_power_w"], pmd2_kernel["t_s"])
+        energy_sensor7_j = integrate.trapezoid(pmd2_kernel["sensor7_power_w"], pmd2_kernel["t_s"])
+        
+        print(f"Total energy (pmd2 total_power): {energy_total_j:.6f} J")
+        print(f"Sensor 4 energy: {energy_sensor4_j:.6f} J")
+        print(f"Sensor 7 energy: {energy_sensor7_j:.6f} J")
+        print(f"Samples used for integration: {len(pmd2_kernel)}")
+    else:
+        print(f"Not enough samples in kernel window for integration (found {len(pmd2_kernel)} samples)")
     
     # Create separate figures for power and temperature
     power_fig = build_figure(nv, pmd2, timing_data)
