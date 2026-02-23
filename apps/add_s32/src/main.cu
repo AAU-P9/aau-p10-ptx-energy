@@ -57,8 +57,8 @@ __global__ void ptx_kernel(int *out, int iterations)
     for(int i = 0; i < iterations; ++i)
     {
         asm volatile (
-            "mov.u32 %0, %0;\n\t"  // move tmp to tmp (self-move)
-            : "+r"(tmp)             // %0 is a register mapped to tmp
+            "add.s32 %0, %0, 0;\n\t"  // add tmp + 0 to tmp
+            : "+r"(tmp)               // %0 is a register mapped to tmp
         );
     }
 }
