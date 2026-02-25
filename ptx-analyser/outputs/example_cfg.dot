@@ -1,0 +1,22 @@
+digraph "_Z10ptx_kernelPii" {
+  rankdir=TB;
+  node [shape=box, fontname="monospace", fontsize=10, margin="0.3,0.2"];
+  BB0 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB0</B></TD></TR><HR/><TR><TD COLSPAN="2" ALIGN="LEFT">.reg .pred %p&lt;6&gt;;</TD></TR><TR><TD COLSPAN="2" ALIGN="LEFT">.reg .b32 %r&lt;30&gt;;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType]</FONT></TD><TD ALIGN="LEFT"> ld.param.u32 %r13, [_Z10ptx_kernelPii_param_1];</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SetpCmpopFtzType]</FONT></TD><TD ALIGN="LEFT"> setp.lt.s32 %p1, %r13, 1;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[BraUni]</FONT></TD><TD ALIGN="LEFT"> @%p1 bra $L__BB0_7;</TD></TR></TABLE>>, style=bold, penwidth=2];
+  BB1 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB1</B></TD></TR><HR/><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %tid.x;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[AndType]</FONT></TD><TD ALIGN="LEFT"> and.b32 %r29, %r13, 3;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[AddType]</FONT></TD><TD ALIGN="LEFT"> add.s32 %r14, %r13, -1;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SetpCmpopFtzType]</FONT></TD><TD ALIGN="LEFT"> setp.lt.u32 %p2, %r14, 3;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[BraUni]</FONT></TD><TD ALIGN="LEFT"> @%p2 bra $L__BB0_4;</TD></TR></TABLE>>];
+  BB2 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB2</B></TD></TR><HR/><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SubType]</FONT></TD><TD ALIGN="LEFT"> sub.s32 %r26, %r13, %r29;</TD></TR></TABLE>>];
+  BB3 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB3</B></TD></TR><HR/><TR><TD COLSPAN="2" ALIGN="LEFT">$L__BB0_3:</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %r25;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %r25;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %r25;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %r25;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[AddType]</FONT></TD><TD ALIGN="LEFT"> add.s32 %r26, %r26, -4;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SetpCmpopFtzType]</FONT></TD><TD ALIGN="LEFT"> setp.ne.s32 %p3, %r26, 0;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[BraUni]</FONT></TD><TD ALIGN="LEFT"> @%p3 bra $L__BB0_3;</TD></TR></TABLE>>];
+  BB4 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB4</B></TD></TR><HR/><TR><TD COLSPAN="2" ALIGN="LEFT">$L__BB0_4:</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SetpCmpopFtzType]</FONT></TD><TD ALIGN="LEFT"> setp.eq.s32 %p4, %r29, 0;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[BraUni]</FONT></TD><TD ALIGN="LEFT"> @%p4 bra $L__BB0_7;</TD></TR></TABLE>>];
+  BB5 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB5</B></TD></TR><HR/><TR><TD COLSPAN="2" ALIGN="LEFT">$L__BB0_6:</TD></TR><TR><TD COLSPAN="2" ALIGN="LEFT">.pragma nounroll;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[MovType]</FONT></TD><TD ALIGN="LEFT"> mov.u32 %r25, %r25;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[AddType]</FONT></TD><TD ALIGN="LEFT"> add.s32 %r29, %r29, -1;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[SetpCmpopFtzType]</FONT></TD><TD ALIGN="LEFT"> setp.ne.s32 %p5, %r29, 0;</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[BraUni]</FONT></TD><TD ALIGN="LEFT"> @%p5 bra $L__BB0_6;</TD></TR></TABLE>>];
+  BB6 [label=<<TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2"><TR><TD COLSPAN="2" ALIGN="CENTER"><B>BB6</B></TD></TR><HR/><TR><TD COLSPAN="2" ALIGN="LEFT">$L__BB0_7:</TD></TR><TR><TD ALIGN="LEFT"><FONT COLOR="#888888">[RetUni]</FONT></TD><TD ALIGN="LEFT"> ret;</TD></TR></TABLE>>, peripheries=2];
+  BB0 -> BB1;
+  BB0 -> BB6;
+  BB1 -> BB2;
+  BB1 -> BB4;
+  BB2 -> BB3;
+  BB3 -> BB3;
+  BB3 -> BB4;
+  BB4 -> BB5;
+  BB4 -> BB6;
+  BB5 -> BB5;
+  BB5 -> BB6;
+}
