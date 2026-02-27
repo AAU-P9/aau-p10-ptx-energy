@@ -224,7 +224,7 @@ def main() -> int:
     args = parser.parse_args()
 
     timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = Path(f"plots/{timestamp}")
+    output_dir = Path(f"plots/{args.path.name}_{timestamp}")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Create log file
