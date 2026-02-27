@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include "cupti_timing.h"
 
-__global__ void vector_mul(float *A, float *B, float *C, int N) {
-    int iterations = 1000;
+#define ITERATIONS 1200
 
-    for(int i = 0; i < iterations; ++i) {
+__global__ void vector_mul(float *A, float *B, float *C, int N) {
+    for (int i = 0; i < ITERATIONS; i++) {
         int index = threadIdx.x + blockIdx.x * blockDim.x;
         if (index < N) {
             C[index] = A[index] * B[index];
@@ -16,11 +16,12 @@ __global__ void vector_mul(float *A, float *B, float *C, int N) {
 
 int main()
 {
+    // Initialize CUPTI profiling
     initializeCUPTI();
-    
-    int n = 1024 * 1024 * 1024 * 1024 * 1024;
+
+    int n = 1024;
     size_t bytes = n * sizeof(float);
-    
+
     // Host vectors
     float *h_a = (float *)malloc(bytes);
     float *h_b = (float *)malloc(bytes);
@@ -42,9 +43,10 @@ int main()
     // Copy data to device
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
-
-    collectTimestampOffsets();
     
+    // Get CPU/GPU offsets
+    collectTimestampOffsets();
+
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;
     int grid_size = (n + block_size - 1) / block_size;
@@ -81,7 +83,9 @@ int main()
         printf("Test failed with %d errors\n", errors);
     }
 
+    // Flush all activity buffers
     flushCUPTIBuffers();
+
     printKernelTiming();
     
     // Clean up
@@ -91,6 +95,9 @@ int main()
     free(h_a);
     free(h_b);
     free(h_out);
+
+    // Disable CUPTI profiling
+    disableCUPTI();
     
     return 0;
 }
