@@ -2,25 +2,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>  // for fabs()
+#include "cupti_timing.h"
 
-__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0f;
+__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K, int iterations) {
+    for(int i = 0; i < iterations; ++i) {
 
-    if (row < M && col < K) {
-        for (int i = 0; i < N; i++) {
-            sum += A[row * N + i] * B[i * K + col];
+        int row = blockIdx.y * blockDim.y + threadIdx.y;
+        int col = blockIdx.x * blockDim.x + threadIdx.x;
+        float sum = 0.0f;
+
+        if (row < M && col < K) {
+            for (int i = 0; i < N; i++) {
+                sum += A[row * N + i] * B[i * K + col];
+            }
+            C[row * K + col] = sum;
         }
-        C[row * K + col] = sum;
     }
 }
 
 int main() {
+    initializeCUPTI();
+    
     int M = 1024, N = 1024, K = 1024;
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
     size_t bytes_c = M * K * sizeof(float);
+
+    int iterations = 200;
 
     // Host matrices
     float *h_a = (float *)malloc(bytes_a);
@@ -54,7 +62,7 @@ int main() {
                    (M + block_size.y - 1) / block_size.y);
 
     // Launch kernel with 2D grid and block size
-    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K);
+    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K, iterations);
 
     // Check for errors after kernel launch
     cudaDeviceSynchronize();
@@ -84,6 +92,9 @@ int main() {
     } else {
         printf("Test failed with %d errors\n", errors);
     }
+
+    flushCUPTIBuffers();
+    printKernelTiming();
 
     // Clean up
     cudaFree(d_a);

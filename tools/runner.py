@@ -182,13 +182,13 @@ def main():
 
     # Give monitors a moment to start
     if monitor_process is not None or pmd2_process is not None:
-        time.sleep(5)
+        time.sleep(1)
 
     run_result = run_command(run_cmd)
 
     # Give monitors a moment to capture final data
     if monitor_process is not None or pmd2_process is not None:
-        time.sleep(10)
+        time.sleep(1)
 
     # Stop nvidia-smi monitoring
     if monitor_process is not None:

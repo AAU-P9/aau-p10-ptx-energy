@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "cupti_timing.h"
 
 __global__ void vector_mul(float *A, float *B, float *C, int N) {
     int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -11,7 +12,9 @@ __global__ void vector_mul(float *A, float *B, float *C, int N) {
 
 int main()
 {
-    int n = 1024;
+    initializeCUPTI();
+    
+    int n = 1024 * 1024 * 1024 * 1024 * 1024;
     size_t bytes = n * sizeof(float);
     
     // Host vectors
@@ -71,6 +74,9 @@ int main()
     } else {
         printf("Test failed with %d errors\n", errors);
     }
+
+    flushCUPTIBuffers();
+    printKernelTiming();
     
     // Clean up
     cudaFree(d_a);

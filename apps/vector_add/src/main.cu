@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "cupti_timing.h"
 
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int n)
@@ -14,6 +15,8 @@ __global__ void vector_add(float *a, float *b, float *out, int n)
 
 int main()
 {
+    initializeCUPTI();
+    
     int n = 1024;
     size_t bytes = n * sizeof(float);
     
@@ -66,6 +69,9 @@ int main()
     } else {
         printf("Test failed with %d errors\n", errors);
     }
+
+    flushCUPTIBuffers();
+    printKernelTiming();
     
     // Clean up
     cudaFree(d_a);
