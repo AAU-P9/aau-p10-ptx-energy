@@ -226,6 +226,16 @@ def main() -> int:
     timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
     output_dir = Path(f"plots/{timestamp}")
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Create log file
+    log_file = output_dir / "analysis.log"
+    
+    def log_print(message: str) -> None:
+        """Print to both console and log file."""
+        print(message)
+        with open(log_file, "a") as f:
+            f.write(message + "\n")
+    
     nv_path = args.path / "nvidia-smi.csv"
     pmd2_path = args.path / "pmd2.csv"
     output_txt_path = args.path / "output.txt"
@@ -238,9 +248,9 @@ def main() -> int:
     timing_data = None
 
     # Print the GPU timestamps for debugging (Note that the start and end timestamp are not normalized, but the duration should be fine.)
-    print("(CUPTI GPU) Kernel start timestamp: ", output_info["kernel_start"] / 1_000_000_000)
-    print("(CUPTI GPU) Kernel end timestamp: ", output_info["kernel_end"] / 1_000_000_000)
-    print("(CUPTI GPU) Kernel duration: ", output_info["kernel_duration"] / 1_000_000_000)
+    log_print(f"(CUPTI GPU) Kernel start timestamp: {output_info['kernel_start'] / 1_000_000_000}")
+    log_print(f"(CUPTI GPU) Kernel end timestamp: {output_info['kernel_end'] / 1_000_000_000}")
+    log_print(f"(CUPTI GPU) Kernel duration: {output_info['kernel_duration'] / 1_000_000_000}")
 
     # Build incremental regression model
     regression = IncrementalRegression()
@@ -250,10 +260,10 @@ def main() -> int:
     # Get regression parameters (using orthogonal regression for better accuracy)
     slope, intercept = regression.orthogonal()
 
-    print(f"\n[DEBUG] Regression parameters:")
-    print(f"  Slope: {slope:.10f}")
-    print(f"  Intercept: {intercept:.2f}")
-    print(f"  Samples used: {len(output_info['offsets'])}")
+    log_print(f"\n[DEBUG] Regression parameters:")
+    log_print(f"  Slope: {slope:.10f}")
+    log_print(f"  Intercept: {intercept:.2f}")
+    log_print(f"  Samples used: {len(output_info['offsets'])}")
 
     # Convert kernel GPU timestamps to CPU timestamps
     kernel_start_gpu = float(output_info["kernel_start"])
@@ -278,16 +288,16 @@ def main() -> int:
         "kernel_duration_s": kernel_end_cpu_s - kernel_start_cpu_s,
     }
 
-    print(f"\n(Estimated CPU) Kernel start: {timing_data['kernel_start_cpu_s']:.6f} s")
-    print(f"(Estimated CPU) Kernel end: {timing_data['kernel_end_cpu_s']:.6f} s")
-    print(f"(Estimated CPU) Kernel duration: {timing_data['kernel_duration_s']:.6f} s")
+    log_print(f"\n(Estimated CPU) Kernel start: {timing_data['kernel_start_cpu_s']:.6f} s")
+    log_print(f"(Estimated CPU) Kernel end: {timing_data['kernel_end_cpu_s']:.6f} s")
+    log_print(f"(Estimated CPU) Kernel duration: {timing_data['kernel_duration_s']:.6f} s")
 
     # Print the duration error
     duration_error_s = abs(timing_data["kernel_duration_s"] - output_info["kernel_duration"] / 1e9)
-    print(f"Duration error: {duration_error_s:.6f} s")
+    log_print(f"Duration error: {duration_error_s:.6f} s")
 
     # Calculate energy consumed during kernel execution using trapezoidal integration
-    print(f"\n[Energy Consumption]")
+    log_print(f"\n[Energy Consumption]")
     kernel_mask = (pmd2["t_s"] >= kernel_start_cpu_s) & (pmd2["t_s"] <= kernel_end_cpu_s)
     pmd2_kernel = pmd2[kernel_mask].copy()
     
@@ -297,12 +307,12 @@ def main() -> int:
         energy_sensor4_j = integrate.trapezoid(pmd2_kernel["sensor4_power_w"], pmd2_kernel["t_s"])
         energy_sensor7_j = integrate.trapezoid(pmd2_kernel["sensor7_power_w"], pmd2_kernel["t_s"])
         
-        print(f"Total energy (pmd2 total_power): {energy_total_j:.6f} J")
-        print(f"Sensor 4 energy: {energy_sensor4_j:.6f} J")
-        print(f"Sensor 7 energy: {energy_sensor7_j:.6f} J")
-        print(f"Samples used for integration: {len(pmd2_kernel)}")
+        log_print(f"Total energy (pmd2 total_power): {energy_total_j:.6f} J")
+        log_print(f"Sensor 4 energy: {energy_sensor4_j:.6f} J")
+        log_print(f"Sensor 7 energy: {energy_sensor7_j:.6f} J")
+        log_print(f"Samples used for integration: {len(pmd2_kernel)}")
     else:
-        print(f"Not enough samples in kernel window for integration (found {len(pmd2_kernel)} samples)")
+        log_print(f"Not enough samples in kernel window for integration (found {len(pmd2_kernel)} samples)")
     
     # Create separate figures for power and temperature
     power_fig = build_figure(nv, pmd2, timing_data)
@@ -320,7 +330,8 @@ def main() -> int:
     )
     temp_fig.update_layout(title="Temperature Metrics", xaxis_title="Time since start [s]", yaxis_title="Temperature [C]")
     temp_fig.write_html(output_dir / "temperature_metrics.html", include_plotlyjs="cdn")
-    print(f"Wrote plots to {output_dir}")
+    log_print(f"Wrote plots to {output_dir}")
+    log_print(f"Log file written to {log_file}")
     return 0
 
 
