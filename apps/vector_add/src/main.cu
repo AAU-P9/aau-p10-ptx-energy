@@ -41,6 +41,8 @@ int main()
     // Copy data to device
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    collectTimestampOffsets();
     
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;

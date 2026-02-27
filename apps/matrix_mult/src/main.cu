@@ -4,19 +4,16 @@
 #include <cmath>  // for fabs()
 #include "cupti_timing.h"
 
-__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K, int iterations) {
-    for(int i = 0; i < iterations; ++i) {
+__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
+    int row = blockIdx.y * blockDim.y + threadIdx.y;
+    int col = blockIdx.x * blockDim.x + threadIdx.x;
+    float sum = 0.0f;
 
-        int row = blockIdx.y * blockDim.y + threadIdx.y;
-        int col = blockIdx.x * blockDim.x + threadIdx.x;
-        float sum = 0.0f;
-
-        if (row < M && col < K) {
-            for (int i = 0; i < N; i++) {
-                sum += A[row * N + i] * B[i * K + col];
-            }
-            C[row * K + col] = sum;
+    if (row < M && col < K) {
+        for (int i = 0; i < N; i++) {
+            sum += A[row * N + i] * B[i * K + col];
         }
+        C[row * K + col] = sum;
     }
 }
 
@@ -27,8 +24,6 @@ int main() {
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
     size_t bytes_c = M * K * sizeof(float);
-
-    int iterations = 200;
 
     // Host matrices
     float *h_a = (float *)malloc(bytes_a);
@@ -61,8 +56,10 @@ int main() {
     dim3 grid_size((K + block_size.x - 1) / block_size.x, 
                    (M + block_size.y - 1) / block_size.y);
 
+    collectTimestampOffsets();
+
     // Launch kernel with 2D grid and block size
-    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K, iterations);
+    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K);
 
     // Check for errors after kernel launch
     cudaDeviceSynchronize();
