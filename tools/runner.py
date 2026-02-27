@@ -66,6 +66,11 @@ def main():
         nargs=argparse.REMAINDER,
         help="Arguments passed to the compiled binary",
     )
+    parser.add_argument(
+        "--artifact",
+        action=argparse.BooleanOptionalAction,
+        help="Save in artifacts",
+    )
 
     args = parser.parse_args()
 
@@ -228,26 +233,29 @@ def main():
     manifest_path = build_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
 
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    zip_name = f"{binary_name}_bundle_{timestamp}.zip"
-    zip_path = output_dir / zip_name
+    if args.artifact:
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        zip_name = f"{binary_name}_bundle_{timestamp}.zip"
+        zip_path = output_dir / zip_name
 
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        add_tree_to_zip(zipf, folder, folder.parent)
-        zipf.write(binary_path, f"{binary_name}/{binary_name}")
-        zipf.write(compile_log, f"{binary_name}/compile.log")
-        zipf.write(output_log, f"{binary_name}/output.txt")
-        zipf.write(manifest_path, f"{binary_name}/manifest.json")
-        if monitor_log.exists():
-            zipf.write(monitor_log, f"{binary_name}/nvidia-smi.csv")
-        if pmd2_log.exists():
-            zipf.write(pmd2_log, f"{binary_name}/pmd2.csv")
-        if compiler == "nvcc":
-            zipf.write(ptx_log, f"{binary_name}/ptx.log")
-            for ptx in ptx_files:
-                zipf.write(ptx, f"{binary_name}/{ptx.name}")
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+            add_tree_to_zip(zipf, folder, folder.parent)
+            zipf.write(binary_path, f"{binary_name}/{binary_name}")
+            zipf.write(compile_log, f"{binary_name}/compile.log")
+            zipf.write(output_log, f"{binary_name}/output.txt")
+            zipf.write(manifest_path, f"{binary_name}/manifest.json")
+            if monitor_log.exists():
+                zipf.write(monitor_log, f"{binary_name}/nvidia-smi.csv")
+            if pmd2_log.exists():
+                zipf.write(pmd2_log, f"{binary_name}/pmd2.csv")
+            if compiler == "nvcc":
+                zipf.write(ptx_log, f"{binary_name}/ptx.log")
+                for ptx in ptx_files:
+                    zipf.write(ptx, f"{binary_name}/{ptx.name}")
 
-    print(f"Bundle created: {zip_path}")
+        print(f"Bundle created: {zip_path}")
+    else:
+        print(f"NOTE: NOT SAVED BUNDLE TO ARTIFACT")
     return 0
 
 
