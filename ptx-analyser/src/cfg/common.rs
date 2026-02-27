@@ -141,7 +141,7 @@ impl fmt::Display for ControlFlowGraph {
 
 /// Produce a short human-readable tag for an instruction variant,
 /// e.g. `MovType`, `BraUni`, `SetpCmpopFtzType`, etc.
-fn format_inst_short(inst: &Inst) -> String {
+pub fn format_inst_short(inst: &Inst) -> String {
     let dbg = format!("{inst:?}");
     if let Some(paren) = dbg.find('(') {
         dbg[..paren].to_string()
@@ -171,7 +171,7 @@ fn format_stmt_parts(stmt: &FunctionStatement) -> (Option<String>, String) {
     let ptx = format_stmt_ptx(stmt);
     match stmt {
         FunctionStatement::Instruction { instruction, .. } => {
-            let tag = format_inst_short(&instruction.inst);
+            let tag: String = format_inst_short(&instruction.inst);
             (Some(tag), ptx)
         }
         _ => (None, ptx),

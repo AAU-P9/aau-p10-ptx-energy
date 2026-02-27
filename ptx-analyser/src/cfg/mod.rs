@@ -6,8 +6,8 @@ mod util;
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::cfg_to_html;
 
-use ptx_parser::r#type::{FunctionBody, FunctionStatement, Module, ModuleDirective};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use ptx_parser::r#type::{FunctionBody, FunctionStatement, Module, ModuleDirective, Operand, instruction::Inst};
+use std::{collections::{BTreeMap, BTreeSet, HashMap}, ffi::c_void, thread::scope};
 
 use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
 
@@ -181,6 +181,209 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
         entry: 0,
         exits,
     }
+}
+
+#[derive(Copy, Clone)]
+pub struct Bound {
+    pub min: i128,
+    pub max: i128,
+}
+
+pub trait HasLoopBounds {
+    fn loop_bounds(&self) -> Bound;
+}
+
+impl HasLoopBounds for ptx_parser::r#type::instruction::ld::section_0::Type {
+    fn loop_bounds(&self) -> Bound {
+        match self {
+            ptx_parser::r#type::instruction::ld::section_0::Type::U8 => Bound {
+                min: 0,
+                max: u8::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::U16 => Bound {
+                min: 0,
+                max: u16::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::U32 => Bound {
+                min: 0,
+                max: u32::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::U64 => Bound {
+                min: 0,
+                max: u64::MAX as i128,
+            },
+
+            ptx_parser::r#type::instruction::ld::section_0::Type::S8 => Bound {
+                min: i8::MIN as i128,
+                max: i8::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::S16 => Bound {
+                min: i16::MIN as i128,
+                max: i16::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::S32 => Bound {
+                min: i32::MIN as i128,
+                max: i32::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::S64 => Bound {
+                min: i64::MIN as i128,
+                max: i64::MAX as i128,
+            },
+
+            ptx_parser::r#type::instruction::ld::section_0::Type::B8 => Bound {
+                min: 0,
+                max: u8::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::B16 => Bound {
+                min: 0,
+                max: u16::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::B32 => Bound {
+                min: 0,
+                max: u32::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::B64 => Bound {
+                min: 0,
+                max: u64::MAX as i128,
+            },
+            ptx_parser::r#type::instruction::ld::section_0::Type::B128 => Bound {
+                min: 0,
+                max: i128::MAX,
+            },
+
+            // floats handled separately if needed
+            ptx_parser::r#type::instruction::ld::section_0::Type::F32 => Bound {
+                min: i128::MIN,
+                max: i128::MAX,
+            }, // placeholder
+            ptx_parser::r#type::instruction::ld::section_0::Type::F64 => Bound {
+                min: i128::MIN,
+                max: i128::MAX,
+            },
+        }
+    }
+}
+
+struct BranchInfo {
+    target_label: String,
+    iteration_count: i32,
+}
+
+pub trait IsBranch {
+    fn is_branch(&self) -> Option<BranchInfo>;
+}   
+
+impl IsBranch for BasicBlock {
+    fn is_branch(&self) -> Option<BranchInfo> {
+        let mut is_branch = false;
+        let mut target_label: String = String::new();
+        let mut iteration_count: i32 = 1;
+
+        for stmt in &self.statements {
+            if let FunctionStatement::Instruction { instruction, .. } = stmt {
+                    if let ptx_parser::r#type::instruction::Inst::SetpCmpopFtzType(inst) = &instruction.inst  {
+                        if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.b {
+                            if let Operand::Immediate { operand, .. } = operand {
+                                iteration_count = operand.value.parse().unwrap();
+                            }
+                        }
+                    }
+                    if let ptx_parser::r#type::instruction::Inst::BraUni(inst) = &instruction.inst {
+                        is_branch = true;
+                        if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.tgt {
+                            if let Operand::Symbol { name, .. } = operand {
+                                target_label = name.clone();
+                            }
+                        }
+                    }
+                }
+        }
+
+        if is_branch {
+            return Some(BranchInfo {
+                target_label,
+                iteration_count,
+            });
+        }
+
+        None
+    }
+}
+
+/// Recursively count all instructions in the CFG starting from a given block.
+fn count_instructions_recursive(
+    block_id: BlockId,
+    cfg: &ControlFlowGraph,
+    visited: &mut BTreeSet<BlockId>,
+    total_instructions: &mut i32,
+    scope_instructions: &mut i32,
+    scope_iterations: &mut i32,
+) {
+    // Avoid infinite loops by tracking visited blocks
+    if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
+        *total_instructions += *scope_instructions * *scope_iterations;
+        return;
+    }
+
+    visited.insert(block_id);
+
+    // Count instructions in current block
+    let block = &cfg.blocks[block_id];
+    *scope_instructions += block.statements.len() as i32;
+
+    
+    // Recursively count instructions in successor blocks
+    if let Some(successors) = cfg.successors.get(&block_id) {
+        if successors.len() == 1 {
+            count_instructions_recursive(*successors.iter().next().unwrap(), cfg, visited, total_instructions, scope_instructions, scope_iterations);
+        } else if successors.len() > 1 {
+            let branch_info = block.is_branch().unwrap();
+
+            let successor_a_id = *successors.iter().nth(0).unwrap();
+            let successor_b_id = *successors.iter().nth(1).unwrap();
+
+            let successor_a_block = &cfg.blocks[successor_a_id];
+            let is_block_a_true_branch = successor_a_block.label.is_some();
+            
+            println!("Branch found at block {}: true branch is {}, iteration count is {}", block_id, if is_block_a_true_branch { "A" } else { "B" }, branch_info.iteration_count);
+
+            let mut block_a_scope_instructions = 0;
+            let mut block_b_scope_instructions = 0;
+
+            if (is_block_a_true_branch) {
+                let mut block_a_scope_iterations = *scope_iterations;
+                let mut block_b_scope_iterations = *scope_iterations * branch_info.iteration_count;
+
+                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
+                count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
+            } else {
+                let mut block_a_scope_iterations = branch_info.iteration_count;
+                let mut block_b_scope_iterations = *scope_iterations;
+
+                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
+                count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
+            }
+
+            *total_instructions += *scope_instructions * *scope_iterations;
+        }
+    }
+}
+
+// Analyze the cfg to get a power consumption estimate
+pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>) {
+    let mut symbol_table: HashMap<String, Bound> = HashMap::new();
+
+    let cfg = &cfgs[0];
+
+    // Count total instructions by recursively walking the CFG tree
+    let mut visited = BTreeSet::new();
+    let mut total_instructions = 0;
+    let mut scope_instructions = 0;
+    let mut scope_iterations = 1;
+
+    count_instructions_recursive(cfg.entry, cfg, &mut visited, &mut total_instructions, &mut scope_instructions, &mut scope_iterations);
+
+    println!("Total instructions for the CFG: {}", total_instructions);
 }
 
 // ---------------------------------------------------------------------------

@@ -22,7 +22,11 @@ enum Command {
         input_file: PathBuf,
     },
 
-    /// Parse a PTX source file and build a control-flow graph for every function.
+    AnalyzeCfg {
+        /// Path to the PTX source file to parse.
+        input_file: PathBuf,
+    },
+
     BuildCfg {
         /// Path to the PTX source file to parse.
         input_file: PathBuf,
@@ -93,6 +97,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let json = serde_json::to_string_pretty(&module)?;
             std::fs::write("ast.json", &json)?;
             println!("Saved AST to ast.json ({} bytes)", json.len());
+        }
+        Command::AnalyzeCfg {
+            input_file,
+        } => {
+            let ptx_source = fs::read_to_string(&input_file)?;
+            let module = parse_ptx(&ptx_source)?;
+
+            let file_name = input_file
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            let cfgs = cfg::build_cfgs(&module, &file_name);
+
+            if cfgs.is_empty() {
+                println!("No functions with bodies found in the module.");
+                return Ok(());
+            }
+
+            cfg::analyze_cfgs(&cfgs);
+   
         }
         Command::BuildCfg {
             input_file,
