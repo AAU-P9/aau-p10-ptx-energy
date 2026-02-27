@@ -223,8 +223,7 @@ def main() -> int:
     parser.add_argument("path", type=Path, help="Path to the directory containing CSV files")
     args = parser.parse_args()
 
-    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = Path(f"plots/{args.path.name}_{timestamp}")
+    output_dir = Path(f"plots/{args.path.name}")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Create log file

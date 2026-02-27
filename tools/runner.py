@@ -40,12 +40,14 @@ def run_command(cmd, cwd=None):
     )
 
 
-def add_tree_to_zip(zipf: zipfile.ZipFile, root: Path, base_parent: Path):
+def add_tree_to_folder(output_folder: Path, root: Path, base_parent: Path):
     for path in root.rglob("*"):
         if path.is_dir():
             continue
-        arcname = path.relative_to(base_parent)
-        zipf.write(path, arcname.as_posix())
+        relative_path = path.relative_to(base_parent)
+        destination = output_folder / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
 
 
 def main():
@@ -235,25 +237,25 @@ def main():
 
     if args.artifact:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
-        zip_name = f"{binary_name}_bundle_{timestamp}.zip"
-        zip_path = output_dir / zip_name
+        output_folder = output_dir / f"{binary_name}_bundle_{timestamp}"
+        output_folder.mkdir(parents=True, exist_ok=True)
 
-        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-            add_tree_to_zip(zipf, folder, folder.parent)
-            zipf.write(binary_path, f"{binary_name}/{binary_name}")
-            zipf.write(compile_log, f"{binary_name}/compile.log")
-            zipf.write(output_log, f"{binary_name}/output.txt")
-            zipf.write(manifest_path, f"{binary_name}/manifest.json")
-            if monitor_log.exists():
-                zipf.write(monitor_log, f"{binary_name}/nvidia-smi.csv")
-            if pmd2_log.exists():
-                zipf.write(pmd2_log, f"{binary_name}/pmd2.csv")
-            if compiler == "nvcc":
-                zipf.write(ptx_log, f"{binary_name}/ptx.log")
-                for ptx in ptx_files:
-                    zipf.write(ptx, f"{binary_name}/{ptx.name}")
+        # Copy everything into the output folder
+        add_tree_to_folder(output_folder, folder, folder.parent)
+        shutil.copy2(binary_path, output_folder / binary_name)
+        shutil.copy2(compile_log, output_folder / "compile.log")
+        shutil.copy2(output_log, output_folder / "output.txt")
+        shutil.copy2(manifest_path, output_folder / "manifest.json")
+        if monitor_log.exists():
+            shutil.copy2(monitor_log, output_folder / "nvidia-smi.csv")
+        if pmd2_log.exists():
+            shutil.copy2(pmd2_log, output_folder / "pmd2.csv")
+        if compiler == "nvcc":
+            shutil.copy2(ptx_log, output_folder / "ptx.log")
+            for ptx in ptx_files:
+                shutil.copy2(ptx, output_folder / ptx.name)
 
-        print(f"Bundle created: {zip_path}")
+        print(f"Bundle created: {output_folder}")
     else:
         print(f"NOTE: NOT SAVED BUNDLE TO ARTIFACT")
     return 0
