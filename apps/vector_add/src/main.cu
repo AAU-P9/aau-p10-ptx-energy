@@ -6,10 +6,14 @@
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int n)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (idx < n) {
-        out[idx] = a[idx] + b[idx];
+    int iterations = 1000;
+
+    for(int i = 0; i < iterations; ++i) {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        
+        if (idx < n) {
+            out[idx] = a[idx] + b[idx];
+        }
     }
 }
 

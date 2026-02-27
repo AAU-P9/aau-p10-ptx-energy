@@ -5,15 +5,20 @@
 #include "cupti_timing.h"
 
 __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
-    int row = blockIdx.y * blockDim.y + threadIdx.y;
-    int col = blockIdx.x * blockDim.x + threadIdx.x;
-    float sum = 0.0f;
+    int iterations = 1000;
 
-    if (row < M && col < K) {
-        for (int i = 0; i < N; i++) {
-            sum += A[row * N + i] * B[i * K + col];
+    for(int i = 0; i < iterations; ++i) {
+
+        int row = blockIdx.y * blockDim.y + threadIdx.y;
+        int col = blockIdx.x * blockDim.x + threadIdx.x;
+        float sum = 0.0f;
+
+        if (row < M && col < K) {
+            for (int i = 0; i < N; i++) {
+                sum += A[row * N + i] * B[i * K + col];
+            }
+            C[row * K + col] = sum;
         }
-        C[row * K + col] = sum;
     }
 }
 

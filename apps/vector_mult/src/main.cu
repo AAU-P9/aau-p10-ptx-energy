@@ -4,9 +4,13 @@
 #include "cupti_timing.h"
 
 __global__ void vector_mul(float *A, float *B, float *C, int N) {
-    int index = threadIdx.x + blockIdx.x * blockDim.x;
-    if (index < N) {
-        C[index] = A[index] * B[index];
+    int iterations = 1000;
+
+    for(int i = 0; i < iterations; ++i) {
+        int index = threadIdx.x + blockIdx.x * blockDim.x;
+        if (index < N) {
+            C[index] = A[index] * B[index];
+        }
     }
 }
 
