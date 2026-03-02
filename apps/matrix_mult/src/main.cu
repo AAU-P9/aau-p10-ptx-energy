@@ -5,10 +5,15 @@
 #include "cupti_timing.h"
 
 
-__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
-    int iterations = 100000000;
+#define ITERATIONS 1000
 
-    for(int i = 0; i < iterations; ++i) {
+#define M 1024
+#define N 1024
+#define K 1024
+
+
+__global__ void matrix_mul(float *A, float *B, float *C) {
+    for(int i = 0; i < ITERATIONS; ++i) {
 
         int row = blockIdx.y * blockDim.y + threadIdx.y;
         int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -26,7 +31,6 @@ __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
 int main() {
     initializeCUPTI();
     
-    int M = 1024, N = 1024, K = 1024;
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
     size_t bytes_c = M * K * sizeof(float);
@@ -67,7 +71,7 @@ int main() {
     collectTimestampOffsets();
 
     // Launch kernel with 2D grid and block size
-    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K);
+    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c);
 
     // Check for errors after kernel launch
     cudaDeviceSynchronize();
