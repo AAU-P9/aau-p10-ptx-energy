@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include "cupti_timing.h"
 
-#define ITERATIONS 1200
+#define ITERATIONS 10000000
 
 __global__ void vector_mul(float *A, float *B, float *C, int N) {
     for (int i = 0; i < ITERATIONS; i++) {
