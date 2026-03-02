@@ -301,6 +301,9 @@ def main() -> int:
     pmd2_kernel = pmd2[kernel_mask].copy()
     
     if len(pmd2_kernel) > 1:
+        # Remove the last line in pmd2 since it is often corrupt
+        pmd2_kernel = pmd2_kernel.iloc[:-1]
+
         # Integrate power over time to get energy (Joules = Watts * seconds)
         energy_total_j = integrate.trapezoid(pmd2_kernel["total_power_w"], pmd2_kernel["t_s"])
         energy_sensor4_j = integrate.trapezoid(pmd2_kernel["sensor4_power_w"], pmd2_kernel["t_s"])
