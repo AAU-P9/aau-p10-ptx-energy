@@ -187,6 +187,8 @@ def main():
             print(f"Warning: Failed to start pmd2-cli monitoring: {e}", file=sys.stderr)
             pmd2_process = None
 
+    start_time = datetime.datetime.now()
+
     # Give monitors a moment to start
     if monitor_process is not None or pmd2_process is not None:
         time.sleep(1)
@@ -195,7 +197,11 @@ def main():
 
     # Give monitors a moment to capture final data
     if monitor_process is not None or pmd2_process is not None:
-        time.sleep(1)
+        time.sleep(3)
+
+    end_time = datetime.datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    print(f"Execution time: {duration:.2f} seconds")
 
     # Stop nvidia-smi monitoring
     if monitor_process is not None:
