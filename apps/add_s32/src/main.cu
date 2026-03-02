@@ -11,7 +11,7 @@ __global__ void ptx_kernel(int *out)
     for(int i = 0; i < ITERATIONS; ++i)
     {
         asm volatile (
-            "add.s32 %0, %0, 0;\n\t"  // add tmp + 0 to tmp
+            "add.s32 %0, %0, 1;\n\t"  // add tmp + 0 to tmp
             : "+r"(tmp)               // %0 is a register mapped to tmp
         );
     }
