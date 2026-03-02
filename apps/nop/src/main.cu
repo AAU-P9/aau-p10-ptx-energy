@@ -1,6 +1,6 @@
 #include "cupti_timing.h"
 
-#define ITERATIONS 100000000
+#define ITERATIONS 40000000
 
 __global__ void ptx_kernel(int *out)
 {
