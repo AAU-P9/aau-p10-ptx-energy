@@ -68,11 +68,7 @@ def main():
         nargs=argparse.REMAINDER,
         help="Arguments passed to the compiled binary",
     )
-    parser.add_argument(
-        "--artifact",
-        action=argparse.BooleanOptionalAction,
-        help="Save in artifacts",
-    )
+    # Artifact feature removed; use tools/artifact.py to zip build folder
 
     args = parser.parse_args()
 
@@ -241,29 +237,7 @@ def main():
     manifest_path = build_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
 
-    if args.artifact:
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        output_folder = output_dir / f"{binary_name}_bundle_{timestamp}"
-        output_folder.mkdir(parents=True, exist_ok=True)
-
-        # Copy everything into the output folder
-        add_tree_to_folder(output_folder, folder, folder.parent)
-        shutil.copy2(binary_path, output_folder / binary_name)
-        shutil.copy2(compile_log, output_folder / "compile.log")
-        shutil.copy2(output_log, output_folder / "output.txt")
-        shutil.copy2(manifest_path, output_folder / "manifest.json")
-        if monitor_log.exists():
-            shutil.copy2(monitor_log, output_folder / "nvidia-smi.csv")
-        if pmd2_log.exists():
-            shutil.copy2(pmd2_log, output_folder / "pmd2.csv")
-        if compiler == "nvcc":
-            shutil.copy2(ptx_log, output_folder / "ptx.log")
-            for ptx in ptx_files:
-                shutil.copy2(ptx, output_folder / ptx.name)
-
-        print(f"Bundle created: {output_folder}")
-    else:
-        print(f"NOTE: NOT SAVED BUNDLE TO ARTIFACT")
+    print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
     return 0
 
 
