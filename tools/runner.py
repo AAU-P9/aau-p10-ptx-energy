@@ -9,6 +9,19 @@ import time
 import zipfile
 from pathlib import Path
 import datetime
+from dataclasses import dataclass
+from typing import Optional, List
+
+
+@dataclass
+class RunnerConfig:
+    """Configuration for the runner."""
+    """folder: Path to the folder containing source code to compile and run."""
+    folder: Path
+    """output_dir: Path to the directory where output artifacts will be stored."""
+    output_dir: Path
+    """run_args: Optional list of arguments to pass to the compiled binary when running."""
+    run_args: Optional[List[str]] = None
 
 
 def find_sources(root: Path):
@@ -50,29 +63,16 @@ def add_tree_to_folder(output_folder: Path, root: Path, base_parent: Path):
         shutil.copy2(path, destination)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Compile, run, capture output, and zip source+binary+output."
-    )
-    parser.add_argument(
-        "folder",
-        help="Folder to compile and run (e.g., app)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="artifacts",
-        help="Directory to place zip bundles",
-    )
-    parser.add_argument(
-        "--run-args",
-        nargs=argparse.REMAINDER,
-        help="Arguments passed to the compiled binary",
-    )
-    # Artifact feature removed; use tools/artifact.py to zip build folder
-
-    args = parser.parse_args()
-
-    folder = Path(args.folder).resolve()
+def run_runner(config: RunnerConfig) -> int:
+    """Run madsens jank, does (compilation, execution) 
+    
+    Args:
+        config: RunnerConfig object containing all necessary parameters
+        
+    Returns:
+        Exit code (0 for success, non-zero for failure)
+    """
+    folder = config.folder.resolve()
     if not folder.exists() or not folder.is_dir():
         print(f"Folder not found: {folder}", file=sys.stderr)
         return 2
@@ -86,7 +86,7 @@ def main():
         print(f"Compiler not found in PATH: {compiler}", file=sys.stderr)
         return 2
 
-    output_dir = Path(args.output_dir).resolve()
+    output_dir = config.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     build_root = Path("build").resolve()
@@ -133,8 +133,8 @@ def main():
             return 2
 
     run_cmd = [str(binary_path)]
-    if args.run_args:
-        run_cmd += args.run_args
+    if config.run_args:
+        run_cmd += config.run_args
 
     # Start nvidia-smi monitoring on a separate process
     monitor_log = build_dir / "nvidia-smi.csv"
@@ -239,6 +239,39 @@ def main():
 
     print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
     return 0
+
+
+def parse_args() -> RunnerConfig:
+    parser = argparse.ArgumentParser(
+        description="Compile, run, capture output, and zip source+binary+output."
+    )
+    parser.add_argument(
+        "folder",
+        help="Folder to compile and run (e.g., app)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="artifacts",
+        help="Directory to place zip bundles",
+    )
+    parser.add_argument(
+        "--run-args",
+        nargs=argparse.REMAINDER,
+        help="Arguments passed to the compiled binary",
+    )
+
+    args = parser.parse_args()
+
+    return RunnerConfig(
+        folder=Path(args.folder),
+        output_dir=Path(args.output_dir),
+        run_args=args.run_args,
+    )
+
+def main():
+    """Main entry point."""
+    config = parse_args()
+    return run_runner(config)
 
 
 if __name__ == "__main__":
