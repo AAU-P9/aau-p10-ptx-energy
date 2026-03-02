@@ -4,10 +4,11 @@
 #include <cmath>  // for fabs()
 #include "cupti_timing.h"
 
-#define ITERATIONS 100000000
 
 __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
-    for(int i = 0; i < ITERATIONS; ++i) {
+    int iterations = 100000000;
+
+    for(int i = 0; i < iterations; ++i) {
 
         int row = blockIdx.y * blockDim.y + threadIdx.y;
         int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -61,7 +62,7 @@ int main() {
     dim3 grid_size((K + block_size.x - 1) / block_size.x, 
                    (M + block_size.y - 1) / block_size.y);
 
-    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
+    printf("[LOG] Running kernel with %d iterations...\n");
 
     collectTimestampOffsets();
 
