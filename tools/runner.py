@@ -102,7 +102,7 @@ def main():
     binary_path = build_dir / binary_name
 
     # We run with O0 to ensure we capture the original source.
-    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./include"]
+    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./include", "-arch=sm_89"]
 
     compile_cmd = [compiler] + default_args + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
     compile_result = run_command(compile_cmd)

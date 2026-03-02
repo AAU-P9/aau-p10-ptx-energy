@@ -43,6 +43,8 @@ int main()
     // Copy data to device
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
     
     // Get CPU/GPU offsets
     collectTimestampOffsets();

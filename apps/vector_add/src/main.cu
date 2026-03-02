@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include "cupti_timing.h"
 
+#define ITERATIONS 100000000
+
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int n)
 {
-    int iterations = 10000000;
-
-    for(int i = 0; i < iterations; ++i) {
+    for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         
         if (idx < n) {
@@ -45,6 +45,8 @@ int main()
     // Copy data to device
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     collectTimestampOffsets();
     

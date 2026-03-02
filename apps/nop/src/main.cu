@@ -1,12 +1,14 @@
 #include "cupti_timing.h"
 
-__global__ void ptx_kernel(int *out, int iterations)
+#define ITERATIONS 40000000
+
+__global__ void ptx_kernel(int *out)
 {
     int tid = threadIdx.x;
     int tmp = tid;
 
     // Repeat the instruction in a C loop
-    for(int i = 0; i < iterations; ++i)
+    for(int i = 0; i < ITERATIONS; ++i)
     {
     }
 }
@@ -15,7 +17,6 @@ int main()
 {
     int h[4] = {0}; 
     int *d;
-    int iterations = 100000000; // 100 million iterations
 
     // Initialize CUPTI profiling
     initializeCUPTI();
@@ -23,13 +24,13 @@ int main()
     cudaMalloc(&d, 4*sizeof(int));
     cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
 
-    printf("[LOG] Running kernel with %d iterations...\n", iterations);
+    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     // Get CPU/GPU offsets
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<1,4>>>(d, iterations);
+    ptx_kernel<<<1,4>>>(d);
     cudaDeviceSynchronize();
 
     // Possibly read back results (not necessary for timing, but included for completeness)
