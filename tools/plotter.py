@@ -17,6 +17,13 @@ PMD2_DEFAULT = Path("build/example/pmd2.csv")
 
 
 @dataclass
+class PlotterConfig:
+    """Configuration for the plotter."""
+    """path: Path to the directory containing CSV files (nvidia-smi.csv, pmd2.csv, output.txt)."""
+    path: Path
+
+
+@dataclass
 class IncrementalRegression:
     """Incremental linear regression for timestamp conversion."""
     n: int = 0
@@ -218,13 +225,16 @@ def build_figure(nv: pd.DataFrame, pmd2: pd.DataFrame, timing_data: dict | None 
     return fig
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="Plot combined CSV data with Plotly")
-    parser.add_argument("path", type=Path, help="Path to the directory containing CSV files")
-    args = parser.parse_args()
+def run_plotter(config: PlotterConfig) -> int:
+    """Plot combined GPU power data from nvidia-smi and pmd2 CSVs.
 
-    timestamp = pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')
-    output_dir = Path(f"plots/{timestamp}")
+    Args:
+        config: PlotterConfig object containing all necessary parameters
+
+    Returns:
+        Exit code (0 for success, non-zero for failure)
+    """
+    output_dir = Path(f"plots/{config.path.name}")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Create log file
@@ -236,9 +246,9 @@ def main() -> int:
         with open(log_file, "a") as f:
             f.write(message + "\n")
     
-    nv_path = args.path / "nvidia-smi.csv"
-    pmd2_path = args.path / "pmd2.csv"
-    output_txt_path = args.path / "output.txt"
+    nv_path = config.path / "nvidia-smi.csv"
+    pmd2_path = config.path / "pmd2.csv"
+    output_txt_path = config.path / "output.txt"
     
     nv = load_nvidia_smi(nv_path)
     pmd2 = load_pmd2(pmd2_path)
@@ -302,6 +312,9 @@ def main() -> int:
     pmd2_kernel = pmd2[kernel_mask].copy()
     
     if len(pmd2_kernel) > 1:
+        # Remove the last line in pmd2 since it is often corrupt
+        pmd2_kernel = pmd2_kernel.iloc[:-1]
+
         # Integrate power over time to get energy (Joules = Watts * seconds)
         energy_total_j = integrate.trapezoid(pmd2_kernel["total_power_w"], pmd2_kernel["t_s"])
         energy_sensor4_j = integrate.trapezoid(pmd2_kernel["sensor4_power_w"], pmd2_kernel["t_s"])
@@ -333,6 +346,27 @@ def main() -> int:
     log_print(f"Wrote plots to {output_dir}")
     log_print(f"Log file written to {log_file}")
     return 0
+
+
+def parse_args() -> PlotterConfig:
+    """Parse command-line arguments and return configuration.
+
+    Returns:
+        PlotterConfig object containing parsed arguments
+    """
+    parser = argparse.ArgumentParser(description="Plot combined CSV data with Plotly")
+    parser.add_argument("path", type=Path, help="Path to the directory containing CSV files")
+    args = parser.parse_args()
+
+    return PlotterConfig(
+        path=args.path,
+    )
+
+
+def main() -> int:
+    """Main entry point."""
+    config = parse_args()
+    return run_plotter(config)
 
 
 if __name__ == "__main__":

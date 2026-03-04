@@ -9,3 +9,5 @@ artifacts
 # Ignore plots (also systemlink)
 plots/
 plots
+
+*__pycache__/

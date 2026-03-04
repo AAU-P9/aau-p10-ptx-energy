@@ -1,19 +1,26 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "cupti_timing.h"
+
+#define ITERATIONS 100000000
 
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int n)
 {
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    
-    if (idx < n) {
-        out[idx] = a[idx] + b[idx];
+    for(int i = 0; i < ITERATIONS; ++i) {
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        
+        if (idx < n) {
+            out[idx] = a[idx] + b[idx];
+        }
     }
 }
 
 int main()
 {
+    initializeCUPTI();
+    
     int n = 1024;
     size_t bytes = n * sizeof(float);
     
@@ -38,6 +45,10 @@ int main()
     // Copy data to device
     cudaMemcpy(d_a, h_a, bytes, cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
+
+    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
+
+    collectTimestampOffsets();
     
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;
@@ -66,6 +77,9 @@ int main()
     } else {
         printf("Test failed with %d errors\n", errors);
     }
+
+    flushCUPTIBuffers();
+    printKernelTiming();
     
     // Clean up
     cudaFree(d_a);

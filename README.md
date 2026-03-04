@@ -6,6 +6,9 @@ This repository includes a small Python utility that compiles a project folder, 
 
 Stay at the repository root and run:
 
+uv venv
+uv pip install pandas plotly scipy
+
 uv run tools/runner.py ./apps/<app_dir>
 
 ## Sambashare

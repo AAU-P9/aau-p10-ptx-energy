@@ -9,6 +9,19 @@ import time
 import zipfile
 from pathlib import Path
 import datetime
+from dataclasses import dataclass
+from typing import Optional, List
+
+
+@dataclass
+class RunnerConfig:
+    """Configuration for the runner."""
+    """folder: Path to the folder containing source code to compile and run."""
+    folder: Path
+    """output_dir: Path to the directory where output artifacts will be stored."""
+    output_dir: Path
+    """run_args: Optional list of arguments to pass to the compiled binary when running."""
+    run_args: Optional[List[str]] = None
 
 
 def find_sources(root: Path):
@@ -40,36 +53,26 @@ def run_command(cmd, cwd=None):
     )
 
 
-def add_tree_to_zip(zipf: zipfile.ZipFile, root: Path, base_parent: Path):
+def add_tree_to_folder(output_folder: Path, root: Path, base_parent: Path):
     for path in root.rglob("*"):
         if path.is_dir():
             continue
-        arcname = path.relative_to(base_parent)
-        zipf.write(path, arcname.as_posix())
+        relative_path = path.relative_to(base_parent)
+        destination = output_folder / relative_path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Compile, run, capture output, and zip source+binary+output."
-    )
-    parser.add_argument(
-        "folder",
-        help="Folder to compile and run (e.g., app)",
-    )
-    parser.add_argument(
-        "--output-dir",
-        default="artifacts",
-        help="Directory to place zip bundles",
-    )
-    parser.add_argument(
-        "--run-args",
-        nargs=argparse.REMAINDER,
-        help="Arguments passed to the compiled binary",
-    )
-
-    args = parser.parse_args()
-
-    folder = Path(args.folder).resolve()
+def run_runner(config: RunnerConfig) -> int:
+    """Run madsens jank, does (compilation, execution) 
+    
+    Args:
+        config: RunnerConfig object containing all necessary parameters
+        
+    Returns:
+        Exit code (0 for success, non-zero for failure)
+    """
+    folder = config.folder.resolve()
     if not folder.exists() or not folder.is_dir():
         print(f"Folder not found: {folder}", file=sys.stderr)
         return 2
@@ -83,7 +86,7 @@ def main():
         print(f"Compiler not found in PATH: {compiler}", file=sys.stderr)
         return 2
 
-    output_dir = Path(args.output_dir).resolve()
+    output_dir = config.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
     build_root = Path("build").resolve()
@@ -95,7 +98,7 @@ def main():
     binary_path = build_dir / binary_name
 
     # We run with O0 to ensure we capture the original source.
-    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./include"]
+    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./include", "-arch=sm_89"]
 
     compile_cmd = [compiler] + default_args + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
     compile_result = run_command(compile_cmd)
@@ -130,8 +133,8 @@ def main():
             return 2
 
     run_cmd = [str(binary_path)]
-    if args.run_args:
-        run_cmd += args.run_args
+    if config.run_args:
+        run_cmd += config.run_args
 
     # Start nvidia-smi monitoring on a separate process
     monitor_log = build_dir / "nvidia-smi.csv"
@@ -180,15 +183,21 @@ def main():
             print(f"Warning: Failed to start pmd2-cli monitoring: {e}", file=sys.stderr)
             pmd2_process = None
 
+    start_time = datetime.datetime.now()
+
     # Give monitors a moment to start
     if monitor_process is not None or pmd2_process is not None:
-        time.sleep(5)
+        time.sleep(1)
 
     run_result = run_command(run_cmd)
 
     # Give monitors a moment to capture final data
     if monitor_process is not None or pmd2_process is not None:
-        time.sleep(10)
+        time.sleep(3)
+
+    end_time = datetime.datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    print(f"Execution time: {duration:.2f} seconds")
 
     # Stop nvidia-smi monitoring
     if monitor_process is not None:
@@ -228,27 +237,41 @@ def main():
     manifest_path = build_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
 
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    zip_name = f"{binary_name}_bundle_{timestamp}.zip"
-    zip_path = output_dir / zip_name
-
-    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
-        add_tree_to_zip(zipf, folder, folder.parent)
-        zipf.write(binary_path, f"{binary_name}/{binary_name}")
-        zipf.write(compile_log, f"{binary_name}/compile.log")
-        zipf.write(output_log, f"{binary_name}/output.txt")
-        zipf.write(manifest_path, f"{binary_name}/manifest.json")
-        if monitor_log.exists():
-            zipf.write(monitor_log, f"{binary_name}/nvidia-smi.csv")
-        if pmd2_log.exists():
-            zipf.write(pmd2_log, f"{binary_name}/pmd2.csv")
-        if compiler == "nvcc":
-            zipf.write(ptx_log, f"{binary_name}/ptx.log")
-            for ptx in ptx_files:
-                zipf.write(ptx, f"{binary_name}/{ptx.name}")
-
-    print(f"Bundle created: {zip_path}")
+    print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
     return 0
+
+
+def parse_args() -> RunnerConfig:
+    parser = argparse.ArgumentParser(
+        description="Compile, run, capture output, and zip source+binary+output."
+    )
+    parser.add_argument(
+        "folder",
+        help="Folder to compile and run (e.g., app)",
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="artifacts",
+        help="Directory to place zip bundles",
+    )
+    parser.add_argument(
+        "--run-args",
+        nargs=argparse.REMAINDER,
+        help="Arguments passed to the compiled binary",
+    )
+
+    args = parser.parse_args()
+
+    return RunnerConfig(
+        folder=Path(args.folder),
+        output_dir=Path(args.output_dir),
+        run_args=args.run_args,
+    )
+
+def main():
+    """Main entry point."""
+    config = parse_args()
+    return run_runner(config)
 
 
 if __name__ == "__main__":
