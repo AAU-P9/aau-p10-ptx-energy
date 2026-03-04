@@ -6,7 +6,7 @@ mod util;
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::cfg_to_html;
 
-use ptx_parser::r#type::{FunctionBody, FunctionStatement, Module, ModuleDirective, Operand, instruction::Inst};
+use ptx_parser::r#type::{FunctionBody, FunctionStatement, MetaDirective, Module, ModuleDirective, Operand, instruction::Inst};
 use std::{collections::{BTreeMap, BTreeSet, HashMap}, ffi::c_void, thread::scope};
 
 use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
@@ -57,8 +57,20 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
             predecessors: BTreeMap::new(),
             entry: 0,
             exits: vec![0],
+            meta: vec![],
         };
     }
+
+    // ------------------------------------------------------------------
+    // Collect @META annotations from the function body.
+    // ------------------------------------------------------------------
+    let meta: Vec<MetaDirective> = stmts
+        .iter()
+        .filter_map(|s| match s {
+            FunctionStatement::Meta { directive, .. } => Some(directive.clone()),
+            _ => None,
+        })
+        .collect();
 
     // ------------------------------------------------------------------
     // Pass 1 – identify leader indices.
@@ -103,7 +115,11 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
             .copied()
             .unwrap_or(stmts.len());
 
-        let block_stmts: Vec<FunctionStatement> = stmts[start..end].to_vec();
+        let block_stmts: Vec<FunctionStatement> = stmts[start..end]
+            .iter()
+            .filter(|s| !matches!(s, FunctionStatement::Meta { .. }))
+            .cloned()
+            .collect();
 
         let label = block_stmts.first().and_then(|s| match s {
             FunctionStatement::Label { label, .. } => Some(label.val.clone()),
@@ -180,6 +196,7 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
         predecessors,
         entry: 0,
         exits,
+        meta,
     }
 }
 
