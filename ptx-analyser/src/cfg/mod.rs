@@ -266,7 +266,7 @@ impl HasLoopBounds for ptx_parser::r#type::instruction::ld::section_0::Type {
 
 struct BranchInfo {
     target_label: String,
-    iteration_count: i32,
+    iteration_count: i64,
 }
 
 pub trait IsBranch {
@@ -277,7 +277,7 @@ impl IsBranch for BasicBlock {
     fn is_branch(&self) -> Option<BranchInfo> {
         let mut is_branch = false;
         let mut target_label: String = String::new();
-        let mut iteration_count: i32 = 1;
+        let mut iteration_count: i64 = 1;
 
         for stmt in &self.statements {
             if let FunctionStatement::Instruction { instruction, .. } = stmt {
@@ -315,9 +315,9 @@ fn count_instructions_recursive(
     block_id: BlockId,
     cfg: &ControlFlowGraph,
     visited: &mut BTreeSet<BlockId>,
-    total_instructions: &mut i32,
-    scope_instructions: &mut i32,
-    scope_iterations: &mut i32,
+    total_instructions: &mut i64,
+    scope_instructions: &mut i64,
+    scope_iterations: &mut i64,
 ) {
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
@@ -329,7 +329,9 @@ fn count_instructions_recursive(
 
     // Count instructions in current block
     let block = &cfg.blocks[block_id];
-    *scope_instructions += block.statements.len() as i32;
+    *scope_instructions += block.statements.len() as i64;
+
+    println!("Visiting block {}, current scope instructions: {}, current scope iterations: {}", block_id, *scope_instructions, *scope_iterations);
 
     
     // Recursively count instructions in successor blocks
@@ -349,7 +351,7 @@ fn count_instructions_recursive(
 
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
-
+            
             if (is_block_a_true_branch) {
                 let mut block_a_scope_iterations = *scope_iterations;
                 let mut block_b_scope_iterations = *scope_iterations * branch_info.iteration_count;
@@ -357,7 +359,7 @@ fn count_instructions_recursive(
                 count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
                 count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
             } else {
-                let mut block_a_scope_iterations = branch_info.iteration_count;
+                let mut block_a_scope_iterations = *scope_iterations * branch_info.iteration_count;
                 let mut block_b_scope_iterations = *scope_iterations;
 
                 count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
@@ -377,8 +379,8 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>) {
 
     // Count total instructions by recursively walking the CFG tree
     let mut visited = BTreeSet::new();
-    let mut total_instructions = 0;
-    let mut scope_instructions = 0;
+    let mut total_instructions: i64 = 0;
+    let mut scope_instructions: i64 = 0;
     let mut scope_iterations = 1;
 
     count_instructions_recursive(cfg.entry, cfg, &mut visited, &mut total_instructions, &mut scope_instructions, &mut scope_iterations);
