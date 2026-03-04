@@ -309,7 +309,7 @@ impl IsBranch for BasicBlock {
         None
     }
 }
-
+ 
 /// Recursively count all instructions in the CFG starting from a given block.
 fn count_instructions_recursive(
     block_id: BlockId,
@@ -322,6 +322,7 @@ fn count_instructions_recursive(
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
         *total_instructions += *scope_instructions * *scope_iterations;
+        println!("[RETURN_END] Incrementing total instructions by {}, returning from block {}", *scope_instructions * *scope_iterations, block_id);
         return;
     }
 
@@ -331,7 +332,12 @@ fn count_instructions_recursive(
     let block = &cfg.blocks[block_id];
     *scope_instructions += block.statements.len() as i64;
 
-    println!("Visiting block {}, current scope instructions: {}, current scope iterations: {}", block_id, *scope_instructions, *scope_iterations);
+    // Debug: Print if the block has no instructions, this should be impossible.
+    if block.statements.is_empty() {
+        println!("[ERROR] Block {} has no statements", block_id);
+    }
+
+    println!("[VISIT] Visiting block {}, current scope instructions: {}, current scope iterations: {}", block_id, *scope_instructions, *scope_iterations);
 
     
     // Recursively count instructions in successor blocks
@@ -345,9 +351,9 @@ fn count_instructions_recursive(
             let successor_b_id = *successors.iter().nth(1).unwrap();
 
             let successor_a_block = &cfg.blocks[successor_a_id];
-            let is_block_a_true_branch = successor_a_block.label.is_some();
+            let is_block_a_true_branch = successor_a_block.label.is_some() && successor_a_block.label.as_ref().unwrap() == &branch_info.target_label;
             
-            println!("Branch found at block {}: true branch is {}, iteration count is {}", block_id, if is_block_a_true_branch { "A" } else { "B" }, branch_info.iteration_count);
+            println!("[BRANCH] Branch found at block {}: true branch is {}, iteration count is {}", block_id, if is_block_a_true_branch { "A" } else { "B" }, branch_info.iteration_count);
 
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
@@ -355,18 +361,27 @@ fn count_instructions_recursive(
             if (is_block_a_true_branch) {
                 let mut block_a_scope_iterations = *scope_iterations;
                 let mut block_b_scope_iterations = *scope_iterations * branch_info.iteration_count;
-
-                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
+                
+                
+                println!("[A_TRUE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}", successor_b_id, block_b_scope_iterations, block_id);
                 count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
+
+                println!("[A_TRUE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}", successor_a_id, block_a_scope_iterations, block_id);
+                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
             } else {
                 let mut block_a_scope_iterations = *scope_iterations * branch_info.iteration_count;
                 let mut block_b_scope_iterations = *scope_iterations;
-
+                
+                println!("[A_FALSE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}", successor_a_id, block_a_scope_iterations, block_id);
                 count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
+
+                println!("[A_FALSE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}", successor_b_id, block_b_scope_iterations, block_id);
                 count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
+
             }
 
             *total_instructions += *scope_instructions * *scope_iterations;
+            println!("[RETURN_SCOPE] Incrementing total instructions by {}, returning from block {}", *scope_instructions * *scope_iterations, block_id);
         }
     }
 }
