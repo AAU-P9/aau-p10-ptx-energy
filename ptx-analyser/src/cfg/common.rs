@@ -1,5 +1,6 @@
 use ptx_parser::PtxUnparser;
 use ptx_parser::r#type::instruction::Inst;
+use ptx_parser::r#type::meta::{MetaDirective, MetaTag, MetaConstraint};
 use ptx_parser::r#type::{FunctionStatement, Predicate};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -84,6 +85,9 @@ pub struct ControlFlowGraph {
 
     /// Ids of blocks that end in `ret` or `exit` (or fall off the end).
     pub exits: Vec<BlockId>,
+
+    /// `// @META` annotations found in the function body.
+    pub meta: Vec<MetaDirective>,
 }
 
 // ---------------------------------------------------------------------------
@@ -108,6 +112,14 @@ impl fmt::Display for ControlFlowGraph {
                 .join(", ")
         )?;
         writeln!(f)?;
+
+        if !self.meta.is_empty() {
+            writeln!(f, "  @META annotations ({}):", self.meta.len())?;
+            for m in &self.meta {
+                writeln!(f, "    {}", format_meta_line(m))?;
+            }
+            writeln!(f)?;
+        }
 
         for block in &self.blocks {
             let label_str = block
@@ -188,6 +200,67 @@ fn format_stmt_line(stmt: &FunctionStatement) -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Meta annotation formatting helpers
+// ---------------------------------------------------------------------------
+
+/// Format a single constraint for display.
+fn format_constraint(c: &MetaConstraint) -> String {
+    match c {
+        MetaConstraint::Range { lo, hi } => format!("range={lo}:{hi}"),
+        MetaConstraint::Stride { value } => format!("stride={value}"),
+        MetaConstraint::Multiple { value } => format!("multiple={value}"),
+        MetaConstraint::Align { value } => format!("align={value}"),
+        MetaConstraint::ReadOnly => "readonly".to_string(),
+        MetaConstraint::WriteOnly => "writeonly".to_string(),
+        MetaConstraint::ReadWrite => "readwrite".to_string(),
+        MetaConstraint::NoAlias => "noalias".to_string(),
+        MetaConstraint::Other(s) => s.clone(),
+    }
+}
+
+/// Format a MetaTag as a human-readable line for display in the CFG.
+fn format_meta_tag(tag: &MetaTag) -> String {
+    match tag {
+        MetaTag::BeginKernel { name } => format!("BEGIN_KERNEL {name}"),
+        MetaTag::EndKernel { name } => format!("END_KERNEL {name}"),
+        MetaTag::Param { index, name, param_type, role, constraints } => {
+            let cs: Vec<String> = constraints.iter().map(format_constraint).collect();
+            let cs_str = if cs.is_empty() { String::new() } else { format!(" {}", cs.join(" ")) };
+            format!("PARAM {index} {name} {param_type} {role}{cs_str}")
+        }
+        MetaTag::Tile { dim, size } => format!("TILE {dim} {size}"),
+        MetaTag::Launch { block_x, block_y, block_z, grid_expr } => {
+            format!("LAUNCH {block_x} {block_y} {block_z} {grid_expr}")
+        }
+        MetaTag::SharedMem { name, elem_type, total_bytes } => {
+            format!("SHARED_MEM {name} {elem_type} {total_bytes}")
+        }
+        MetaTag::Loop { label, min_iters, max_iters, is_unrolled } => {
+            format!("LOOP {label} {min_iters}..{max_iters} unrolled={is_unrolled}")
+        }
+        MetaTag::Layout { name, order, dims } => format!("LAYOUT {name} {order} {dims}"),
+        MetaTag::Assume { description } => format!("ASSUME {description}"),
+        MetaTag::ConstTable { symbol_name, num_entries } => {
+            format!("CONST_TABLE {symbol_name} ({num_entries})")
+        }
+        MetaTag::Const { symbol_name, fields } => format!("CONST {symbol_name} {fields}"),
+        MetaTag::Custom { key, value } => format!("CUSTOM {key} {value}"),
+        MetaTag::Version { version } => format!("VERSION {version}"),
+        MetaTag::Kernel { name } => format!("KERNEL {name}"),
+        MetaTag::Unknown { raw } => raw.clone(),
+    }
+}
+
+/// Format a MetaDirective as a single display line.
+pub fn format_meta_line(m: &MetaDirective) -> String {
+    let version_prefix = match m.version {
+        Some(v) => format!("@META:{v} "),
+        None => "@META ".to_string(),
+    };
+    format!("{version_prefix}{}", format_meta_tag(&m.tag))
+}
+
+// ---------------------------------------------------------------------------
 // Mermaid export
 // ---------------------------------------------------------------------------
 
@@ -196,6 +269,19 @@ impl ControlFlowGraph {
     pub fn to_mermaid(&self) -> String {
         let mut out = String::new();
         out.push_str("graph TD\n");
+
+        // Render @META annotations as a special info node
+        if !self.meta.is_empty() {
+            let meta_lines: Vec<String> = self.meta.iter().map(format_meta_line).collect();
+            let meta_body = meta_lines.join("\n");
+            let escaped = meta_body.replace('"', "#quot;");
+            out.push_str(&format!(
+                "    META[\"<b>@META annotations</b><br/><pre>{}</pre>\"]\n",
+                escaped
+            ));
+            out.push_str("    style META fill:#2d2a4a,stroke:#b4befe,stroke-width:2px,color:#cdd6f4\n");
+            out.push_str(&format!("    META -.-> BB{}\n", self.entry));
+        }
 
         for block in &self.blocks {
             let stmt_lines: Vec<String> = block
@@ -274,6 +360,29 @@ impl ControlFlowGraph {
         out.push_str(
             "  node [shape=box, fontname=\"monospace\", fontsize=10, margin=\"0.3,0.2\"];\n",
         );
+
+        // Render @META annotations as a separate info node
+        if !self.meta.is_empty() {
+            let mut table = String::new();
+            table.push_str(
+                "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"2\">",
+            );
+            table.push_str(
+                "<TR><TD COLSPAN=\"2\" ALIGN=\"CENTER\"><B>@META annotations</B></TD></TR>",
+            );
+            table.push_str("<HR/>");
+            for m in &self.meta {
+                let line = dot_html_escape(&format_meta_line(m));
+                table.push_str(&format!(
+                    "<TR><TD ALIGN=\"LEFT\"><FONT COLOR=\"#b4befe\">{line}</FONT></TD></TR>"
+                ));
+            }
+            table.push_str("</TABLE>");
+            out.push_str(&format!(
+                "  META [label=<{table}>, shape=note, style=filled, fillcolor=\"#2d2a4a\", fontcolor=\"#cdd6f4\"];\n"
+            ));
+            out.push_str(&format!("  META -> BB{} [style=dashed, color=\"#888888\"];\n", self.entry));
+        }
 
         for block in &self.blocks {
             // Build an HTML table label so tag and PTX text align in columns.
