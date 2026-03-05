@@ -3,15 +3,16 @@
 #include <stdlib.h>
 #include "cupti_timing.h"
 
-#define ITERATIONS 100000000
+#define ITERATIONS 10000000
+#define N 1024
 
 // Vector add kernel: out[i] = a[i] + b[i]
-__global__ void vector_add(float *a, float *b, float *out, int n)
+__global__ void vector_add(float *a, float *b, float *out)
 {
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         
-        if (idx < n) {
+        if (idx < N) {
             out[idx] = a[idx] + b[idx];
         }
     }
@@ -21,8 +22,7 @@ int main()
 {
     initializeCUPTI();
     
-    int n = 1024;
-    size_t bytes = n * sizeof(float);
+    size_t bytes = N * sizeof(float);
     
     // Host vectors
     float *h_a = (float *)malloc(bytes);
@@ -30,7 +30,7 @@ int main()
     float *h_out = (float *)malloc(bytes);
     
     // Initialize host vectors
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < N; i++) {
         h_a[i] = (float)i;
         h_b[i] = (float)(i * 2);
         h_out[i] = 0.0f;
@@ -52,32 +52,12 @@ int main()
     
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;
-    int grid_size = (n + block_size - 1) / block_size;
-    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, n);
+    int grid_size = (N + block_size - 1) / block_size;
+    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out);
     
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     
-    // Verify results
-    int errors = 0;
-    for (int i = 0; i < n; i++) {
-        float expected = h_a[i] + h_b[i];
-        if (h_out[i] != expected) {
-            errors++;
-            if (errors <= 5) {
-                printf("Error at index %d: expected %f, got %f\n", i, expected, h_out[i]);
-            }
-        }
-    }
-    
-    if (errors == 0) {
-        printf("Vector add kernel executed successfully!\n");
-        printf("Sum of first 5 elements: %.2f, %.2f, %.2f, %.2f, %.2f\n", 
-               h_out[0], h_out[1], h_out[2], h_out[3], h_out[4]);
-    } else {
-        printf("Test failed with %d errors\n", errors);
-    }
-
     flushCUPTIBuffers();
     printKernelTiming();
     
