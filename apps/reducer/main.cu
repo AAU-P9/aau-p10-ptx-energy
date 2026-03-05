@@ -318,8 +318,6 @@ int main()
     cudaMalloc(&d_partial, partialBytes);
     cudaMemcpy(d_input, h_input, inputBytes, cudaMemcpyHostToDevice);
 
-
-    
     // Run kernel
     reduce_sum_kernel<<<blocks, threads>>>(d_input, d_partial, N_ELEMS);
 
