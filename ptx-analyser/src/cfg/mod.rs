@@ -6,7 +6,16 @@ mod util;
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::cfg_to_html;
 
-use ptx_parser::r#type::{FunctionBody, FunctionStatement, MetaDirective, Module, ModuleDirective, Operand};
+use ptx_parser::r#type::{
+    EntryFunctionHeaderDirective,
+    FunctionBody,
+    FunctionDim,
+    FunctionStatement,
+    MetaDirective,
+    Module,
+    ModuleDirective,
+    Operand,
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
@@ -24,7 +33,8 @@ pub fn build_cfgs(module: &Module, source_file: &str) -> Vec<ControlFlowGraph> {
             ModuleDirective::EntryFunction { directive, .. } => {
                 if let Some(body) = &directive.body {
                     let name = directive.name.val.clone();
-                    cfgs.push(build_cfg(&name, body, source_file));
+                    let maxntid = extract_maxntid(&directive.directives);
+                    cfgs.push(build_cfg_with_header(&name, body, source_file, maxntid));
                 }
             }
             ModuleDirective::FuncFunction { directive, .. } => {
@@ -40,8 +50,31 @@ pub fn build_cfgs(module: &Module, source_file: &str) -> Vec<ControlFlowGraph> {
     cfgs
 }
 
-/// Build a single CFG from a function body.
+/// Extract the `.maxntid` header directive (if any) from an entry's header
+/// directive list.
+fn extract_maxntid(directives: &[EntryFunctionHeaderDirective]) -> Option<FunctionDim> {
+    directives.iter().find_map(|d| match d {
+        EntryFunctionHeaderDirective::MaxNTid { dim, .. } => Some(dim.clone()),
+        _ => None,
+    })
+}
+
+/// Build a single CFG from a function body (no header information).
+///
+/// This is used for plain `.func` device functions that do not carry
+/// launch-bounds style directives such as `.maxntid`.
 pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) -> ControlFlowGraph {
+    build_cfg_with_header(function_name, body, source_file, None)
+}
+
+/// Internal helper that also takes entry-function header information such as
+/// `.maxntid` (if available).
+fn build_cfg_with_header(
+    function_name: &str,
+    body: &FunctionBody,
+    source_file: &str,
+    maxntid: Option<FunctionDim>,
+) -> ControlFlowGraph {
     let stmts = &body.statements;
 
     if stmts.is_empty() {
@@ -58,6 +91,7 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
             entry: 0,
             exits: vec![0],
             meta: vec![],
+            maxntid,
         };
     }
 
@@ -197,6 +231,7 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
         entry: 0,
         exits,
         meta,
+        maxntid,
     }
 }
 

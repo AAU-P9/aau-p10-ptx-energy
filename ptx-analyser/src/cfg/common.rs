@@ -1,7 +1,7 @@
 use ptx_parser::PtxUnparser;
 use ptx_parser::r#type::instruction::Inst;
-use ptx_parser::r#type::meta::{MetaDirective, MetaTag, MetaConstraint};
-use ptx_parser::r#type::{FunctionStatement, Predicate};
+use ptx_parser::r#type::meta::{MetaConstraint, MetaDirective, MetaTag};
+use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -88,6 +88,11 @@ pub struct ControlFlowGraph {
 
     /// `// @META` annotations found in the function body.
     pub meta: Vec<MetaDirective>,
+
+    /// `.maxntid` header directive for this entry function, if present.
+    ///
+    /// For non-entry device functions this is always `None`.
+    pub maxntid: Option<FunctionDim>,
 }
 
 // ---------------------------------------------------------------------------
