@@ -19,9 +19,12 @@ set -euo pipefail
 # --------------------------------------------------------------------------
 CUDA_PATH="${CUDA_PATH:-/usr/local/cuda}"
 SM="${SM:-86}"
-SRC="${SRC:-matmul.cu}"
+SRC="${SRC:-reduce.cu}"
 OUT="build"
 ANALYSIS="${ANALYSIS:-0}"    # set to 1 to also generate LLVM IR with clang
+
+# Project include directory (for ptx_meta.h, cupti_timing.h, etc.)
+PROJECT_INCLUDE="-I../include"
 
 # Derive executable name from source file
 EXE_NAME="${SRC%.cu}_demo"
@@ -41,6 +44,7 @@ echo "========================================================"
 echo ""
 echo "[1/3] Generating PTX (nvcc)       ->  $OUT/device.ptx"
 nvcc -arch="$ARCH" -std=c++17 -O2 \
+    $PROJECT_INCLUDE \
     --ptx \
     "$SRC" -o "$OUT/device.ptx"
 
@@ -80,6 +84,7 @@ echo "  ld.global.nc (non-coherent): ${count:-0} occurrences"
 echo ""
 echo "[2/3] Compiling executable (nvcc) ->  $OUT/$EXE_NAME"
 nvcc -arch="$ARCH" -std=c++17 -O2 \
+    $PROJECT_INCLUDE \
     "$SRC" -o "$OUT/$EXE_NAME"
 
 echo "      Running $EXE_NAME..."
@@ -116,6 +121,7 @@ if [ "$ANALYSIS" = "1" ]; then
         --cuda-path="$CUDA_PATH"
         --cuda-gpu-arch="$ARCH"
         -I"$CUDA_PATH/include"
+        $PROJECT_INCLUDE
         -std=c++17
         -O2
         -Wno-unknown-cuda-version

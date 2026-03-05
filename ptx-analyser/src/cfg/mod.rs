@@ -6,8 +6,8 @@ mod util;
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::cfg_to_html;
 
-use ptx_parser::r#type::{FunctionBody, FunctionStatement, MetaDirective, Module, ModuleDirective, Operand, instruction::Inst};
-use std::{collections::{BTreeMap, BTreeSet, HashMap}, ffi::c_void, thread::scope};
+use ptx_parser::r#type::{FunctionBody, FunctionStatement, MetaDirective, Module, ModuleDirective, Operand};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
 
@@ -200,12 +200,14 @@ pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) ->
     }
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct Bound {
     pub min: i128,
     pub max: i128,
 }
 
+#[allow(dead_code)]
 pub trait HasLoopBounds {
     fn loop_bounds(&self) -> Bound;
 }
@@ -281,7 +283,7 @@ impl HasLoopBounds for ptx_parser::r#type::instruction::ld::section_0::Type {
     }
 }
 
-struct BranchInfo {
+pub(crate) struct BranchInfo {
     target_label: String,
     iteration_count: i64,
 }
@@ -375,7 +377,7 @@ fn count_instructions_recursive(
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
             
-            if (is_block_a_true_branch) {
+            if is_block_a_true_branch {
                 let mut block_a_scope_iterations = *scope_iterations;
                 let mut block_b_scope_iterations = *scope_iterations * branch_info.iteration_count;
                 
@@ -405,8 +407,6 @@ fn count_instructions_recursive(
 
 // Analyze the cfg to get a power consumption estimate
 pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>) {
-    let mut symbol_table: HashMap<String, Bound> = HashMap::new();
-
     let cfg = &cfgs[0];
 
     // Count total instructions by recursively walking the CFG tree
