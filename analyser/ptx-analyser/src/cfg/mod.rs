@@ -7,14 +7,8 @@ pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::cfg_to_html;
 
 use ptx_parser::r#type::{
-    EntryFunctionHeaderDirective,
-    FunctionBody,
-    FunctionDim,
-    FunctionStatement,
-    MetaDirective,
-    Module,
-    ModuleDirective,
-    Operand,
+    EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
+    Module, ModuleDirective, Operand,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
@@ -289,7 +283,7 @@ impl HasLoopBounds for ptx_parser::r#type::instruction::ld::section_0::Type {
                 max: u8::MAX as i128,
             },
             ptx_parser::r#type::instruction::ld::section_0::Type::B16 => Bound {
-                min: 0,
+                min: 0,2
                 max: u16::MAX as i128,
             },
             ptx_parser::r#type::instruction::ld::section_0::Type::B32 => Bound {
@@ -325,7 +319,7 @@ pub(crate) struct BranchInfo {
 
 pub trait IsBranch {
     fn is_branch(&self) -> Option<BranchInfo>;
-}   
+}
 
 impl IsBranch for BasicBlock {
     fn is_branch(&self) -> Option<BranchInfo> {
@@ -335,22 +329,24 @@ impl IsBranch for BasicBlock {
 
         for stmt in &self.statements {
             if let FunctionStatement::Instruction { instruction, .. } = stmt {
-                    if let ptx_parser::r#type::instruction::Inst::SetpCmpopFtzType(inst) = &instruction.inst  {
-                        if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.b {
-                            if let Operand::Immediate { operand, .. } = operand {
-                                iteration_count = operand.value.parse().unwrap();
-                            }
-                        }
-                    }
-                    if let ptx_parser::r#type::instruction::Inst::BraUni(inst) = &instruction.inst {
-                        is_branch = true;
-                        if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.tgt {
-                            if let Operand::Symbol { name, .. } = operand {
-                                target_label = name.clone();
-                            }
+                if let ptx_parser::r#type::instruction::Inst::SetpCmpopFtzType(inst) =
+                    &instruction.inst
+                {
+                    if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.b {
+                        if let Operand::Immediate { operand, .. } = operand {
+                            iteration_count = operand.value.parse().unwrap();
                         }
                     }
                 }
+                if let ptx_parser::r#type::instruction::Inst::BraUni(inst) = &instruction.inst {
+                    is_branch = true;
+                    if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.tgt {
+                        if let Operand::Symbol { name, .. } = operand {
+                            target_label = name.clone();
+                        }
+                    }
+                }
+            }
         }
 
         if is_branch {
@@ -363,7 +359,7 @@ impl IsBranch for BasicBlock {
         None
     }
 }
- 
+
 /// Recursively count all instructions in the CFG starting from a given block.
 fn count_instructions_recursive(
     block_id: BlockId,
@@ -376,13 +372,17 @@ fn count_instructions_recursive(
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
         *total_instructions += *scope_instructions * *scope_iterations;
-        println!("[RETURN_END] Incrementing total instructions by {}, returning from block {}", *scope_instructions * *scope_iterations, block_id);
+        println!(
+            "[RETURN_END] Incrementing total instructions by {}, returning from block {}",
+            *scope_instructions * *scope_iterations,
+            block_id
+        );
         return;
     }
 
     visited.insert(block_id);
 
-    // Count instructions in current block
+    // Count instructions in current block1x
     let block = &cfg.blocks[block_id];
     *scope_instructions += block.statements.len() as i64;
 
@@ -391,13 +391,30 @@ fn count_instructions_recursive(
         println!("[ERROR] Block {} has no statements", block_id);
     }
 
-    println!("[VISIT] Visiting block {}, current scope instructions: {}, current scope iterations: {}", block_id, *scope_instructions, *scope_iterations);
+    println!(
+        "[VISIT] Visiting block {}, current scope instructions: {}, current scope iterations: {}",
+        block_id, *scope_instructions, *scope_iterations
+    );
 
-    
     // Recursively count instructions in successor blocks
     if let Some(successors) = cfg.successors.get(&block_id) {
-        if successors.len() == 1 {
-            count_instructions_recursive(*successors.iter().next().unwrap(), cfg, visited, total_instructions, scope_instructions, scope_iterations);
+        if (successors.len() == 0) {
+            println!("[NO_SUCCESSORS] Block {} has no successors", block_id);
+        } else if successors.len() == 1 {
+            println!(
+                "[SINGLE_SUCCESSOR] Block {} has a single successor {}, continuing with same scope iterations {}",
+                block_id,
+                *successors.iter().nth(0).unwrap(),
+                *scope_iterations
+            );
+            count_instructions_recursive(
+                *successors.iter().nth(0).unwrap(),
+                cfg,
+                visited,
+                total_instructions,
+                scope_instructions,
+                scope_iterations,
+            );
         } else if successors.len() > 1 {
             let branch_info = block.is_branch().unwrap();
 
@@ -405,37 +422,85 @@ fn count_instructions_recursive(
             let successor_b_id = *successors.iter().nth(1).unwrap();
 
             let successor_a_block = &cfg.blocks[successor_a_id];
-            let is_block_a_true_branch = successor_a_block.label.is_some() && successor_a_block.label.as_ref().unwrap() == &branch_info.target_label;
-            
-            println!("[BRANCH] Branch found at block {}: true branch is {}, iteration count is {}", block_id, if is_block_a_true_branch { "A" } else { "B" }, branch_info.iteration_count);
+            let is_block_a_true_branch = successor_a_block.label.is_some()
+                && successor_a_block.label.as_ref().unwrap() == &branch_info.target_label;
+
+            println!(
+                "[BRANCH] Branch found at block {}: true branch is {}, iteration count is {}",
+                block_id,
+                if is_block_a_true_branch { "A" } else { "B" },
+                branch_info.iteration_count
+            );
 
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
-            
+
             if is_block_a_true_branch {
                 let mut block_a_scope_iterations = *scope_iterations;
                 let mut block_b_scope_iterations = *scope_iterations * branch_info.iteration_count;
-                
-                
-                println!("[A_TRUE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}", successor_b_id, block_b_scope_iterations, block_id);
-                count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
 
-                println!("[A_TRUE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}", successor_a_id, block_a_scope_iterations, block_id);
-                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
+                println!(
+                    "[A_TRUE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}",
+                    successor_b_id, block_b_scope_iterations, block_id
+                );
+                count_instructions_recursive(
+                    successor_b_id,
+                    cfg,
+                    visited,
+                    total_instructions,
+                    &mut block_b_scope_instructions,
+                    &mut block_b_scope_iterations,
+                );
+
+                println!(
+                    "[A_TRUE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}",
+                    successor_a_id, block_a_scope_iterations, block_id
+                );
+                count_instructions_recursive(
+                    successor_a_id,
+                    cfg,
+                    visited,
+                    total_instructions,
+                    &mut block_a_scope_instructions,
+                    &mut block_a_scope_iterations,
+                );
             } else {
                 let mut block_a_scope_iterations = *scope_iterations * branch_info.iteration_count;
                 let mut block_b_scope_iterations = *scope_iterations;
-                
-                println!("[A_FALSE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}", successor_a_id, block_a_scope_iterations, block_id);
-                count_instructions_recursive(successor_a_id, cfg, visited, total_instructions, &mut block_a_scope_instructions, &mut block_a_scope_iterations);
 
-                println!("[A_FALSE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}", successor_b_id, block_b_scope_iterations, block_id);
-                count_instructions_recursive(successor_b_id, cfg, visited, total_instructions, &mut block_b_scope_instructions, &mut block_b_scope_iterations);
+                println!(
+                    "[A_FALSE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}",
+                    successor_a_id, block_a_scope_iterations, block_id
+                );
+                count_instructions_recursive(
+                    successor_a_id,
+                    cfg,
+                    visited,
+                    total_instructions,
+                    &mut block_a_scope_instructions,
+                    &mut block_a_scope_iterations,
+                );
 
+                println!(
+                    "[A_FALSE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}",
+                    successor_b_id, block_b_scope_iterations, block_id
+                );
+                count_instructions_recursive(
+                    successor_b_id,
+                    cfg,
+                    visited,
+                    total_instructions,
+                    &mut block_b_scope_instructions,
+                    &mut block_b_scope_iterations,
+                );
             }
 
             *total_instructions += *scope_instructions * *scope_iterations;
-            println!("[RETURN_SCOPE] Incrementing total instructions by {}, returning from block {}", *scope_instructions * *scope_iterations, block_id);
+            println!(
+                "[RETURN_SCOPE] Incrementing total instructions by {}, returning from block {}",
+                *scope_instructions * *scope_iterations,
+                block_id
+            );
         }
     }
 }
@@ -450,7 +515,21 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>) {
     let mut scope_instructions: i64 = 0;
     let mut scope_iterations = 1;
 
-    count_instructions_recursive(cfg.entry, cfg, &mut visited, &mut total_instructions, &mut scope_instructions, &mut scope_iterations);
+    if let block = cfg.blocks.iter().nth(2).unwrap() {
+        println!(
+            "[ANALYZE_CFGS] Starting analysis from entry block {} with label {:?} and {} successors",
+            block.id, block.label, cfg.successors.get(&block.id).unwrap().len()
+        );
+    }
+
+    count_instructions_recursive(
+        cfg.entry,
+        cfg,
+        &mut visited,
+        &mut total_instructions,
+        &mut scope_instructions,
+        &mut scope_iterations,
+    );
 
     println!("Total instructions for the CFG: {}", total_instructions);
 }
