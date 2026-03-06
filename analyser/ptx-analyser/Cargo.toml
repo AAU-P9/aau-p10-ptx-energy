@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 clap = "4.5.60"
-ptx-90-parser = { path = "lib/ptx-90-parser"}
+ptx-90-parser = { path = "libs/ptx-parser"}
 serde_json = "1"
