@@ -7,40 +7,40 @@
       "description": "Enter the name of the application (e.g., vector_add)"
     },
     {
-      "id": "artifact_name",
+      "id": "artifact_path",
       "type": "promptString",
-      "description": "Enter the name for the artifact (e.g., vector_add_bundle_...)"
+      "description": "Enter the path for the artifact (e.g., experiments/artifacts/vector_add_bundle_...)"
     }
   ],
   "tasks": [
     {
       "label": "PTX: Run application",
       "type": "shell",
-      "command": "uv run tools/runner.py apps/${input:app_name}/",
+      "command": "uv run experiments/tools/runner.py experiments/apps/${input:app_name}/",
       "problemMatcher": []
     },
 	{
 	  "label": "PTX: Create artifact",
 	  "type": "shell",
-	  "command": "uv run tools/artifact.py build/${input:app_name}/",
+	  "command": "uv run experiments/tools/artifact.py experiments/build/${input:app_name}/",
 	  "problemMatcher": []
 	},
 	{
 	  "label": "PTX: Create plot",
 	  "type": "shell",
-	  "command": "uv run tools/plotter.py artifacts/${input:artifact_name}/",
+	  "command": "uv run tools/plotter.py ${input:artifact_path}/",
 	  "problemMatcher": []
 	},
   {
     "label": "PTX: Create analysis",
     "type": "shell",
-    "command": "cargo run --manifest-path ./ptx-analyser/Cargo.toml analyze-cfg artifacts/${input:artifact_name}/main.ptx",
+    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml analyze-cfg ${input:artifact_path}/main.ptx",
     "problemMatcher": []
   },
   {
     "label": "PTX: Create Control Flow Graph",
     "type": "shell",
-    "command": "cargo run --manifest-path ./ptx-analyser/Cargo.toml build-cfg artifacts/${input:artifact_name}/main.ptx --html-output artifacts/${input:artifact_name}/cfg.html",
+    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
     "problemMatcher": []
   }
   ]

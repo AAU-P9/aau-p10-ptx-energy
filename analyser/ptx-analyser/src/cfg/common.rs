@@ -1,7 +1,7 @@
 use ptx_parser::PtxUnparser;
 use ptx_parser::r#type::instruction::Inst;
-use ptx_parser::r#type::meta::{MetaDirective, MetaTag, MetaConstraint};
-use ptx_parser::r#type::{FunctionStatement, Predicate};
+use ptx_parser::r#type::meta::{MetaConstraint, MetaDirective, MetaTag};
+use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
@@ -88,6 +88,11 @@ pub struct ControlFlowGraph {
 
     /// `// @META` annotations found in the function body.
     pub meta: Vec<MetaDirective>,
+
+    /// `.maxntid` header directive for this entry function, if present.
+    ///
+    /// For non-entry device functions this is always `None`.
+    pub maxntid: Option<FunctionDim>,
 }
 
 // ---------------------------------------------------------------------------
@@ -260,6 +265,15 @@ pub fn format_meta_line(m: &MetaDirective) -> String {
     format!("{version_prefix}{}", format_meta_tag(&m.tag))
 }
 
+/// Format a `.maxntid` FunctionDim as a compact "x,y,z" string.
+fn format_maxntid_dim(dim: &FunctionDim) -> String {
+    match dim {
+        FunctionDim::X { x, .. } => format!("{x},1,1"),
+        FunctionDim::XY { x, y, .. } => format!("{x},{y},1"),
+        FunctionDim::XYZ { x, y, z, .. } => format!("{x},{y},{z}"),
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Mermaid export
 // ---------------------------------------------------------------------------
@@ -281,6 +295,21 @@ impl ControlFlowGraph {
             ));
             out.push_str("    style META fill:#2d2a4a,stroke:#b4befe,stroke-width:2px,color:#cdd6f4\n");
             out.push_str(&format!("    META -.-> BB{}\n", self.entry));
+        }
+
+        // Render .maxntid launch bounds (if present) as a small header node
+        if let Some(dim) = &self.maxntid {
+            let value = format_maxntid_dim(dim);
+            let label = format!(".maxntid {value}");
+            let escaped = label.replace('"', "#quot;");
+            out.push_str(&format!(
+                "    MAXNTID[\"<b>.maxntid</b><br/>{}\"]\n",
+                escaped
+            ));
+            out.push_str(
+                "    style MAXNTID fill:#2d2a4a,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4\n",
+            );
+            out.push_str(&format!("    MAXNTID -.-> BB{}\n", self.entry));
         }
 
         for block in &self.blocks {
@@ -382,6 +411,33 @@ impl ControlFlowGraph {
                 "  META [label=<{table}>, shape=note, style=filled, fillcolor=\"#2d2a4a\", fontcolor=\"#cdd6f4\"];\n"
             ));
             out.push_str(&format!("  META -> BB{} [style=dashed, color=\"#888888\"];\n", self.entry));
+        }
+
+        // Render .maxntid (if present) as a separate note node
+        if let Some(dim) = &self.maxntid {
+            let value = format_maxntid_dim(dim);
+            let label = format!(".maxntid {value}");
+            let escaped = dot_html_escape(&label);
+
+            let mut table = String::new();
+            table.push_str(
+                "<TABLE BORDER=\"0\" CELLBORDER=\"0\" CELLSPACING=\"0\" CELLPADDING=\"2\">",
+            );
+            table.push_str(
+                "<TR><TD COLSPAN=\"1\" ALIGN=\"CENTER\"><B>.maxntid</B></TD></TR>",
+            );
+            table.push_str("<HR/>");
+            table.push_str(&format!(
+                "<TR><TD ALIGN=\"LEFT\"><FONT COLOR=\"#f9e2af\">{escaped}</FONT></TD></TR>",
+            ));
+            table.push_str("</TABLE>");
+            out.push_str(&format!(
+                "  MAXNTID [label=<{table}>, shape=note, style=filled, fillcolor=\"#2d2a4a\", fontcolor=\"#cdd6f4\"];\n",
+            ));
+            out.push_str(&format!(
+                "  MAXNTID -> BB{} [style=dashed, color=\"#888888\"];\n",
+                self.entry
+            ));
         }
 
         for block in &self.blocks {

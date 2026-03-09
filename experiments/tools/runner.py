@@ -89,7 +89,7 @@ def run_runner(config: RunnerConfig) -> int:
     output_dir = config.output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    build_root = Path("build").resolve()
+    build_root = Path("experiments/build").resolve()
     build_root.mkdir(parents=True, exist_ok=True)
 
     binary_name = folder.name
@@ -98,7 +98,7 @@ def run_runner(config: RunnerConfig) -> int:
     binary_path = build_dir / binary_name
 
     # We run with O0 to ensure we capture the original source.
-    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./include", "-arch=sm_89"]
+    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./experiments/include", "-arch=sm_89"]
 
     compile_cmd = [compiler] + default_args + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
     compile_result = run_command(compile_cmd)

@@ -5,10 +5,13 @@
 
 #define BLOCK_SIZE 256
 
-#define N (1024 * 256)   // 262144 elements
-#define NUM_BLOCKS (N / BLOCK_SIZE)
+#define N_ELEMS (1024 * 256)   // 262144 elements
+#define NUM_BLOCKS (N_ELEMS / BLOCK_SIZE)
 
-__global__ void __launch_bounds__(BLOCK_SIZE, 1) reduce_sum_kernel(const float* __restrict__ input, float*       __restrict__ output, int N)
+__global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
+reduce_sum_kernel(const float* __restrict__ input,
+                  float*       __restrict__ output,
+                  int N)
 {
     // =======================================================================
     // PTX METADATA BLOCK
@@ -298,15 +301,15 @@ int main()
     dim3 threads(BLOCK_SIZE);
     dim3 blocks(NUM_BLOCKS);
 
-    const size_t inputBytes   = N * sizeof(float);
+    const size_t inputBytes   = N_ELEMS * sizeof(float);
     const size_t partialBytes = NUM_BLOCKS * sizeof(float);
 
     // Host allocations
     float* h_input   = (float*)malloc(inputBytes);
     float* h_partial = (float*)malloc(partialBytes);
 
-    // Fill with 1.0 so expected sum = N
-    for (int i = 0; i < N; i++)
+    // Fill with 1.0 so expected sum = N_ELEMS
+    for (int i = 0; i < N_ELEMS; i++)
         h_input[i] = 1.0f;
 
     // Device allocations
@@ -315,10 +318,8 @@ int main()
     cudaMalloc(&d_partial, partialBytes);
     cudaMemcpy(d_input, h_input, inputBytes, cudaMemcpyHostToDevice);
 
-
-    
     // Run kernel
-    reduce_sum_kernel<<<blocks, threads>>>(d_input, d_partial, N);
+    reduce_sum_kernel<<<blocks, threads>>>(d_input, d_partial, N_ELEMS);
 
     cudaDeviceSynchronize();
 
