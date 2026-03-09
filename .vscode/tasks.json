@@ -10,6 +10,12 @@
       "id": "artifact_path",
       "type": "promptString",
       "description": "Enter the path for the artifact (e.g., experiments/artifacts/vector_add_bundle_...)"
+    },
+    {
+      "id": "kernel_params",
+      "type": "promptString",
+      "description": "Enter kernel parameters (e.g., grid and block dimensions)",
+      "default": "{\"grid_dim\": {\"x\": 1, \"y\": 1, \"z\": 1}, \"block_dim\": {\"x\": 32, \"y\": 1, \"z\": 1}, \"parameters\": []}"
     }
   ],
   "tasks": [
@@ -34,7 +40,7 @@
   {
     "label": "PTX: Create analysis",
     "type": "shell",
-    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml analyze-cfg ${input:artifact_path}/main.ptx",
+    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:artifact_path}/main.ptx",
     "problemMatcher": []
   },
   {

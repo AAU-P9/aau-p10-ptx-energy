@@ -8,6 +8,43 @@ use clap::{Parser, Subcommand};
 
 mod cfg;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ParameterType {
+    Int,
+    Float,
+    UnsignedInt,
+    SignedInt,
+    Int64,
+    Int32,
+    Int16,
+    Int8,
+    Int4,
+    Unknown, 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Parameter {
+    pub name: String,
+    pub r#type: ParameterType,
+    pub size: usize,
+    pub value: Option<serde_json::Value>, // replaces void*
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Dim3 {
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KernelParameters {
+    pub grid_dim: Dim3,
+    pub block_dim: Dim3,
+    pub parameters: Vec<Parameter>,
+}
+
 #[derive(Parser)]
 #[command(name = "ptx-parser", about = "Utilities for parsing PTX assembly")]
 struct Cli {
