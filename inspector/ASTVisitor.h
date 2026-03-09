@@ -18,7 +18,7 @@ public:
     public:
         Visitor(clang::Rewriter &R) : TheRewriter(R) {}
 
-        std::vector<std::pair<std::string,std::string>> KernelParams;
+        std::vector<std::pair<std::string, std::string>> KernelParams;
 
         bool VisitFunctionDecl(clang::FunctionDecl *FD)
         {
@@ -68,6 +68,7 @@ public:
                 {
                     clang::SourceLocation InsertLoc = SM.getLocForStartOfFile(FID).getLocWithOffset(LineEnd + 1);
                     TheRewriter.InsertText(InsertLoc, "#include \"../lli.h\"\n", true, true);
+                    TheRewriter.InsertText(InsertLoc, "#include <string>\n", true, true);
                 }
             }
 
@@ -107,25 +108,44 @@ public:
         clang::Rewriter TheRewriter;
     };
 
-    static std::string GenerateMadsenFunctionCode(const std::vector<std::pair<std::string, std::string>> &params)
+    static std::string GenerateMadsenFunctionCode(
+        const std::vector<std::pair<std::string, std::string>> &params)
     {
-        std::string code = "void madsen_function(void **args) {\n";
+        std::string code = "void madsen_function(void **args, KernelParameters* kp) {\n";
+        code += "    kp->parameters_length = " + std::to_string(params.size()) + ";\n";
+        code += "    kp->parameters = new Parameter[kp->parameters_length];\n\n";
+
         for (size_t i = 0; i < params.size(); ++i)
         {
             const auto &type_name = params[i].first;
             const auto &param_name = params[i].second;
 
-            code += "    printf(\"Parameter " + param_name + " = ";
+            code += "    kp->parameters[" + std::to_string(i) + "].name = (char*)\"" + param_name + "\";\n";
+            code += "    kp->parameters[" + std::to_string(i) + "].size = sizeof(" + type_name + ");\n";
+            code += "    kp->parameters[" + std::to_string(i) + "].value = args[" + std::to_string(i) + "];\n";
+
+            code += "    kp->parameters[" + std::to_string(i) + "].type = ";
             if (type_name == "int")
-                code += "%d";
+                code += "Int;\n";
+            else if (type_name == "unsigned int")
+                code += "UnsignedInt;\n";
             else if (type_name == "float")
-                code += "%f";
-            else if (type_name == "double")
-                code += "%lf";
+                code += "Float;\n";
+            else if (type_name == "int64_t" || type_name == "long long")
+                code += "Int64;\n";
+            else if (type_name == "int32_t")
+                code += "Int32;\n";
+            else if (type_name == "int16_t")
+                code += "Int16;\n";
+            else if (type_name == "int8_t")
+                code += "Int8;\n";
             else
-                code += "%p";
-            code += "\\n\", *(" + type_name + "*)args[" + std::to_string(i) + "]);\n";
+                code += "Unknown;\n";
+
+            code += "\n";
         }
+
+        code += "    PrintKernelParametersJSON(*kp);\n";
         code += "    exit(0);\n";
 
         code += "}\n";
