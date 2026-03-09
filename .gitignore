@@ -1,6 +1,7 @@
 # Ignore the build folder
 build/
 build
+build/*
 
 # Ignore build artifacts (also systemlink)
 artifacts/
@@ -11,3 +12,4 @@ plots/
 plots
 
 *__pycache__/
+
