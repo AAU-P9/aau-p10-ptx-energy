@@ -32,6 +32,22 @@ pub fn is_terminator_inst(inst: &Inst) -> bool {
     )
 }
 
+/// Determine whether an `Inst` is any kind of PTX call instruction.
+pub fn is_call_inst(inst: &Inst) -> bool {
+    matches!(
+        inst,
+        Inst::CallUni(_)
+            | Inst::CallUni1(_)
+            | Inst::CallUni2(_)
+            | Inst::CallUni3(_)
+            | Inst::CallUni4(_)
+            | Inst::CallUni5(_)
+            | Inst::CallUni6(_)
+            | Inst::CallUni7(_)
+            | Inst::CallUni8(_)
+    )
+}
+
 /// Returns `true` if the instruction is a return or exit.
 pub fn is_return_or_exit(inst: &Inst) -> bool {
     matches!(inst, Inst::RetUni(_) | Inst::Exit(_))

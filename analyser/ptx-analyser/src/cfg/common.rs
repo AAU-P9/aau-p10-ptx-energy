@@ -5,6 +5,8 @@ use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+
+
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
@@ -70,6 +72,9 @@ pub struct ControlFlowGraph {
 
     /// Name of the function / entry point this CFG belongs to.
     pub function_name: String,
+
+    /// Whether this CFG was built from a PTX `.entry` rather than a `.func`.
+    pub is_entry: bool,
 
     /// Ordered list of basic blocks (index == `BlockId`).
     pub blocks: Vec<BasicBlock>,
