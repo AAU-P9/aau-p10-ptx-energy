@@ -1,4 +1,4 @@
-#include <fstream>
+#include <iostream>
 #include <sstream>
 #include "ASTVisitor.h"
 #include "llvm/IR/LLVMContext.h"
@@ -11,18 +11,11 @@ using namespace llvm;
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
-    {
-        errs() << "Usage: " << argv[0] << " <CU file>\n";
-        return 1;
-    }
-
-    std::ifstream file(argv[1]);
     std::stringstream buffer;
-    buffer << file.rdbuf();
+    buffer << std::cin.rdbuf();
     std::string code = buffer.str();
 
-    ASTVisitor::runOnCode(code, argv[1]);
+    ASTVisitor::runOnCode(code, "input.cu");
 
     /*LLVMContext Context;
     SMDiagnostic Err;
