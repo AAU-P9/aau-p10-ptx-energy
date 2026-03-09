@@ -11,6 +11,7 @@ use ptx_parser::r#type::{
     Module, ModuleDirective, Operand,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
+use crate::{Parameter};
 
 use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
 
@@ -506,7 +507,7 @@ fn count_instructions_recursive(
 }
 
 // Analyze the cfg to get a power consumption estimate
-pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, params: &BTreeMap<String, i64>) {
+pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, params: &Vec<Parameter>) {
     let cfg = &cfgs[0];
 
     println!(
@@ -514,9 +515,9 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid
         grid_x, grid_y, grid_z, block_x, block_y, block_z
     );
     if !params.is_empty() {
-        println!("[ANALYZE_CFGS] CLI parameters:");
-        for (name, value) in params {
-            println!("  - {}={}", name, value);
+        println!("[ANALYZE_CFGS] Kernel parameters:");
+        for param in params {
+            println!("  - {} ({:?}, {} bytes)", param.name, param.r#type, param.size);
         }
     }
 

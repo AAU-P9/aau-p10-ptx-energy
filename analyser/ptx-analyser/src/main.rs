@@ -2,7 +2,7 @@ use ptx_parser::parse_ptx;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command as ProcessCommand;
-use std::collections::BTreeMap;
+use serde::{Deserialize, Serialize};
 
 use clap::{Parser, Subcommand};
 
@@ -27,27 +27,10 @@ enum Command {
         /// Path to the PTX source file to parse.
         input_file: PathBuf,
     
-        // Grid dimension assignemnts for analysis, e.g. --grid-x=16 --grid-y=8 --grid-z=1
-        #[arg(long = "grid-x")]
-        grid_x: u32,
-        #[arg(long = "grid-y")]
-        grid_y: u32,
-        #[arg(long = "grid-z")]
-        grid_z: u32,
-
-        // Block size assignemnts for analysis, e.g. --grid-x=16 --grid-y=8 --grid-z=1
-        #[arg(long = "block-x")]
-        block_x: u32,
-        #[arg(long = "block-y")]
-        block_y: u32,
-        #[arg(long = "block-z")]
-        block_z: u32,
-
-        /// Parameter assignment(s) for analysis, e.g. --param n=1024 --param k=7
-        ///
-        /// Can be provided multiple times.
-        #[arg(long = "param", value_name = "name=value")]
-        params: Vec<String>,
+        /// Kernel parameters as a JSON string
+        /// Expected format: {"grid_dim": {"x": 1, "y": 1, "z": 1}, "block_dim": {"x": 32, "y": 1, "z": 1}, "parameters": []}
+        #[arg(long)]
+        kernel_params: String,
     },
 
     BuildCfg {
@@ -108,31 +91,6 @@ fn render_dot_to_svg(dot: &str) -> Result<String, Box<dyn std::error::Error>> {
     Ok(String::from_utf8(output.stdout)?)
 }
 
-fn parse_param_assignments(params: &[String]) -> Result<BTreeMap<String, i64>, Box<dyn std::error::Error>> {
-    let mut parsed = BTreeMap::new();
-
-    for raw in params {
-        let (name, value) = raw
-            .split_once('=')
-            .ok_or_else(|| format!("Invalid --param value '{raw}'. Expected name=value"))?;
-
-        let name = name.trim();
-        let value = value.trim();
-
-        if name.is_empty() {
-            return Err(format!("Invalid --param value '{raw}'. Name cannot be empty").into());
-        }
-
-        let parsed_value: i64 = value.parse().map_err(|_| {
-            format!("Invalid --param value '{raw}'. '{value}' is not a valid integer")
-        })?;
-
-        parsed.insert(name.to_string(), parsed_value);
-    }
-
-    Ok(parsed)
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
@@ -148,17 +106,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Command::AnalyzeCfg {
             input_file,
-            grid_x,
-            grid_y,
-            grid_z,
-            block_x,
-            block_y,
-            block_z,
-            params,
+            kernel_params,
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
-            let param_values = parse_param_assignments(&params)?;
+            
+            let kernel_config: KernelParameters = serde_json::from_str(&kernel_params)
+                .map_err(|e| format!("Failed to parse kernel_params as JSON: {}", e))?;
 
             let file_name = input_file
                 .file_name()
@@ -172,10 +126,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
-            println!("Analyzing CFGs with grid=({grid_x},{grid_y},{grid_z}), block=({block_x},{block_y},{block_z}), params={param_values:?}");
+            println!("Analyzing CFGs with grid=({},{},{}), block=({},{},{}), parameters={:?}",
+                kernel_config.grid_dim.x, kernel_config.grid_dim.y, kernel_config.grid_dim.z,
+                kernel_config.block_dim.x, kernel_config.block_dim.y, kernel_config.block_dim.z,
+                kernel_config.parameters);
 
-            cfg::analyze_cfgs(&cfgs, grid_x, grid_y, grid_z, block_x, block_y, block_z, &param_values);
-   
+            cfg::analyze_cfgs(
+                &cfgs,
+                kernel_config.grid_dim.x,
+                kernel_config.grid_dim.y,
+                kernel_config.grid_dim.z,
+                kernel_config.block_dim.x,
+                kernel_config.block_dim.y,
+                kernel_config.block_dim.z,
+                &kernel_config.parameters,
+            );
         }
         Command::BuildCfg {
             input_file,
