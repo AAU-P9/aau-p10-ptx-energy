@@ -104,7 +104,7 @@ void PrintKernelParametersJSON(const KernelParameters &kp)
             std::cout << (int)(*((int8_t *)p.value));
             break;
         default:
-            std::cout << "\"unknown\"";
+            std::cout << "null";
             break;
         }
 
