@@ -283,7 +283,7 @@ impl HasLoopBounds for ptx_parser::r#type::instruction::ld::section_0::Type {
                 max: u8::MAX as i128,
             },
             ptx_parser::r#type::instruction::ld::section_0::Type::B16 => Bound {
-                min: 0,2
+                min: 0,
                 max: u16::MAX as i128,
             },
             ptx_parser::r#type::instruction::ld::section_0::Type::B32 => Bound {
@@ -506,8 +506,19 @@ fn count_instructions_recursive(
 }
 
 // Analyze the cfg to get a power consumption estimate
-pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>) {
+pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, params: &BTreeMap<String, i64>) {
     let cfg = &cfgs[0];
+
+    println!(
+        "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
+        grid_x, grid_y, grid_z, block_x, block_y, block_z
+    );
+    if !params.is_empty() {
+        println!("[ANALYZE_CFGS] CLI parameters:");
+        for (name, value) in params {
+            println!("  - {}={}", name, value);
+        }
+    }
 
     // Count total instructions by recursively walking the CFG tree
     let mut visited = BTreeSet::new();
