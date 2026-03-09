@@ -30,7 +30,7 @@ int main()
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<1,4>>>(d);
+    ptx_kernel<<<54938,4>>>(d);
     cudaDeviceSynchronize();
 
     // Possibly read back results (not necessary for timing, but included for completeness)

@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.16)
+project(MatrixMultLLVM)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(LLVM REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+
+find_package(Clang REQUIRED CONFIG)
+message(STATUS "Found Clang ${Clang_VERSION}")
+include_directories(${CLANG_INCLUDE_DIRS})
+
+add_executable(injector injector.cpp)
+
+llvm_map_components_to_libnames(llvm_libs
+    Core
+    Support
+    IRReader
+)
+
+set(clang_libs
+    clangTooling
+    clangFrontend
+    clangAST
+    clangBasic
+)
+
+target_link_libraries(injector ${llvm_libs} ${clang_libs})
