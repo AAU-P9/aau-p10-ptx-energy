@@ -300,7 +300,7 @@ int main() {
   int *d;
 
   // Initialize CUPTI profiling
-  initializeCUPTI();
+  // initializeCUPTI();
 
   cudaMalloc(&d, 4 * sizeof(int));
   cudaMemcpy(d, h, 4 * sizeof(int), cudaMemcpyHostToDevice);
@@ -308,7 +308,7 @@ int main() {
   printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
   // Get CPU/GPU offsets
-  collectTimestampOffsets();
+  // collectTimestampOffsets();
 
   dim3 threads(BLOCK_SIZE);
   dim3 blocks(NUM_BLOCKS);
@@ -339,12 +339,12 @@ int main() {
   // completeness) cudaMemcpy(h, d, 4*sizeof(int), cudaMemcpyDeviceToHost);
 
   // Flush all activity buffers
-  flushCUPTIBuffers();
+  // flushCUPTIBuffers();
 
-  printKernelTiming();
+  // printKernelTiming();
 
   // Clean up
   cudaFree(d);
 
-  disableCUPTI();
+  // disableCUPTI();
 }
