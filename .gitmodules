@@ -1,3 +1,0 @@
-[submodule "ptx-analyser/libs/ptx-parser"]
-	path = ptx-analyser/libs/ptx-parser
-	url = git@github.com:AAU-P9/ptx-90-parser.git
