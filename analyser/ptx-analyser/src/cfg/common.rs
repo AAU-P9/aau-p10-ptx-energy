@@ -325,9 +325,15 @@ impl ControlFlowGraph {
                 .collect();
 
             let body = stmt_lines.join("\n");
+            let has_call = body.contains("call.uni") || body.contains(".calltargets");
 
             // Escape quotes and wrap in quoted node label.
             let escaped = body.replace('"', "#quot;");
+            let call_banner = if has_call {
+                "<font color='#f9a826'><b>CALL</b></font><br/>"
+            } else {
+                ""
+            };
 
             let mut shape_open = "[\"";
             let mut shape_close = "\"]";
@@ -337,7 +343,7 @@ impl ControlFlowGraph {
             }
 
             out.push_str(&format!(
-                "    BB{}{shape_open}<b>BB{}</b><br/><pre>{}</pre>{shape_close}\n",
+                "    BB{}{shape_open}<b>BB{}</b><br/>{call_banner}<pre>{}</pre>{shape_close}\n",
                 block.id, block.id, escaped
             ));
         }

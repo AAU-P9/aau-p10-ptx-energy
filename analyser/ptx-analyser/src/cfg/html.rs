@@ -1,5 +1,6 @@
 use super::cfgMerge::{CallSite, MergedCfg};
 use super::common::{BasicBlock, BlockId, ControlFlowGraph};
+use ptx_parser::PtxUnparser;
 use ptx_parser::r#type::instruction::Inst;
 use ptx_parser::r#type::{FunctionStatement, GeneralOperand, Operand, StatementDirective};
 use std::collections::BTreeSet;
@@ -53,10 +54,53 @@ fn statement_call_targets(stmt: &FunctionStatement, out: &mut Vec<String>) {
   }
 }
 
+fn stmt_ptx(stmt: &FunctionStatement) -> String {
+  let tokens = stmt.to_tokens_spaced();
+  let raw: String = tokens.iter().map(|token| token.as_str()).collect();
+  raw.lines()
+    .map(|line| line.trim())
+    .filter(|line| !line.is_empty())
+    .collect::<Vec<_>>()
+    .join(" ")
+}
+
+fn extract_call_target_from_text(text: &str) -> Option<String> {
+  if let Some(idx) = text.find(".calltargets") {
+    let rest = text[idx + ".calltargets".len()..].trim();
+    let target = rest
+      .split(|ch: char| ch == ';' || ch == ',' || ch.is_whitespace())
+      .find(|part| !part.is_empty())?;
+    return Some(target.to_string());
+  }
+
+  let idx = text.find("call.uni").or_else(|| text.find("call "))?;
+  let mut rest = text[idx..]
+    .split_once(' ')
+    .map(|(_, tail)| tail.trim())
+    .unwrap_or_default();
+
+  if rest.starts_with('(') {
+    rest = rest.split_once(") ,").map(|(_, tail)| tail).unwrap_or(rest);
+    if rest == text[idx..].split_once(' ').map(|(_, tail)| tail.trim()).unwrap_or_default() {
+      rest = rest.split_once(",").map(|(_, tail)| tail.trim()).unwrap_or(rest);
+    }
+  }
+
+  let target = rest
+    .split(|ch: char| ch == ',' || ch == ';' || ch.is_whitespace())
+    .find(|part| !part.is_empty() && *part != "(")?;
+  Some(target.to_string())
+}
+
 fn block_call_targets(block: &BasicBlock) -> Vec<String> {
   let mut targets = Vec::new();
   for stmt in &block.statements {
     statement_call_targets(stmt, &mut targets);
+    if targets.is_empty() {
+      if let Some(target) = extract_call_target_from_text(&stmt_ptx(stmt)) {
+        targets.push(target);
+      }
+    }
   }
   targets.sort();
   targets.dedup();
@@ -74,6 +118,36 @@ fn collect_call_blocks(cfg: &ControlFlowGraph) -> Vec<(BlockId, Vec<String>)> {
         Some((block.id, targets))
       }
     })
+    .collect()
+}
+
+fn detect_call_blocks_from_mermaid(mermaid: &str) -> Vec<(BlockId, Vec<String>)> {
+  let mut current_block_id = None;
+  let mut detected = BTreeSet::new();
+
+  for line in mermaid.lines() {
+    let trimmed = line.trim_start();
+
+    if trimmed.starts_with("BB") {
+      let block_id_text = trimmed[2..]
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit())
+        .collect::<String>();
+      current_block_id = block_id_text.parse::<BlockId>().ok();
+    }
+
+    if (line.contains("call.uni") || line.contains(".calltargets")) && current_block_id.is_some() {
+      detected.insert(current_block_id.unwrap());
+    }
+
+    if trimmed.ends_with("]]") || trimmed.ends_with("]") {
+      current_block_id = None;
+    }
+  }
+
+  detected
+    .into_iter()
+    .map(|block_id| (block_id, vec!["function call".to_string()]))
     .collect()
 }
 
@@ -239,8 +313,11 @@ pub fn merged_cfg_to_html(merged: &MergedCfg) -> String {
 /// The page title and header include both the source file name and the
 /// function name stored in the [`ControlFlowGraph`].
 fn render_cfg_html(cfg: &ControlFlowGraph, call_sites: &[CallSite]) -> String {
-  let call_blocks = collect_call_blocks(cfg);
   let mut mermaid = cfg.to_mermaid();
+  let mut call_blocks = collect_call_blocks(cfg);
+  if call_blocks.is_empty() {
+    call_blocks = detect_call_blocks_from_mermaid(&mermaid);
+  }
   mermaid.push_str(&mermaid_class_lines(call_sites, &call_blocks));
 
     // Escape the mermaid content for embedding inside HTML
