@@ -40,13 +40,13 @@
   {
     "label": "PTX: Create analysis",
     "type": "shell",
-    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:artifact_path}/main.ptx",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:artifact_path}/main.ptx",
     "problemMatcher": []
   },
   {
     "label": "PTX: Create Control Flow Graph",
     "type": "shell",
-    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
     "problemMatcher": []
   }
   ]

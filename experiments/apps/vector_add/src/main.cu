@@ -1,13 +1,14 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "cupti_timing.h"
+#include <cuda.h>
+
+// include "cupti_timing.h"
 
 #define ITERATIONS 10000000
-#define N 1024
 
 // Vector add kernel: out[i] = a[i] + b[i]
-__global__ void vector_add(float *a, float *b, float *out)
+__global__ void vector_add(float *a, float *b, float *out, int N)
 {
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -20,8 +21,9 @@ __global__ void vector_add(float *a, float *b, float *out)
 
 int main()
 {
-    initializeCUPTI();
+    // initializeCUPTI();
     
+    int N = 1024;
     size_t bytes = N * sizeof(float);
     
     // Host vectors
@@ -48,18 +50,18 @@ int main()
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
-    collectTimestampOffsets();
+    // collectTimestampOffsets();
     
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;
     int grid_size = (N + block_size - 1) / block_size;
-    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out);
+    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, N);
     
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     
-    flushCUPTIBuffers();
-    printKernelTiming();
+    // flushCUPTIBuffers();
+    // printKernelTiming();
     
     // Clean up
     cudaFree(d_a);

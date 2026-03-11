@@ -166,6 +166,7 @@ def main():
     ptx_analyser_cmd = [
         "ptx-analyser",
         "analyze-cfg",
+        "--kernel-params", json.dumps(kernel_params),
         str(ptx_path)
     ]
 
