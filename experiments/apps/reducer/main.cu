@@ -1,5 +1,5 @@
-#include "cupti_timing.h"
 #include "ptx_meta.h"
+#include <cuda.h>
 
 #define ITERATIONS 40000000
 
