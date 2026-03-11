@@ -5,6 +5,8 @@ use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
+
+
 // ---------------------------------------------------------------------------
 // Data types
 // ---------------------------------------------------------------------------
@@ -70,6 +72,9 @@ pub struct ControlFlowGraph {
 
     /// Name of the function / entry point this CFG belongs to.
     pub function_name: String,
+
+    /// Whether this CFG was built from a PTX `.entry` rather than a `.func`.
+    pub is_entry: bool,
 
     /// Ordered list of basic blocks (index == `BlockId`).
     pub blocks: Vec<BasicBlock>,
@@ -320,9 +325,15 @@ impl ControlFlowGraph {
                 .collect();
 
             let body = stmt_lines.join("\n");
+            let has_call = body.contains("call.uni") || body.contains(".calltargets");
 
             // Escape quotes and wrap in quoted node label.
             let escaped = body.replace('"', "#quot;");
+            let call_banner = if has_call {
+                "<font color='#f9a826'><b>CALL</b></font><br/>"
+            } else {
+                ""
+            };
 
             let mut shape_open = "[\"";
             let mut shape_close = "\"]";
@@ -332,7 +343,7 @@ impl ControlFlowGraph {
             }
 
             out.push_str(&format!(
-                "    BB{}{shape_open}<b>BB{}</b><br/><pre>{}</pre>{shape_close}\n",
+                "    BB{}{shape_open}<b>BB{}</b><br/>{call_banner}<pre>{}</pre>{shape_close}\n",
                 block.id, block.id, escaped
             ));
         }

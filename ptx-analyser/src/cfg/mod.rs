@@ -1,10 +1,15 @@
 mod common;
+#[allow(non_snake_case)]
+mod cfgMerge;
 mod html;
 mod util;
 
+
 #[allow(unused_imports)]
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
-pub use html::cfg_to_html;
+#[allow(unused_imports)]
+pub use cfgMerge::{merge_cfgs, CallSite, MergedCfg};
+pub use html::{cfg_to_html, merged_cfg_to_html};
 
 use ptx_parser::r#type::{
     EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
@@ -13,7 +18,7 @@ use ptx_parser::r#type::{
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use crate::{Parameter};
 
-use util::{add_edge, add_edges_for_instruction, is_terminator_inst};
+use util::{add_edge, add_edges_for_instruction, is_call_inst, is_terminator_inst};
 
 // ---------------------------------------------------------------------------
 // Builder – construct a CFG from the flat list of FunctionStatements
@@ -29,7 +34,7 @@ pub fn build_cfgs(module: &Module, source_file: &str) -> Vec<ControlFlowGraph> {
                 if let Some(body) = &directive.body {
                     let name = directive.name.val.clone();
                     let maxntid = extract_maxntid(&directive.directives);
-                    cfgs.push(build_cfg_with_header(&name, body, source_file, maxntid));
+                    cfgs.push(build_cfg_with_header(&name, body, source_file, maxntid, true));
                 }
             }
             ModuleDirective::FuncFunction { directive, .. } => {
@@ -59,7 +64,7 @@ fn extract_maxntid(directives: &[EntryFunctionHeaderDirective]) -> Option<Functi
 /// This is used for plain `.func` device functions that do not carry
 /// launch-bounds style directives such as `.maxntid`.
 pub fn build_cfg(function_name: &str, body: &FunctionBody, source_file: &str) -> ControlFlowGraph {
-    build_cfg_with_header(function_name, body, source_file, None)
+    build_cfg_with_header(function_name, body, source_file, None, false)
 }
 
 /// Internal helper that also takes entry-function header information such as
@@ -69,6 +74,7 @@ fn build_cfg_with_header(
     body: &FunctionBody,
     source_file: &str,
     maxntid: Option<FunctionDim>,
+    is_entry: bool,
 ) -> ControlFlowGraph {
     let stmts = &body.statements;
 
@@ -76,6 +82,7 @@ fn build_cfg_with_header(
         return ControlFlowGraph {
             source_file: source_file.to_string(),
             function_name: function_name.to_string(),
+            is_entry,
             blocks: vec![BasicBlock {
                 id: 0,
                 label: None,
@@ -121,6 +128,15 @@ fn build_cfg_with_header(
                 leaders.insert(i);
             }
             FunctionStatement::Instruction { instruction, .. } => {
+                if is_call_inst(&instruction.inst) {
+                    if i > 0 {
+                        leaders.insert(i);
+                    }
+                    if i + 1 < stmts.len() {
+                        leaders.insert(i + 1);
+                    }
+                }
+
                 if is_terminator_inst(&instruction.inst) {
                     // The statement *after* this one starts a new block.
                     if i + 1 < stmts.len() {
@@ -220,6 +236,7 @@ fn build_cfg_with_header(
     ControlFlowGraph {
         source_file: source_file.to_string(),
         function_name: function_name.to_string(),
+        is_entry,
         blocks,
         successors,
         predecessors,
@@ -399,7 +416,7 @@ fn count_instructions_recursive(
 
     // Recursively count instructions in successor blocks
     if let Some(successors) = cfg.successors.get(&block_id) {
-        if (successors.len() == 0) {
+        if successors.is_empty() {
             println!("[NO_SUCCESSORS] Block {} has no successors", block_id);
         } else if successors.len() == 1 {
             println!(
@@ -508,7 +525,14 @@ fn count_instructions_recursive(
 
 // Analyze the cfg to get a power consumption estimate
 pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, params: &Vec<Parameter>) {
-    let cfg = &cfgs[0];
+    let root_name = cfgs
+        .iter()
+        .find(|cfg| cfg.is_entry)
+        .map(|cfg| cfg.function_name.as_str())
+        .unwrap_or_else(|| cfgs[0].function_name.as_str());
+    let cfg = merge_cfgs(cfgs, root_name)
+        .map(|merged| merged.cfg)
+        .unwrap_or_else(|| cfgs[0].clone());
 
     println!(
         "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
@@ -527,16 +551,18 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid
     let mut scope_instructions: i64 = 0;
     let mut scope_iterations = 1;
 
-    if let block = cfg.blocks.iter().nth(2).unwrap() {
+    if let Some(block) = cfg.blocks.get(cfg.entry) {
         println!(
             "[ANALYZE_CFGS] Starting analysis from entry block {} with label {:?} and {} successors",
-            block.id, block.label, cfg.successors.get(&block.id).unwrap().len()
+            block.id,
+            block.label,
+            cfg.successors.get(&block.id).map_or(0, |succs| succs.len())
         );
     }
 
     count_instructions_recursive(
         cfg.entry,
-        cfg,
+        &cfg,
         &mut visited,
         &mut total_instructions,
         &mut scope_instructions,
@@ -574,6 +600,7 @@ mod tests {
         assert_eq!(cfg.blocks.len(), 1);
         assert_eq!(cfg.exits.len(), 1);
         assert_eq!(cfg.source_file, "test.ptx");
+        assert!(cfg.is_entry);
     }
 
     /// Kernel with an unconditional branch creating two blocks.
@@ -635,5 +662,43 @@ mod tests {
         let html = cfg_to_html(&cfgs[0]);
         assert!(html.contains("my_kernel.ptx"));
         assert!(html.contains("kernel"));
+    }
+
+    #[test]
+    fn merge_inlines_single_calltargets_helper() {
+        let src = r#"
+            .version 8.5
+            .target sm_80
+            .address_size 64
+
+            .visible .func helper(.param .b32 helper_param)
+            {
+                .reg .b32 %r0;
+                mov.u32 %r0, %r0;
+                ret;
+            }
+
+            .visible .entry kernel()
+            {
+            entry_call:
+                .calltargets helper;
+            entry_proto:
+                ret;
+            }
+        "#;
+
+        let module = parse_ptx(src).expect("parse");
+        let cfgs = build_cfgs(&module, "merge_test.ptx");
+        let merged = merge_cfgs(&cfgs, "kernel").expect("merged cfg");
+
+        assert_eq!(merged.call_sites.len(), 1);
+
+        let call_site = &merged.call_sites[0];
+        let call_successors = merged.cfg.successors.get(&call_site.call_block).unwrap();
+        let helper_block = call_site.callee_entry;
+        let return_block = call_site.caller_return_blocks[0];
+
+        assert!(call_successors.contains(&helper_block));
+        assert!(merged.cfg.successors.get(&helper_block).unwrap().contains(&return_block));
     }
 }
