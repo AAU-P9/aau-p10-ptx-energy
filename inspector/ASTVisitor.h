@@ -67,7 +67,7 @@ public:
                 if (LineEnd != std::string::npos)
                 {
                     clang::SourceLocation InsertLoc = SM.getLocForStartOfFile(FID).getLocWithOffset(LineEnd + 1);
-                    TheRewriter.InsertText(InsertLoc, "#include \"../lli.h\"\n", true, true);
+                    TheRewriter.InsertText(InsertLoc, "#include \"lli.h\"\n", true, true);
                     TheRewriter.InsertText(InsertLoc, "#include <string>\n", true, true);
                 }
             }

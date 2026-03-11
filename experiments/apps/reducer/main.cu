@@ -1,5 +1,5 @@
-#include "cupti_timing.h"
 #include "ptx_meta.h"
+#include <cuda.h>
 
 #define ITERATIONS 40000000
 
@@ -8,8 +8,7 @@
 #define N_ELEMS (1024 * 256)   // 262144 elements
 #define NUM_BLOCKS (N_ELEMS / BLOCK_SIZE)
 
-__global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
-reduce_sum_kernel(const float* __restrict__ input,
+__global__ void reduce_sum_kernel(const float* __restrict__ input,
                   float*       __restrict__ output,
                   int N)
 {
@@ -288,7 +287,7 @@ int main()
     int *d;
 
     // Initialize CUPTI profiling
-    initializeCUPTI();
+    // initializeCUPTI();
 
     cudaMalloc(&d, 4*sizeof(int));
     cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
@@ -296,7 +295,7 @@ int main()
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     // Get CPU/GPU offsets
-    collectTimestampOffsets();
+    // collectTimestampOffsets();
 
     dim3 threads(BLOCK_SIZE);
     dim3 blocks(NUM_BLOCKS);
@@ -327,12 +326,12 @@ int main()
     // cudaMemcpy(h, d, 4*sizeof(int), cudaMemcpyDeviceToHost);
 
     // Flush all activity buffers
-    flushCUPTIBuffers();
+    // flushCUPTIBuffers();
 
-    printKernelTiming();
+    // printKernelTiming();
 
     // Clean up
     cudaFree(d);
     
-    disableCUPTI();
+    // disableCUPTI();
 }
