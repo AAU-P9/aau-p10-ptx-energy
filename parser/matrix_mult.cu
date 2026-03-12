@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include <cuda.h>
 
-#include "lli.h"
-
 #define M 4
 #define N 3
 #define K 5
