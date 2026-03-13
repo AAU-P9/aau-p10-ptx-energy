@@ -10,13 +10,13 @@ pub use cfgMerge::{CallSite, MergedCfg, merge_cfgs};
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::{cfg_to_html, merged_cfg_to_html};
 
-use crate::Parameter;
 use ptx_parser::r#type::{
     EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
-    Module, ModuleDirective, Operand, instruction::ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType,
+    Module, ModuleDirective, Operand,
+    instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType},
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use crate::{Parameter};
+use crate::{Parameter, cfg::common::format_inst_short};
 
 use util::{add_edge, add_edges_for_instruction, is_call_inst, is_terminator_inst};
 
@@ -433,28 +433,14 @@ fn count_instructions_recursive(
     );
 
     // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
-    // for stmt in &block.statements {
-    //     if let FunctionStatement::Instruction { instruction, .. } = stmt {
-    //         if let ptx_parser::r#type::instruction::Inst::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType(inst) = &instruction.inst {
-    //             if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.d {
-    //                 if let Operand::Register { operand, span } = operand {
-    //                     // For simplicity, we assume this register is used as a loop iteration count. In a real implementation, we would need to track register usage more precisely.
-    //                     let iteration_count = 5;
-    //                     println!(
-    //                         "[SETP] Found setp instruction in block {}: setting register {} to iteration count {}",
-    //                         block_id, operand.name, iteration_count
-    //                     );
-                        
-
-                        
-    //                     // Update the registers map with the new iteration count
-    //                     // In a real implementation, we would need to handle register lifetimes and scopes properly.
-    //                 }
-    //             }
-
-    //         }
-    //     }
-    // }
+    for stmt in &block.statements {
+        if let FunctionStatement::Instruction { instruction, .. } = stmt {
+            *scope_instructions += 1;
+            instruction_occurrences.entry(format_inst_short(&instruction.inst))
+                .and_modify(|count| *count += *scope_iterations)
+                .or_insert(*scope_iterations);
+        }
+    }
 
     // Recurse into successors
     if let Some(successors) = cfg.successors.get(&block_id) {
