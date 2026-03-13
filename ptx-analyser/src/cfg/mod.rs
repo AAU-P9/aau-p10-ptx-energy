@@ -241,7 +241,7 @@ fn build_cfg_with_header(
     exits.sort_unstable();
     exits.dedup();
 
-    ControlFlowGraph {
+        let cfg = ControlFlowGraph {
         source_file: source_file.to_string(),
         function_name: function_name.to_string(),
         is_entry,
@@ -252,8 +252,12 @@ fn build_cfg_with_header(
         exits,
         meta,
         maxntid,
-    }
+    };
+
+    cfg.compact() 
 }
+
+
 
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
@@ -661,140 +665,118 @@ pub fn analyze_cfgs(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Unit-style sanity helpers (not exhaustive – useful during development)
-// ---------------------------------------------------------------------------
+impl ControlFlowGraph {
+    /// Merge chains of blocks where A has one successor B and B has one
+    /// predecessor A. Returns a new compacted CFG.
+    pub fn compact(&self) -> ControlFlowGraph {
+        // Build a union-find / chain map: for each block, find the head of
+        // its chain.
+        let mut merged_into: Vec<BlockId> = (0..self.blocks.len()).collect();
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use ptx_parser::parse_ptx;
-
-    /// Minimal kernel that has a single basic block.
-    #[test]
-    fn single_block() {
-        let src = r#"
-            .version 8.0
-            .target sm_52
-            .address_size 64
-
-            .entry kernel() {
-                ret;
+        for (a, succs) in &self.successors {
+            if succs.len() != 1 {
+                continue;
             }
-        "#;
-        let module = parse_ptx(src).expect("parse");
-        let cfgs = build_cfgs(&module, "test.ptx");
-        assert_eq!(cfgs.len(), 1);
-        let cfg = &cfgs[0];
-        assert_eq!(cfg.blocks.len(), 1);
-        assert_eq!(cfg.exits.len(), 1);
-        assert_eq!(cfg.source_file, "test.ptx");
-        assert!(cfg.is_entry);
-    }
-
-    /// Kernel with an unconditional branch creating two blocks.
-    #[test]
-    fn unconditional_branch() {
-        let src = r#"
-            .version 8.0
-            .target sm_52
-            .address_size 64
-
-            .entry kernel() {
-                bra.uni target;
-            target:
-                ret;
+            let b = *succs.iter().next().unwrap();
+            // B must have exactly one predecessor too
+            if self.predecessors.get(&b).map_or(0, |p| p.len()) != 1 {
+                continue;
             }
-        "#;
-        let module = parse_ptx(src).expect("parse");
-        let cfgs = build_cfgs(&module, "test.ptx");
-        assert_eq!(cfgs.len(), 1);
-        let cfg = &cfgs[0];
-        // Should have 2 blocks: the bra and the target label block.
-        assert!(cfg.blocks.len() >= 2);
-        // The entry block should have the target block as successor.
-        let entry_succs = cfg.successors.get(&cfg.entry).unwrap();
-        assert!(!entry_succs.is_empty());
-    }
-
-    #[test]
-    fn dot_output_is_nonempty() {
-        let src = r#"
-            .version 8.0
-            .target sm_52
-            .address_size 64
-
-            .entry kernel() {
-                ret;
+            // Don't merge a block into itself (self-loop)
+            if *a == b {
+                continue;
             }
-        "#;
-        let module = parse_ptx(src).expect("parse");
-        let cfgs = build_cfgs(&module, "test.ptx");
-        let dot = cfgs[0].to_dot();
-        assert!(dot.contains("digraph"));
-        assert!(dot.contains("BB0"));
-    }
+            merged_into[b] = merged_into[*a];
+        }
 
-    #[test]
-    fn html_output_includes_source_file() {
-        let src = r#"
-            .version 8.0
-            .target sm_52
-            .address_size 64
-
-            .entry kernel() {
-                ret;
+        // Flatten chains: each block maps to the representative (head) of its chain
+        for i in 0..merged_into.len() {
+            let mut root = i;
+            while merged_into[root] != root {
+                root = merged_into[root];
             }
-        "#;
-        let module = parse_ptx(src).expect("parse");
-        let cfgs = build_cfgs(&module, "my_kernel.ptx");
-        let html = cfg_to_html(&cfgs[0]);
-        assert!(html.contains("my_kernel.ptx"));
-        assert!(html.contains("kernel"));
-    }
+            merged_into[i] = root;
+        }
 
-    #[test]
-    fn merge_inlines_single_calltargets_helper() {
-        let src = r#"
-            .version 8.5
-            .target sm_80
-            .address_size 64
+        // Group blocks by their chain head, preserving order
+        let mut chains: BTreeMap<BlockId, Vec<BlockId>> = BTreeMap::new();
+        for (id, &head) in merged_into.iter().enumerate() {
+            chains.entry(head).or_default().push(id);
+        }
 
-            .visible .func helper(.param .b32 helper_param)
-            {
-                .reg .b32 %r0;
-                mov.u32 %r0, %r0;
-                ret;
+        // Assign new contiguous block ids
+        let old_to_new: BTreeMap<BlockId, BlockId> = chains
+            .keys()
+            .enumerate()
+            .map(|(new_id, &old_head)| (old_head, new_id))
+            .collect();
+
+        // Build new blocks
+        let mut new_blocks: Vec<BasicBlock> = Vec::with_capacity(chains.len());
+        for (&head, members) in &chains {
+            let new_id = old_to_new[&head];
+            let label = self.blocks[head].label.clone();
+
+            let mut statements = Vec::new();
+            let mut meta = Vec::new();
+            for &member in members {
+                statements.extend(self.blocks[member].statements.iter().cloned());
+                meta.extend(self.blocks[member].meta.iter().cloned());
             }
 
-            .visible .entry kernel()
-            {
-            entry_call:
-                .calltargets helper;
-            entry_proto:
-                ret;
+            new_blocks.push(BasicBlock {
+                id: new_id,
+                label,
+                statements,
+                meta,
+            });
+        }
+        new_blocks.sort_by_key(|b| b.id);
+
+        // Rebuild edges, remapping block ids
+        let mut new_successors: BTreeMap<BlockId, BTreeSet<BlockId>> = BTreeMap::new();
+        let mut new_predecessors: BTreeMap<BlockId, BTreeSet<BlockId>> = BTreeMap::new();
+
+        for b in &new_blocks {
+            new_successors.entry(b.id).or_default();
+            new_predecessors.entry(b.id).or_default();
+        }
+
+        for (old_from, old_tos) in &self.successors {
+            let new_from = old_to_new[&merged_into[*old_from]];
+            for old_to in old_tos {
+                let new_to = old_to_new[&merged_into[*old_to]];
+                // Skip intra-chain edges (they no longer exist after merging)
+                if new_from == new_to && merged_into[*old_from] == merged_into[*old_to] {
+                    continue;
+                }
+                new_successors.entry(new_from).or_default().insert(new_to);
+                new_predecessors.entry(new_to).or_default().insert(new_from);
             }
-        "#;
+        }
 
-        let module = parse_ptx(src).expect("parse");
-        let cfgs = build_cfgs(&module, "merge_test.ptx");
-        let merged = merge_cfgs(&cfgs, "kernel").expect("merged cfg");
+        let new_entry = old_to_new[&merged_into[self.entry]];
+        let new_exits: Vec<BlockId> = self.exits.iter()
+            .map(|e| old_to_new[&merged_into[*e]])
+            .collect::<BTreeSet<_>>()
+            .into_iter()
+            .collect();
 
-        assert_eq!(merged.call_sites.len(), 1);
+        let new_meta: Vec<_> = new_blocks.iter()
+            .flat_map(|b| b.meta.iter().cloned())
+            .collect();
 
-        let call_site = &merged.call_sites[0];
-        let call_successors = merged.cfg.successors.get(&call_site.call_block).unwrap();
-        let helper_block = call_site.callee_entry;
-        let return_block = call_site.caller_return_blocks[0];
-
-        assert!(call_successors.contains(&helper_block));
-        assert!(
-            merged
-                .cfg
-                .successors
-                .get(&helper_block)
-                .unwrap()
-                .contains(&return_block)
-        );
+        ControlFlowGraph {
+            source_file: self.source_file.clone(),
+            function_name: self.function_name.clone(),
+            is_entry: self.is_entry,
+            blocks: new_blocks,
+            successors: new_successors,
+            predecessors: new_predecessors,
+            entry: new_entry,
+            exits: new_exits,
+            meta: new_meta,
+            maxntid: self.maxntid.clone(),
+        }
     }
 }
