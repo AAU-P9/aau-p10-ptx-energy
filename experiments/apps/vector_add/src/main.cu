@@ -4,12 +4,14 @@
 #include <cuda.h>
 
 #include "cupti_timing.h"
+#include "ptx_meta.h"
 
 #define ITERATIONS 10000000
 
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int N)
 {
+    META_LOOP(iterations, ITERATIONS, 0, false);
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         
