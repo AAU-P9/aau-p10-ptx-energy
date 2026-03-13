@@ -28,7 +28,7 @@
 	{
 	  "label": "PTX: Create artifact",
 	  "type": "shell",
-	  "command": "uv run experiments/tools/artifact.py experiments/build/${input:app_name}/",
+	  "command": "uv run experiments/tools/artifact.py experiments/build/${input:app_name}/ experiments/apps/${input:app_name}/src/",
 	  "problemMatcher": []
 	},
 	{
