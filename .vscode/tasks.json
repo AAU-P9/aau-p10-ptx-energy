@@ -16,6 +16,11 @@
       "type": "promptString",
       "description": "Enter kernel parameters (e.g., grid and block dimensions)",
       "default": "{\"grid_dim\": {\"x\": 1, \"y\": 1, \"z\": 1}, \"block_dim\": {\"x\": 32, \"y\": 1, \"z\": 1}, \"parameters\": []}"
+    },
+    {
+      "id": "cuda_path",
+      "type": "promptString",
+      "description": "Enter the path to the CUDA toolkit (e.g., ./experiments/apps/vector_add/src/main.cu)",
     }
   ],
   "tasks": [
@@ -47,6 +52,12 @@
     "label": "PTX: Create Control Flow Graph",
     "type": "shell",
     "command": "cargo run --manifest-path ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
+    "problemMatcher": []
+  },
+  {
+    "label": "PTX: Run CUDA file with big-chain",
+    "type": "shell",
+    "command": "uv run big-chain.py ${input:cuda_path}",
     "problemMatcher": []
   }
   ]
