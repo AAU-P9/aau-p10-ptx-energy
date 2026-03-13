@@ -1,0 +1,21 @@
+(CUPTI GPU) Kernel start timestamp: 1773323205.6054153
+(CUPTI GPU) Kernel end timestamp: 1773323210.9233818
+(CUPTI GPU) Kernel duration: 5.317966586
+
+[DEBUG] Regression parameters:
+  Slope: 0.9999990113
+  Intercept: -1772986872113395968.00
+  Samples used: 100
+
+(Estimated CPU) Kernel start: 2.123009 s
+(Estimated CPU) Kernel end: 7.440970 s
+(Estimated CPU) Kernel duration: 5.317961 s
+Duration error: 0.000005 s
+
+[Energy Consumption]
+Total energy (pmd2 total_power): 337.313103 J
+Sensor 4 energy: 264.851004 J
+Sensor 7 energy: 73.123598 J
+Samples used for integration: 51
+Wrote plots to plots/vector_add_bundle_20260312_134708
+Log file written to plots/vector_add_bundle_20260312_134708/analysis.log

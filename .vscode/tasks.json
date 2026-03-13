@@ -34,7 +34,7 @@
 	{
 	  "label": "PTX: Create plot",
 	  "type": "shell",
-	  "command": "uv run tools/plotter.py ${input:artifact_path}/",
+	  "command": "uv run experiments/tools/plotter.py ${input:artifact_path}/",
 	  "problemMatcher": []
 	},
   {

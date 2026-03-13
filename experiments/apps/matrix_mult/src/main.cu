@@ -66,7 +66,7 @@ int main() {
 
     printf("[LOG] Running kernel with %d iterations...\n");
 
-    //collectTimestampOffsets();
+    // collectTimestampOffsets();
 
     // Launch kernel with 2D grid and block size
     matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c);
