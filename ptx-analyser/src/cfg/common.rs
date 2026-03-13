@@ -28,6 +28,8 @@ pub struct BasicBlock {
     /// and nested blocks are all kept; only label statements that *start*
     /// a new block are split off.
     pub statements: Vec<FunctionStatement>,
+    /// Meta directives scoped to this block.
+    pub meta: Vec<MetaDirective>,
 }
 
 /// The kind of terminator at the end of a basic block.
@@ -286,90 +288,98 @@ fn format_maxntid_dim(dim: &FunctionDim) -> String {
 impl ControlFlowGraph {
     /// Render the CFG as a Mermaid flowchart string.
     pub fn to_mermaid(&self) -> String {
-        let mut out = String::new();
-        out.push_str("graph TD\n");
+    let mut out = String::new();
+    out.push_str("graph TD\n");
 
-        // Render @META annotations as a special info node
-        if !self.meta.is_empty() {
-            let meta_lines: Vec<String> = self.meta.iter().map(format_meta_line).collect();
-            let meta_body = meta_lines.join("\n");
-            let escaped = meta_body.replace('"', "#quot;");
-            out.push_str(&format!(
-                "    META[\"<b>@META annotations</b><br/><pre>{}</pre>\"]\n",
-                escaped
-            ));
-            out.push_str("    style META fill:#2d2a4a,stroke:#b4befe,stroke-width:2px,color:#cdd6f4\n");
-            out.push_str(&format!("    META -.-> BB{}\n", self.entry));
-        }
-
-        // Render .maxntid launch bounds (if present) as a small header node
-        if let Some(dim) = &self.maxntid {
-            let value = format_maxntid_dim(dim);
-            let label = format!(".maxntid {value}");
-            let escaped = label.replace('"', "#quot;");
-            out.push_str(&format!(
-                "    MAXNTID[\"<b>.maxntid</b><br/>{}\"]\n",
-                escaped
-            ));
-            out.push_str(
-                "    style MAXNTID fill:#2d2a4a,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4\n",
-            );
-            out.push_str(&format!("    MAXNTID -.-> BB{}\n", self.entry));
-        }
-
-        for block in &self.blocks {
-            let stmt_lines: Vec<String> = block
-                .statements
-                .iter()
-                .map(|s| format_stmt_line(s))
-                .collect();
-
-            let body = stmt_lines.join("\n");
-            let has_call = body.contains("call.uni") || body.contains(".calltargets");
-
-            // Escape quotes and wrap in quoted node label.
-            let escaped = body.replace('"', "#quot;");
-            let call_banner = if has_call {
-                "<font color='#f9a826'><b>CALL</b></font><br/>"
-            } else {
-                ""
-            };
-
-            let mut shape_open = "[\"";
-            let mut shape_close = "\"]";
-            if self.exits.contains(&block.id) {
-                shape_open = "[[\"";
-                shape_close = "\"]]";
-            }
-
-            out.push_str(&format!(
-                "    BB{}{shape_open}<b>BB{}</b><br/>{call_banner}<pre>{}</pre>{shape_close}\n",
-                block.id, block.id, escaped
-            ));
-        }
-
-        // Edges
-        for (from, tos) in &self.successors {
-            for to in tos {
-                out.push_str(&format!("    BB{from} --> BB{to}\n"));
-            }
-        }
-
-        // Style the entry block
+    // Render .maxntid launch bounds (if present) as a small header node
+    if let Some(dim) = &self.maxntid {
+        let value = format_maxntid_dim(dim);
+        let label = format!(".maxntid {value}");
+        let escaped = label.replace('"', "#quot;");
         out.push_str(&format!(
-            "    style BB{} stroke-width:3px,stroke:#d35400\n",
-            self.entry
+            "    MAXNTID[\"<b>.maxntid</b><br/>{}\"]\n",
+            escaped
         ));
+        out.push_str(
+            "    style MAXNTID fill:#2d2a4a,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4\n",
+        );
+        out.push_str(&format!("    MAXNTID -.-> BB{}\n", self.entry));
+    }
 
-        // Style exit blocks
-        for exit in &self.exits {
-            out.push_str(&format!(
-                "    style BB{exit} stroke-width:3px,stroke:#27ae60\n"
-            ));
+    for block in &self.blocks {
+        let stmt_lines: Vec<String> = block
+            .statements
+            .iter()
+            .map(|s| format_stmt_line(s))
+            .collect();
+
+        let body = stmt_lines.join("\n");
+        let has_call = body.contains("call.uni") || body.contains(".calltargets");
+
+        let escaped = body.replace('"', "#quot;");
+        let call_banner = if has_call {
+            "<font color='#f9a826'><b>CALL</b></font><br/>"
+        } else {
+            ""
+        };
+
+        // Render per-block meta annotations inline
+        let meta_section = if !block.meta.is_empty() {
+            let meta_lines: Vec<String> = block.meta.iter().map(format_meta_line).collect();
+            let meta_body = meta_lines.join("\n").replace('"', "#quot;");
+            format!(
+                "<font color='#b4befe'><b>@META</b></font><br/><pre>{}</pre><hr/>",
+                meta_body
+            )
+        } else {
+            String::new()
+        };
+
+        let mut shape_open = "[\"";
+        let mut shape_close = "\"]";
+        if self.exits.contains(&block.id) {
+            shape_open = "[[\"";
+            shape_close = "\"]]";
         }
 
-        out
+        out.push_str(&format!(
+            "    BB{}{shape_open}{meta_section}<b>BB{}</b><br/>{call_banner}<pre>{}</pre>{shape_close}\n",
+            block.id, block.id, escaped
+        ));
     }
+
+    // Edges
+    for (from, tos) in &self.successors {
+        for to in tos {
+            out.push_str(&format!("    BB{from} --> BB{to}\n"));
+        }
+    }
+
+    // Style the entry block
+    out.push_str(&format!(
+        "    style BB{} stroke-width:3px,stroke:#d35400\n",
+        self.entry
+    ));
+
+    // Style exit blocks
+    for exit in &self.exits {
+        out.push_str(&format!(
+            "    style BB{exit} stroke-width:3px,stroke:#27ae60\n"
+        ));
+    }
+
+    // Style blocks that have meta annotations
+    for block in &self.blocks {
+        if !block.meta.is_empty() {
+            out.push_str(&format!(
+                "    style BB{} fill:#1e1e3a,stroke:#b4befe,stroke-width:2px\n",
+                block.id
+            ));
+        }
+    }
+
+    return out;
+}
 }
 
 // ---------------------------------------------------------------------------
