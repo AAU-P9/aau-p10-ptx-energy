@@ -234,7 +234,7 @@ def run_plotter(config: PlotterConfig) -> int:
     Returns:
         Exit code (0 for success, non-zero for failure)
     """
-    output_dir = Path(f"plots/{config.path.name}")
+    output_dir = Path(f"experiments/plots/{config.path.name}")
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Create log file
