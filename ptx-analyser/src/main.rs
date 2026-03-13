@@ -8,6 +8,43 @@ use clap::{Parser, Subcommand};
 
 mod cfg;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ParameterType {
+    Int,
+    Float,
+    UnsignedInt,
+    SignedInt,
+    Int64,
+    Int32,
+    Int16,
+    Int8,
+    Int4,
+    Unknown, 
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Parameter {
+    pub name: String,
+    pub r#type: ParameterType,
+    pub size: usize,
+    pub value: Option<serde_json::Value>, // replaces void*
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Dim3 {
+    pub x: u32,
+    pub y: u32,
+    pub z: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KernelParameters {
+    pub grid_dim: Dim3,
+    pub block_dim: Dim3,
+    pub parameters: Vec<Parameter>,
+}
+
 #[derive(Parser)]
 #[command(name = "ptx-parser", about = "Utilities for parsing PTX assembly")]
 struct Cli {
@@ -163,22 +200,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 return Ok(());
             }
 
-            for (i, graph) in cfgs.iter().enumerate() {
+            let root_name = cfgs
+                .iter()
+                .find(|cfg| cfg.is_entry)
+                .map(|cfg| cfg.function_name.as_str())
+                .unwrap_or_else(|| cfgs[0].function_name.as_str());
+
+            if let Some(merged) = cfg::merge_cfgs(&cfgs, root_name) {
+                let graph = &merged.cfg;
                 println!("{}", graph);
 
-                // Optionally write DOT files.
                 if let Some(base) = &dot_output {
-                    let dot_path = if cfgs.len() == 1 {
-                        base.with_extension("dot")
-                    } else {
-                        let stem = base
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string();
-                        base.with_file_name(format!("{stem}.{i}.dot"))
-                    };
-
+                    let dot_path = base.with_extension("dot");
                     let dot = graph.to_dot();
                     fs::write(&dot_path, &dot)?;
                     println!(
@@ -188,20 +221,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }
 
-                // Optionally write HTML files.
                 if let Some(base) = &html_output {
-                    let html_path = if cfgs.len() == 1 {
-                        base.with_extension("html")
-                    } else {
-                        let stem = base
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string();
-                        base.with_file_name(format!("{stem}.{i}.html"))
-                    };
-
-                    let html = cfg::cfg_to_html(graph);
+                    let html_path = base.with_extension("html");
+                    let html = cfg::merged_cfg_to_html(&merged);
                     fs::write(&html_path, &html)?;
                     println!(
                         "  -> HTML written to {} ({} bytes)\n",
@@ -210,19 +232,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
                 }
 
-                // Optionally render SVG via Graphviz dot.
                 if let Some(base) = &svg_output {
-                    let svg_path = if cfgs.len() == 1 {
-                        base.with_extension("svg")
-                    } else {
-                        let stem = base
-                            .file_stem()
-                            .unwrap_or_default()
-                            .to_string_lossy()
-                            .to_string();
-                        base.with_file_name(format!("{stem}.{i}.svg"))
-                    };
-
+                    let svg_path = base.with_extension("svg");
                     let dot = graph.to_dot();
                     let svg = render_dot_to_svg(&dot)?;
                     fs::write(&svg_path, &svg)?;
@@ -231,6 +242,77 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         svg_path.display(),
                         svg.len()
                     );
+                }
+            } else {
+                for (i, graph) in cfgs.iter().enumerate() {
+                    println!("{}", graph);
+
+                    // Optionally write DOT files.
+                    if let Some(base) = &dot_output {
+                        let dot_path = if cfgs.len() == 1 {
+                            base.with_extension("dot")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.dot"))
+                        };
+
+                        let dot = graph.to_dot();
+                        fs::write(&dot_path, &dot)?;
+                        println!(
+                            "  -> DOT written to {} ({} bytes)\n",
+                            dot_path.display(),
+                            dot.len()
+                        );
+                    }
+
+                    // Optionally write HTML files.
+                    if let Some(base) = &html_output {
+                        let html_path = if cfgs.len() == 1 {
+                            base.with_extension("html")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.html"))
+                        };
+
+                        let html = cfg::cfg_to_html(graph);
+                        fs::write(&html_path, &html)?;
+                        println!(
+                            "  -> HTML written to {} ({} bytes)\n",
+                            html_path.display(),
+                            html.len()
+                        );
+                    }
+
+                    // Optionally render SVG via Graphviz dot.
+                    if let Some(base) = &svg_output {
+                        let svg_path = if cfgs.len() == 1 {
+                            base.with_extension("svg")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.svg"))
+                        };
+
+                        let dot = graph.to_dot();
+                        let svg = render_dot_to_svg(&dot)?;
+                        fs::write(&svg_path, &svg)?;
+                        println!(
+                            "  -> SVG written to {} ({} bytes)\n",
+                            svg_path.display(),
+                            svg.len()
+                        );
+                    }
                 }
             }
         }

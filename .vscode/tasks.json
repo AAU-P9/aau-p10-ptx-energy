@@ -10,6 +10,12 @@
       "id": "artifact_path",
       "type": "promptString",
       "description": "Enter the path for the artifact (e.g., experiments/artifacts/vector_add_bundle_...)"
+    },
+    {
+      "id": "kernel_params",
+      "type": "promptString",
+      "description": "Enter kernel parameters (e.g., grid and block dimensions)",
+      "default": "{\"grid_dim\": {\"x\": 1, \"y\": 1, \"z\": 1}, \"block_dim\": {\"x\": 32, \"y\": 1, \"z\": 1}, \"parameters\": []}"
     }
   ],
   "tasks": [
@@ -28,19 +34,19 @@
 	{
 	  "label": "PTX: Create plot",
 	  "type": "shell",
-	  "command": "uv run tools/plotter.py ${input:artifact_path}/",
+	  "command": "uv run experiments/tools/plotter.py ${input:artifact_path}/",
 	  "problemMatcher": []
 	},
   {
     "label": "PTX: Create analysis",
     "type": "shell",
-    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml analyze-cfg ${input:artifact_path}/main.ptx",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:artifact_path}/main.ptx",
     "problemMatcher": []
   },
   {
     "label": "PTX: Create Control Flow Graph",
     "type": "shell",
-    "command": "cargo run --manifest-path analyser/ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
     "problemMatcher": []
   }
   ]

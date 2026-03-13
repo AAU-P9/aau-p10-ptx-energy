@@ -2,8 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>  // for fabs()
-#include "cupti_timing.h"
-
+#include <cuda.h>
 
 #define ITERATIONS 1000
 
@@ -11,9 +10,8 @@
 #define N 1024
 #define K 1024
 
-
 __global__ void matrix_mul(float *A, float *B, float *C) {
-    for(int i = 0; i < ITERATIONS; ++i) {
+    for(int k = 0; k < ITERATIONS; ++k) {
 
         int row = blockIdx.y * blockDim.y + threadIdx.y;
         int col = blockIdx.x * blockDim.x + threadIdx.x;
@@ -29,7 +27,7 @@ __global__ void matrix_mul(float *A, float *B, float *C) {
 }
 
 int main() {
-    initializeCUPTI();
+    // initializeCUPTI();
     
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
@@ -68,7 +66,7 @@ int main() {
 
     printf("[LOG] Running kernel with %d iterations...\n");
 
-    collectTimestampOffsets();
+    // collectTimestampOffsets();
 
     // Launch kernel with 2D grid and block size
     matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c);
@@ -101,9 +99,9 @@ int main() {
     } else {
         printf("Test failed with %d errors\n", errors);
     }
-
-    flushCUPTIBuffers();
-    printKernelTiming();
+    
+    // flushCUPTIBuffers();
+    // printKernelTiming();
 
     // Clean up
     cudaFree(d_a);

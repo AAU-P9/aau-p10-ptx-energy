@@ -54,7 +54,7 @@ def parse_args() -> ArtifactConfig:
     )
     parser.add_argument(
         "--output-dir",
-        default="artifacts",
+        default="experiments/artifacts",
         help="Directory to place artifact bundles",
     )
     args = parser.parse_args()
