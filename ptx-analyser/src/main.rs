@@ -63,11 +63,14 @@ enum Command {
     AnalyzeCfg {
         /// Path to the PTX source file to parse.
         input_file: PathBuf,
-    
+
         /// Kernel parameters as a JSON string
-        /// Expected format: {"grid_dim": {"x": 1, "y": 1, "z": 1}, "block_dim": {"x": 32, "y": 1, "z": 1}, "parameters": []}
-        #[arg(long)]
-        kernel_params: String,
+        #[arg(long, conflicts_with = "kernel_params_file")]
+        kernel_params: Option<String>,
+
+        /// Path to JSON file containing kernel parameters
+        #[arg(long, conflicts_with = "kernel_params")]
+        kernel_params_file: Option<PathBuf>,
     },
 
     BuildCfg {
@@ -148,8 +151,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
             
-            let kernel_config: KernelParameters = serde_json::from_str(&kernel_params)
-                .map_err(|e| format!("Failed to parse kernel_params as JSON: {}", e))?;
+            let kernel_config: KernelParameters = if let Some(json) = kernel_params {
+                serde_json::from_str(&json)
+                    .map_err(|e| format!("Failed to parse kernel_params JSON: {}", e))?
+            } else if let Some(path) = kernel_params_file {
+                let contents = fs::read_to_string(&path)?;
+                serde_json::from_str(&contents)
+                    .map_err(|e| format!("Failed to parse JSON in {}: {}", path.display(), e))?
+            } else {
+                return Err("You must provide either --kernel-params or --kernel-params-file".into());
+            };
 
             let file_name = input_file
                 .file_name()

@@ -44,13 +44,6 @@ target_link_libraries(parser_ast
 )
 
 # -------------------
-# Kernel Inspector executable (new)
-# -------------------
-add_executable(kernel_inspector kernel_inspector.cpp)
-llvm_map_components_to_libnames(llvm_libs_inspector core irreader support)
-target_link_libraries(kernel_inspector PRIVATE ${llvm_libs_inspector})
-
-# -------------------
 # Custom command to generate LLVM IR
 # -------------------
 add_custom_command(

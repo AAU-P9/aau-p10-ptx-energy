@@ -6,7 +6,7 @@
 #define N 3
 #define K 5
 
-__global__ void gpu_matrix_mult(int *a, int *b, int *c, int m, int n, int k) {
+__global__ void gpu_matrix_mult(int *a, int *b, int *c, int m, int n, int k, int s, float z) {
     int row = blockIdx.y * blockDim.y + threadIdx.y; 
     int col = blockIdx.x * blockDim.x + threadIdx.x;
     int sum = 0;
@@ -42,7 +42,10 @@ int main() {
     dim3 numBlocks((k + threadsPerBlock.x - 1) / threadsPerBlock.x,
                    (m + threadsPerBlock.y - 1) / threadsPerBlock.y);
 
-    gpu_matrix_mult<<<numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, m, n, k);
+    int s = 21049;
+    float z = 499843.323;
+
+    gpu_matrix_mult<<<numBlocks, threadsPerBlock>>>(d_a, d_b, d_c, m, n, k, s, z);
 
     cudaDeviceSynchronize();
 
