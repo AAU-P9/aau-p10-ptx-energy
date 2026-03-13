@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <iomanip>
+#include <cupti.h>
 
 typedef enum ParameterType
 {
@@ -67,7 +68,7 @@ std::string ParameterTypeToString(ParameterType type)
 void PrintKernelParametersJSON(const KernelParameters &kp, const std::string &filename = "kernel_params.json")
 {
     std::ofstream outfile(filename);
-    
+
     outfile << "{\n";
     outfile << "  \"gridDim\": { \"x\": " << kp.gridDim.x << ", \"y\": " << kp.gridDim.y << ", \"z\": " << kp.gridDim.z << " },\n";
     outfile << "  \"blockDim\": { \"x\": " << kp.blockDim.x << ", \"y\": " << kp.blockDim.y << ", \"z\": " << kp.blockDim.z << " },\n";
@@ -173,6 +174,42 @@ extern "C"
         madsen_function(args, &g_kernelParams);
 
         return cudaSuccess;
+    }
+
+    CUptiResult cuptiActivityFlushAll(uint32_t flag)
+    {
+        return CUPTI_SUCCESS;
+    }
+
+    CUptiResult cuptiActivityEnable(CUpti_ActivityKind kind)
+    {
+        return CUPTI_SUCCESS;
+    }
+
+    CUptiResult cuptiActivityDisable(CUpti_ActivityKind kind)
+    {
+        return CUPTI_SUCCESS;
+    }
+
+    CUptiResult cuptiActivityGetNextRecord(uint8_t *buffer,
+                                           size_t validBufferSizeBytes,
+                                           CUpti_Activity **record)
+    {
+        *record = nullptr;
+        return CUPTI_ERROR_MAX_LIMIT_REACHED;
+    }
+
+    CUptiResult cuptiGetTimestamp(uint64_t *timestamp)
+    {
+        if (timestamp)
+            *timestamp = 0;
+        return CUPTI_SUCCESS;
+    }
+
+    CUptiResult cuptiActivityRegisterCallbacks(CUpti_BuffersCallbackRequestFunc funcBufferRequested,
+                                               CUpti_BuffersCallbackCompleteFunc funcBufferCompleted)
+    {
+        return CUPTI_SUCCESS;
     }
 }
 #endif
