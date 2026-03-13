@@ -111,6 +111,7 @@ fn inline_call_site(merged: &mut MergedCfg, call_block_id: BlockId, callee_cfg: 
                 .as_ref()
                 .map(|label| format!("{}::{}@{}", callee_cfg.function_name, label, offset)),
             statements: block.statements.clone(),
+            meta: vec![], 
         })
         .collect();
 

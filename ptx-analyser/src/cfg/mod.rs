@@ -1,22 +1,22 @@
-mod common;
 #[allow(non_snake_case)]
 mod cfgMerge;
+mod common;
 mod html;
 mod util;
 
-
+#[allow(unused_imports)]
+pub use cfgMerge::{CallSite, MergedCfg, merge_cfgs};
 #[allow(unused_imports)]
 pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
-#[allow(unused_imports)]
-pub use cfgMerge::{merge_cfgs, CallSite, MergedCfg};
 pub use html::{cfg_to_html, merged_cfg_to_html};
 
+use crate::Parameter;
 use ptx_parser::r#type::{
     EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
-    Module, ModuleDirective, Operand, instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType},
+    Module, ModuleDirective, Operand, instruction::ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType,
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use crate::{Parameter, cfg::common::format_inst_short};
+use crate::{Parameter};
 
 use util::{add_edge, add_edges_for_instruction, is_call_inst, is_terminator_inst};
 
@@ -34,7 +34,13 @@ pub fn build_cfgs(module: &Module, source_file: &str) -> Vec<ControlFlowGraph> {
                 if let Some(body) = &directive.body {
                     let name = directive.name.val.clone();
                     let maxntid = extract_maxntid(&directive.directives);
-                    cfgs.push(build_cfg_with_header(&name, body, source_file, maxntid, true));
+                    cfgs.push(build_cfg_with_header(
+                        &name,
+                        body,
+                        source_file,
+                        maxntid,
+                        true,
+                    ));
                 }
             }
             ModuleDirective::FuncFunction { directive, .. } => {
@@ -87,6 +93,7 @@ fn build_cfg_with_header(
                 id: 0,
                 label: None,
                 statements: vec![],
+                meta: vec![],
             }],
             successors: BTreeMap::new(),
             predecessors: BTreeMap::new(),
@@ -96,17 +103,6 @@ fn build_cfg_with_header(
             maxntid,
         };
     }
-
-    // ------------------------------------------------------------------
-    // Collect @META annotations from the function body.
-    // ------------------------------------------------------------------
-    let meta: Vec<MetaDirective> = stmts
-        .iter()
-        .filter_map(|s| match s {
-            FunctionStatement::Meta { directive, .. } => Some(directive.clone()),
-            _ => None,
-        })
-        .collect();
 
     // ------------------------------------------------------------------
     // Pass 1 – identify leader indices.
@@ -166,6 +162,14 @@ fn build_cfg_with_header(
             .cloned()
             .collect();
 
+        let block_meta: Vec<MetaDirective> = stmts[start..end]
+            .iter()
+            .filter_map(|s| match s {
+                FunctionStatement::Meta { directive, .. } => Some(directive.clone()),
+                _ => None,
+            })
+            .collect();
+
         let label = block_stmts.first().and_then(|s| match s {
             FunctionStatement::Label { label, .. } => Some(label.val.clone()),
             _ => None,
@@ -175,8 +179,12 @@ fn build_cfg_with_header(
             id: block_idx,
             label,
             statements: block_stmts,
+            meta: block_meta,
         });
     }
+
+    // Derive cfg-level meta from all blocks.
+    let meta: Vec<MetaDirective> = blocks.iter().flat_map(|b| b.meta.iter().cloned()).collect();
 
     // Map from label name → block id for resolving branch targets.
     let label_to_block: HashMap<String, BlockId> = blocks
@@ -351,7 +359,10 @@ impl GetCmpInfo for BasicBlock {
                     &instruction.inst
                 {
                     if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.b {
-                        print!("[DEBUG] Found SetpCmpopFtzType with operand: {:?}\n", operand);
+                        print!(
+                            "[DEBUG] Found SetpCmpopFtzType with operand: {:?}\n",
+                            operand
+                        );
                         if let Operand::Register { operand, span } = operand {
                             iterations_count = *registers.get(&operand.name).unwrap_or(&1);
                         }
@@ -381,7 +392,6 @@ impl GetCmpInfo for BasicBlock {
         None
     }
 }
-
 
 /// Recursively count all instructions in the CFG starting from a given block.
 fn count_instructions_recursive(
@@ -423,14 +433,28 @@ fn count_instructions_recursive(
     );
 
     // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
-    for stmt in &block.statements {
-        if let FunctionStatement::Instruction { instruction, .. } = stmt {
-            *scope_instructions += 1;
-            instruction_occurrences.entry(format_inst_short(&instruction.inst))
-                .and_modify(|count| *count += *scope_iterations)
-                .or_insert(*scope_iterations);
-        }
-    }
+    // for stmt in &block.statements {
+    //     if let FunctionStatement::Instruction { instruction, .. } = stmt {
+    //         if let ptx_parser::r#type::instruction::Inst::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType(inst) = &instruction.inst {
+    //             if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.d {
+    //                 if let Operand::Register { operand, span } = operand {
+    //                     // For simplicity, we assume this register is used as a loop iteration count. In a real implementation, we would need to track register usage more precisely.
+    //                     let iteration_count = 5;
+    //                     println!(
+    //                         "[SETP] Found setp instruction in block {}: setting register {} to iteration count {}",
+    //                         block_id, operand.name, iteration_count
+    //                     );
+                        
+
+                        
+    //                     // Update the registers map with the new iteration count
+    //                     // In a real implementation, we would need to handle register lifetimes and scopes properly.
+    //                 }
+    //             }
+
+    //         }
+    //     }
+    // }
 
     // Recurse into successors
     if let Some(successors) = cfg.successors.get(&block_id) {
@@ -481,13 +505,16 @@ fn count_instructions_recursive(
                 );
             }
 
-
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
 
             if is_block_a_true_branch {
                 let mut block_a_scope_iterations = *scope_iterations;
-                let mut block_b_scope_iterations = if is_loop { *scope_iterations * branch_info.iterations_count } else { *scope_iterations };
+                let mut block_b_scope_iterations = if is_loop {
+                    *scope_iterations * branch_info.iterations_count
+                } else {
+                    *scope_iterations
+                };
 
                 println!(
                     "[A_TRUE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}",
@@ -522,7 +549,11 @@ fn count_instructions_recursive(
                     instruction_occurrences,
                 );
             } else {
-                let mut block_a_scope_iterations = if is_loop {*scope_iterations * branch_info.iterations_count} else { *scope_iterations };
+                let mut block_a_scope_iterations = if is_loop {
+                    *scope_iterations * branch_info.iterations_count
+                } else {
+                    *scope_iterations
+                };
                 let mut block_b_scope_iterations = *scope_iterations;
 
                 println!(
@@ -571,7 +602,16 @@ fn count_instructions_recursive(
 }
 
 // Analyze the cfg to get a power consumption estimate
-pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid_z: u32, block_x: u32, block_y: u32, block_z: u32, params: &Vec<Parameter>) {    
+pub fn analyze_cfgs(
+    cfgs: &Vec<ControlFlowGraph>,
+    grid_x: u32,
+    grid_y: u32,
+    grid_z: u32,
+    block_x: u32,
+    block_y: u32,
+    block_z: u32,
+    params: &Vec<Parameter>,
+) {
     let root_name = cfgs
         .iter()
         .find(|cfg| cfg.is_entry)
@@ -588,7 +628,10 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid
     if !params.is_empty() {
         println!("[ANALYZE_CFGS] Kernel parameters:");
         for param in params {
-            println!("  - {} ({:?}, {} bytes)", param.name, param.r#type, param.size);
+            println!(
+                "  - {} ({:?}, {} bytes)",
+                param.name, param.r#type, param.size
+            );
         }
     }
 
@@ -759,6 +802,13 @@ mod tests {
         let return_block = call_site.caller_return_blocks[0];
 
         assert!(call_successors.contains(&helper_block));
-        assert!(merged.cfg.successors.get(&helper_block).unwrap().contains(&return_block));
+        assert!(
+            merged
+                .cfg
+                .successors
+                .get(&helper_block)
+                .unwrap()
+                .contains(&return_block)
+        );
     }
 }

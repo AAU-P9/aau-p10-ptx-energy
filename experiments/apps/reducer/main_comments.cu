@@ -1,5 +1,6 @@
-#include "ptx_meta.h"
+/*#include "ptx_meta.h"
 #include <cuda.h>
+#include <stdio.h>
 
 #define ITERATIONS 40000000
 
@@ -348,3 +349,4 @@ int main() {
 
   // disableCUPTI();
 }
+*/

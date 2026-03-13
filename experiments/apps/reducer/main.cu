@@ -1,5 +1,7 @@
 #include "ptx_meta.h"
 #include <cuda.h>
+#include <stdio.h>
+
 
 #define ITERATIONS 40000000
 
@@ -13,34 +15,31 @@ extern "C" {
 __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
     reduce_sum_kernel(const float *__restrict__ input,
                       float *__restrict__ output, int N) {
+  KERNEL_BEGIN(reduce_sum_kernel);
 
-  KERNEL_META(
-      reduce_sum_kernel,
+  KERNEL_PARAM_PTR(0, input, ELEM_F32, input_vector,
+                   ALIGN(ALIGN_CACHELINE) ACCESS_READONLY ACCESS_NOALIAS);
+  KERNEL_PARAM_PTR(1, output, ELEM_F32, partial_sums,
+                   ALIGN(ALIGN_CACHELINE) ACCESS_WRITEONLY ACCESS_NOALIAS);
+  KERNEL_PARAM_INT(2, N, TYPE_I32, num_elements,
+                   RANGE(1, 1048576) MULTIPLE(256));
 
-        META_PARAM_PTR(0, input, ELEM_F32, input_vector, ALIGN(ALIGN_CACHELINE) ACCESS_READONLY ACCESS_NOALIAS)
+  KERNEL_TILE(DIM_X, 256);
+  KERNEL_LAUNCH_CONFIG(256, 1, 1, "N/256 1 1");
+  KERNEL_LAYOUT(input, LAYOUT_LINEAR, "N");
+  KERNEL_LAYOUT(output, LAYOUT_LINEAR, "num_blocks");
 
-        META_PARAM_PTR(1, output, ELEM_F32, partial_sums, ALIGN(ALIGN_CACHELINE) ACCESS_WRITEONLY ACCESS_NOALIAS)
-        
-        META_PARAM_INT(2, N, TYPE_I32, num_elements, RANGE(1, 1048576) MULTIPLE(256))
-        
-        META_TILE(DIM_X, 256) 
-        META_LAUNCH(256, 1, 1, "N/256 1 1")
-                      
-        META_SHARED(sdata, ELEM_F32, 1024) 
-        META_LOOP(grid_stride, 1, 4096, false)
-        META_LOOP(warp_reduce, 5, 5, true) 
-        
-        META_LAYOUT(input, LAYOUT_LINEAR, "N")
-        META_LAYOUT(output, LAYOUT_LINEAR, "num_blocks")
-        META_ASSUME("N > 0 && N <= 1048576 && N % 256 == 0")
-        META_ASSUME("blockDim.x == 256")
-        
-        META_CONST_REF(reduce_sum, "version block_size warp_size" "min_blocks_per_sm max_n"));
-        ASSUME_DIM(N, 1, 1048576, 256);
-        ASSUME_ALIGNED(input, 128);
-        ASSUME_ALIGNED(output, 128);
+  KERNEL_ASSUME("N > 0 && N <= 1048576 && N % 256 == 0");
+  KERNEL_ASSUME("blockDim.x == 256");
+  KERNEL_CONST_REF(reduce_sum,
+                   "version block_size warp_size min_blocks_per_sm max_n");
+
+  ASSUME_DIM(N, 1, 1048576, 256);
+  ASSUME_ALIGNED(input, 128);
+  ASSUME_ALIGNED(output, 128);
 
   // ----- Shared memory -------------------------------------------------
+  KERNEL_SHARED(sdata, ELEM_F32, 1024);
   __shared__ float sdata[BLOCK_SIZE];
 
   int tid = threadIdx.x;
@@ -50,6 +49,7 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
   ASSUME_RANGE(tid, 0, BLOCK_SIZE - 1);
 
   // ----- Phase 1: grid-stride accumulation into shared memory ----------
+  KERNEL_LOOP(grid_stride, 1, 4096, false);
   float sum = 0.0f;
   for (int i = gid; i < N; i += gridSize) {
     sum += input[i];
@@ -75,6 +75,7 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
     sdata[tid] += sdata[tid + 32];
     __syncwarp();
     float val = sdata[tid];
+    KERNEL_LOOP(warp_reduce, 5, 5, true);
     for (int offset = 16; offset >= 1; offset >>= 1) {
       val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }
@@ -82,6 +83,8 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
       output[blockIdx.x] = val;
     }
   }
+
+  KERNEL_END(reduce_sum_kernel);
 }
 }
 
