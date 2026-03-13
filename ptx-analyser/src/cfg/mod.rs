@@ -13,10 +13,10 @@ pub use html::{cfg_to_html, merged_cfg_to_html};
 
 use ptx_parser::r#type::{
     EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
-    Module, ModuleDirective, Operand, instruction::ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType,
+    Module, ModuleDirective, Operand, instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType},
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use crate::{Parameter};
+use crate::{Parameter, cfg::common::format_inst_short};
 
 use util::{add_edge, add_edges_for_instruction, is_call_inst, is_terminator_inst};
 
@@ -393,6 +393,7 @@ fn count_instructions_recursive(
     scope_iterations: &mut u64,
     registers: &HashMap<String, u64>,
     previous_block_predecessor_count: usize,
+    instruction_occurrences: &mut HashMap<String, u64>,
 ) {
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
@@ -409,8 +410,6 @@ fn count_instructions_recursive(
 
     // Count instructions in current block1x
     let block = &cfg.blocks[block_id];
-    *scope_instructions += block.statements.len() as u64;
-
     let block_predecessor_count = cfg.predecessors.get(&block_id).unwrap().len();
 
     // Debug: Print if the block has no instructions, this should be impossible.
@@ -424,28 +423,14 @@ fn count_instructions_recursive(
     );
 
     // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
-    // for stmt in &block.statements {
-    //     if let FunctionStatement::Instruction { instruction, .. } = stmt {
-    //         if let ptx_parser::r#type::instruction::Inst::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType(inst) = &instruction.inst {
-    //             if let ptx_parser::r#type::GeneralOperand::Single { operand, .. } = &inst.d {
-    //                 if let Operand::Register { operand, span } = operand {
-    //                     // For simplicity, we assume this register is used as a loop iteration count. In a real implementation, we would need to track register usage more precisely.
-    //                     let iteration_count = 5;
-    //                     println!(
-    //                         "[SETP] Found setp instruction in block {}: setting register {} to iteration count {}",
-    //                         block_id, operand.name, iteration_count
-    //                     );
-                        
-
-                        
-    //                     // Update the registers map with the new iteration count
-    //                     // In a real implementation, we would need to handle register lifetimes and scopes properly.
-    //                 }
-    //             }
-
-    //         }
-    //     }
-    // }
+    for stmt in &block.statements {
+        if let FunctionStatement::Instruction { instruction, .. } = stmt {
+            *scope_instructions += 1;
+            instruction_occurrences.entry(format_inst_short(&instruction.inst))
+                .and_modify(|count| *count += *scope_iterations)
+                .or_insert(*scope_iterations);
+        }
+    }
 
     // Recurse into successors
     if let Some(successors) = cfg.successors.get(&block_id) {
@@ -467,6 +452,7 @@ fn count_instructions_recursive(
                 scope_iterations,
                 registers,
                 block_predecessor_count,
+                instruction_occurrences,
             );
         } else if successors.len() > 1 {
             let branch_info = block.get_cmp_info(registers).unwrap();
@@ -516,6 +502,7 @@ fn count_instructions_recursive(
                     &mut block_b_scope_iterations,
                     registers,
                     block_predecessor_count,
+                    instruction_occurrences,
                 );
 
                 println!(
@@ -532,6 +519,7 @@ fn count_instructions_recursive(
                     &mut block_a_scope_iterations,
                     registers,
                     block_predecessor_count,
+                    instruction_occurrences,
                 );
             } else {
                 let mut block_a_scope_iterations = if is_loop {*scope_iterations * branch_info.iterations_count} else { *scope_iterations };
@@ -551,6 +539,7 @@ fn count_instructions_recursive(
                     &mut block_a_scope_iterations,
                     registers,
                     block_predecessor_count,
+                    instruction_occurrences,
                 );
 
                 println!(
@@ -567,6 +556,7 @@ fn count_instructions_recursive(
                     &mut block_b_scope_iterations,
                     registers,
                     block_predecessor_count,
+                    instruction_occurrences,
                 );
             }
 
@@ -611,6 +601,9 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid
     // Registers for tracking loop iteration counts (e.g., from setp instructions)
     let registers: HashMap<String, u64> = HashMap::new();
 
+    // Track occurrences of each instruction type for potential use in a more detailed power model
+    let mut instruction_occurrences: HashMap<String, u64> = HashMap::new();
+
     if let Some(block) = cfg.blocks.get(cfg.entry) {
         println!(
             "[ANALYZE_CFGS] Starting analysis from entry block {} with label {:?} and {} successors",
@@ -629,9 +622,14 @@ pub fn analyze_cfgs(cfgs: &Vec<ControlFlowGraph>, grid_x: u32, grid_y: u32, grid
         &mut scope_iterations,
         &registers,
         0,
+        &mut instruction_occurrences,
     );
-
+// 
     println!("Total instructions for the CFG: {}", total_instructions);
+    println!("Instruction occurrences:");
+    for (inst, count) in &instruction_occurrences {
+        println!("  - {}: {}", inst, count);
+    }
 }
 
 // ---------------------------------------------------------------------------
