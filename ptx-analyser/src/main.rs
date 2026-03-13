@@ -147,6 +147,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::AnalyzeCfg {
             input_file,
             kernel_params,
+            kernel_params_file,
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
