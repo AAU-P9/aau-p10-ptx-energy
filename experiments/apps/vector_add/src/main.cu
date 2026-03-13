@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <cuda.h>
 
-// include "cupti_timing.h"
+#include "cupti_timing.h"
 
 #define ITERATIONS 10000000
 
@@ -21,7 +21,7 @@ __global__ void vector_add(float *a, float *b, float *out, int N)
 
 int main()
 {
-    // initializeCUPTI();
+    initializeCUPTI();
     
     int N = 1024;
     size_t bytes = N * sizeof(float);
@@ -50,7 +50,7 @@ int main()
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
-    // collectTimestampOffsets();
+    collectTimestampOffsets();
     
     // Launch kernel: 1 block with 256 threads
     int block_size = 256;
@@ -60,8 +60,8 @@ int main()
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     
-    // flushCUPTIBuffers();
-    // printKernelTiming();
+    flushCUPTIBuffers();
+    printKernelTiming();
     
     // Clean up
     cudaFree(d_a);
