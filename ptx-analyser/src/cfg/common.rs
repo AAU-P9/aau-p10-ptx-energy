@@ -2,7 +2,7 @@ use ptx_parser::PtxUnparser;
 use ptx_parser::r#type::instruction::Inst;
 use ptx_parser::r#type::meta::{MetaConstraint, MetaDirective, MetaTag};
 use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 use std::fmt;
 
 
@@ -13,6 +13,23 @@ use std::fmt;
 
 /// Unique identifier for a basic block inside one function's CFG.
 pub type BlockId = usize;
+
+/// A detected natural loop derived from `@META Loop` annotations + back-edge analysis.
+/// Stored on the CFG so analysis passes can query loop structure without re-running detection.
+#[derive(Debug, Clone)]
+pub struct LoopInfo {
+    /// Block ID of the loop header (target of the back edge).
+    pub header: BlockId,
+    /// Back-edge sources that jump back to the header.
+    pub tails: Vec<BlockId>,
+    /// All block IDs in the loop body (range heuristic: [min(header,tail)..=max(header,tail)]).
+    pub body: HashSet<BlockId>,
+    /// User-supplied label from the `@META Loop` annotation.
+    pub label: String,
+    pub min_iters: u32,
+    pub max_iters: u32,
+    pub is_unrolled: bool,
+}
 
 /// A single basic block: a maximal straight-line sequence of statements with
 /// exactly one entry point (the first statement) and one exit point (the last).
@@ -30,6 +47,9 @@ pub struct BasicBlock {
     pub statements: Vec<FunctionStatement>,
     /// Meta directives scoped to this block.
     pub meta: Vec<MetaDirective>,
+    /// True if this block absorbed one or more trampoline blocks during compaction.
+    /// The trampoline statements are still present at the end of `statements`.
+    pub absorbed_trampoline: bool,
 }
 
 /// The kind of terminator at the end of a basic block.
@@ -100,6 +120,9 @@ pub struct ControlFlowGraph {
     ///
     /// For non-entry device functions this is always `None`.
     pub maxntid: Option<FunctionDim>,
+
+    /// Natural loops detected from `@META Loop` annotations + back-edge analysis.
+    pub loops: Vec<LoopInfo>,
 }
 
 // ---------------------------------------------------------------------------

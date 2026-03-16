@@ -205,6 +205,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string();
+
+            // --- new cfg rewrite ---
+            let new_cfg = cfg::cfg::build_cfg(&module, &file_name);
+            if let Some(base) = &html_output {
+                let html_path = base.with_extension("new.html");
+                let html = cfg::cfg::cfg_to_html(&new_cfg);
+                fs::write(&html_path, &html)?;
+                println!("new cfg -> HTML written to {}", html_path.display());
+            }
+            // -----------------------
+
             let cfgs = cfg::build_cfgs(&module, &file_name);
 
             if cfgs.is_empty() {
