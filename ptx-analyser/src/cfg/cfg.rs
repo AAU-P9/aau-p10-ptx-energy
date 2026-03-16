@@ -1,8 +1,10 @@
 use ptx_parser::PtxUnparser;
-use ptx_parser::r#type::{FunctionStatement, GeneralOperand, Module, ModuleDirective, Operand, StatementDirective};
-use ptx_parser::r#type::meta::MetaTag;
 use ptx_parser::r#type::instruction::Inst;
 use ptx_parser::r#type::instruction::mov::section_0::Type as MovType;
+use ptx_parser::r#type::meta::MetaTag;
+use ptx_parser::r#type::{
+    FunctionStatement, GeneralOperand, Module, ModuleDirective, Operand, StatementDirective,
+};
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use super::common::{BasicBlock, BlockId, ControlFlowGraph, LoopInfo};
@@ -55,14 +57,26 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
 
         if is_end {
             let id = blocks.len();
-            blocks.push(BasicBlock { id, label: None, statements: current, meta: Vec::new(), absorbed_trampoline: false });
+            blocks.push(BasicBlock {
+                id,
+                label: None,
+                statements: current,
+                meta: Vec::new(),
+                absorbed_trampoline: false,
+            });
             current = Vec::new();
         }
     }
 
     if !current.is_empty() {
         let id = blocks.len();
-        blocks.push(BasicBlock { id, label: None, statements: current, meta: Vec::new(), absorbed_trampoline: false });
+        blocks.push(BasicBlock {
+            id,
+            label: None,
+            statements: current,
+            meta: Vec::new(),
+            absorbed_trampoline: false,
+        });
     }
 
     //label -> block_id, needed to resolve branch targets
@@ -102,8 +116,11 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
 
         let Some(inst) = last_inst else {
             // no instruction — fall through
-            if has_next { add_edge(id, next, &mut successors, &mut predecessors); }
-            else { exits.push(id); }
+            if has_next {
+                add_edge(id, next, &mut successors, &mut predecessors);
+            } else {
+                exits.push(id);
+            }
             continue;
         };
 
@@ -157,8 +174,14 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
             }
 
             // call returns to next block; treat it like fall-through
-            Inst::CallUni(_) | Inst::CallUni1(_) | Inst::CallUni2(_) | Inst::CallUni3(_)
-            | Inst::CallUni4(_) | Inst::CallUni5(_) | Inst::CallUni6(_) | Inst::CallUni7(_)
+            Inst::CallUni(_)
+            | Inst::CallUni1(_)
+            | Inst::CallUni2(_)
+            | Inst::CallUni3(_)
+            | Inst::CallUni4(_)
+            | Inst::CallUni5(_)
+            | Inst::CallUni6(_)
+            | Inst::CallUni7(_)
             | Inst::CallUni8(_) => {
                 if has_next {
                     add_edge(id, next, &mut successors, &mut predecessors);
@@ -169,8 +192,11 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
 
             //shouldn't really appear as a terminator but handle it anyway
             _ => {
-                if has_next { add_edge(id, next, &mut successors, &mut predecessors); }
-                else { exits.push(id); }
+                if has_next {
+                    add_edge(id, next, &mut successors, &mut predecessors);
+                } else {
+                    exits.push(id);
+                }
             }
         }
     }
@@ -190,14 +216,26 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
     };
 
     compact(&mut cfg);
-    println!("[cfg] {} blocks after compaction, {} exits", cfg.blocks.len(), cfg.exits.len());
+    println!(
+        "[cfg] {} blocks after compaction, {} exits",
+        cfg.blocks.len(),
+        cfg.exits.len()
+    );
 
     cfg.loops = detect_loops(&cfg);
     println!("[cfg] {} natural loops detected", cfg.loops.len());
     for lp in &cfg.loops {
         let unrolled = if lp.is_unrolled { " (unrolled)" } else { "" };
-        println!("[cfg]   loop '{}'{}: header=BB{}, tails={:?}, iters={}..{}, body={} blocks",
-            lp.label, unrolled, lp.header, lp.tails, lp.min_iters, lp.max_iters, lp.body.len());
+        println!(
+            "[cfg]   loop '{}'{}: header=BB{}, tails={:?}, iters={}..{}, body={} blocks",
+            lp.label,
+            unrolled,
+            lp.header,
+            lp.tails,
+            lp.min_iters,
+            lp.max_iters,
+            lp.body.len()
+        );
     }
 
     cfg
@@ -206,8 +244,7 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
 //TODO move to own file
 pub fn cfg_to_html(cfg: &ControlFlowGraph) -> String {
     let loop_palette = [
-        "#e64553", "#fe640b", "#40a02b", "#04a5e5",
-        "#8839ef", "#dd7878", "#179299", "#df8e1d",
+        "#e64553", "#fe640b", "#40a02b", "#04a5e5", "#8839ef", "#dd7878", "#179299", "#df8e1d",
     ];
     // build legend directly from cfg.loops — no need to re-scan statements
     let legend_html: String = cfg.loops.iter().enumerate().map(|(i, lp)| {
@@ -218,9 +255,13 @@ pub fn cfg_to_html(cfg: &ControlFlowGraph) -> String {
 
     let dot = cfg_to_dot(cfg);
     // escape for JS template literal — backtick and $ would break the string
-    let dot_escaped = dot.replace('\\', "\\\\").replace('`', "\\`").replace('$', "\\$");
+    let dot_escaped = dot
+        .replace('\\', "\\\\")
+        .replace('`', "\\`")
+        .replace('$', "\\$");
 
-    format!(r#"<!DOCTYPE html>
+    format!(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -258,7 +299,9 @@ try {{
         source = html_esc(&cfg.source_file),
         total = cfg.blocks.len(),
         dot_escaped = dot_escaped,
-        legend = if legend_html.is_empty() { String::new() } else {
+        legend = if legend_html.is_empty() {
+            String::new()
+        } else {
             format!("&nbsp;&middot;&nbsp; loops: {legend_html}")
         },
     )
@@ -266,15 +309,17 @@ try {{
 
 fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
     fn html_esc(s: &str) -> String {
-        s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+        s.replace('&', "&amp;")
+            .replace('<', "&lt;")
+            .replace('>', "&gt;")
+            .replace('"', "&quot;")
     }
 
     let back_edges = find_back_edges(cfg);
 
     //colours for loop regions — wraps around if there are more than 8 loops
     let loop_palette: &[&str] = &[
-        "#e64553", "#fe640b", "#40a02b", "#04a5e5",
-        "#8839ef", "#dd7878", "#179299", "#df8e1d",
+        "#e64553", "#fe640b", "#40a02b", "#04a5e5", "#8839ef", "#dd7878", "#179299", "#df8e1d",
     ];
 
     //build display strings from pre-computed loop info on the cfg
@@ -282,9 +327,14 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
     for (i, lp) in cfg.loops.iter().enumerate() {
         let color = loop_palette[i % loop_palette.len()];
         let unrolled = if lp.is_unrolled { " unrolled" } else { "" };
-        let display = format!("{} [{}..{}]{}", lp.label, lp.min_iters, lp.max_iters, unrolled);
+        let display = format!(
+            "{} [{}..{}]{}",
+            lp.label, lp.min_iters, lp.max_iters, unrolled
+        );
         for &bid in &lp.body {
-            block_loop_color.entry(bid).or_insert((color, display.clone()));
+            block_loop_color
+                .entry(bid)
+                .or_insert((color, display.clone()));
         }
         block_loop_color.insert(lp.header, (color, display));
     }
@@ -313,14 +363,21 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
         // when a trampoline was absorbed, find the index where it starts
         // (the last unconditional bra.uni in the block)
         let tramp_start = if block.absorbed_trampoline {
-            block.statements.iter().enumerate().rev().find_map(|(i, s)| {
-                if let FunctionStatement::Instruction { instruction, .. } = s {
-                    if instruction.predicate.is_none() && matches!(instruction.inst, Inst::BraUni(_) | Inst::BraUni1(_)) {
-                        return Some(i);
+            block
+                .statements
+                .iter()
+                .enumerate()
+                .rev()
+                .find_map(|(i, s)| {
+                    if let FunctionStatement::Instruction { instruction, .. } = s {
+                        if instruction.predicate.is_none()
+                            && matches!(instruction.inst, Inst::BraUni(_) | Inst::BraUni1(_))
+                        {
+                            return Some(i);
+                        }
                     }
-                }
-                None
-            })
+                    None
+                })
         } else {
             None
         };
@@ -329,7 +386,9 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
         for (i, stmt) in block.statements.iter().enumerate() {
             let text: String = stmt.to_tokens_spaced().iter().map(|t| t.as_str()).collect();
             let line = text.trim();
-            if line.is_empty() { continue; }
+            if line.is_empty() {
+                continue;
+            }
 
             let in_tramp = tramp_start.map_or(false, |t| i >= t);
 
@@ -343,11 +402,14 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
                 "#585b70"
             } else {
                 match stmt {
-                    FunctionStatement::Instruction { .. }                                        => "#cdd6f4",
-                    FunctionStatement::Meta { .. }                                               => "#cba6f7",
-                    FunctionStatement::Label { .. }                                              => "#585b70",
-                    FunctionStatement::Directive { directive: StatementDirective::Loc {..}, .. } => "#585b70",
-                    _                                                                            => "#89b4fa",
+                    FunctionStatement::Instruction { .. } => "#cdd6f4",
+                    FunctionStatement::Meta { .. } => "#cba6f7",
+                    FunctionStatement::Label { .. } => "#585b70",
+                    FunctionStatement::Directive {
+                        directive: StatementDirective::Loc { .. },
+                        ..
+                    } => "#585b70",
+                    _ => "#89b4fa",
                 }
             };
             let text = wrap_line(&html_esc(line), 60);
@@ -360,7 +422,8 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
         let header_content = if let Some(lbl) = loop_label {
             format!(
                 "<B>&#160;BB{id}&#160;</B><BR/><FONT POINT-SIZE=\"8\">&#x27F3; {lbl}</FONT>",
-                id = block.id, lbl = html_esc(lbl),
+                id = block.id,
+                lbl = html_esc(lbl),
             )
         } else {
             format!("<B>&#160;BB{id}&#160;</B>", id = block.id)
@@ -403,8 +466,20 @@ fn detect_loops(cfg: &ControlFlowGraph) -> Vec<LoopInfo> {
     for block in &cfg.blocks {
         for stmt in &block.statements {
             if let FunctionStatement::Meta { directive, .. } = stmt {
-                if let MetaTag::Loop { label, min_iters, max_iters, is_unrolled } = &directive.tag {
-                    annotation_blocks.push((block.id, label.clone(), *min_iters, *max_iters, *is_unrolled));
+                if let MetaTag::Loop {
+                    label,
+                    min_iters,
+                    max_iters,
+                    is_unrolled,
+                } = &directive.tag
+                {
+                    annotation_blocks.push((
+                        block.id,
+                        label.clone(),
+                        *min_iters,
+                        *max_iters,
+                        *is_unrolled,
+                    ));
                     break;
                 }
             }
@@ -427,16 +502,21 @@ fn detect_loops(cfg: &ControlFlowGraph) -> Vec<LoopInfo> {
                         found_header = Some(s);
                         break 'bfs;
                     }
-                    if visited.insert(s) { queue.push_back(s); }
+                    if visited.insert(s) {
+                        queue.push_back(s);
+                    }
                 }
             }
         }
 
         let Some(header) = found_header else { continue };
-        if seen_headers.contains(&header) { continue; }
+        if seen_headers.contains(&header) {
+            continue;
+        }
         seen_headers.insert(header);
 
-        let tails: Vec<BlockId> = back_edges.iter()
+        let tails: Vec<BlockId> = back_edges
+            .iter()
             .filter(|(_, h)| *h == header)
             .map(|(t, _)| *t)
             .collect();
@@ -445,7 +525,15 @@ fn detect_loops(cfg: &ControlFlowGraph) -> Vec<LoopInfo> {
         let hi = tails.iter().copied().max().unwrap_or(header).max(header);
         let body: HashSet<BlockId> = (lo..=hi).collect();
 
-        loops.push(LoopInfo { header, tails, body, label, min_iters, max_iters, is_unrolled });
+        loops.push(LoopInfo {
+            header,
+            tails,
+            body,
+            label,
+            min_iters,
+            max_iters,
+            is_unrolled,
+        });
     }
 
     loops
@@ -457,25 +545,40 @@ fn compact(cfg: &mut ControlFlowGraph) {
 
     //wtf is this syntax lol
     loop {
-        
         // block A ends with unconditional bra.uni, one succ B, B has one pred A
         // -> safe to merge A+B into A
-        let candidate = cfg.blocks.iter()
+        let candidate = cfg
+            .blocks
+            .iter()
             .filter(|b| !deleted.contains(&b.id))
             .find_map(|block| {
                 let last = block.statements.iter().rev().find_map(|s| {
-                    if let FunctionStatement::Instruction { instruction, .. } = s { Some(instruction) } else { None }
+                    if let FunctionStatement::Instruction { instruction, .. } = s {
+                        Some(instruction)
+                    } else {
+                        None
+                    }
                 })?;
-                if last.predicate.is_some() { return None; }
-                if !matches!(last.inst, Inst::BraUni(_) | Inst::BraUni1(_)) { return None; }
+                if last.predicate.is_some() {
+                    return None;
+                }
+                if !matches!(last.inst, Inst::BraUni(_) | Inst::BraUni1(_)) {
+                    return None;
+                }
 
                 let succs = cfg.successors.get(&block.id)?;
-                if succs.len() != 1 { return None; }
+                if succs.len() != 1 {
+                    return None;
+                }
                 let &b_id = succs.iter().next()?;
-                if b_id == block.id || deleted.contains(&b_id) { return None; }
+                if b_id == block.id || deleted.contains(&b_id) {
+                    return None;
+                }
 
                 let preds = cfg.predecessors.get(&b_id)?;
-                if preds.len() != 1 { return None; }
+                if preds.len() != 1 {
+                    return None;
+                }
 
                 Some((block.id, b_id))
             });
@@ -483,13 +586,15 @@ fn compact(cfg: &mut ControlFlowGraph) {
         let Some((a_id, b_id)) = candidate else { break };
 
         //strip the unconditional bra.uni — it's now a no-op after merge
+        /*
         let a = &mut cfg.blocks[a_id];
         a.statements.retain(|s| !matches!(s,
-            FunctionStatement::Instruction { instruction, .. }
-            if matches!(instruction.inst, Inst::BraUni(_) | Inst::BraUni1(_))
-                && instruction.predicate.is_none()
+        FunctionStatement::Instruction { instruction, .. }
+        if matches!(instruction.inst, Inst::BraUni(_) | Inst::BraUni1(_))
+        && instruction.predicate.is_none()
         ));
 
+        */
         //move B's stmts into A
         let b_stmts = cfg.blocks[b_id].statements.clone();
         cfg.blocks[a_id].statements.extend(b_stmts);
@@ -508,7 +613,9 @@ fn compact(cfg: &mut ControlFlowGraph) {
         //if B was an exit, A inherits that
         if cfg.exits.contains(&b_id) {
             cfg.exits.retain(|&x| x != b_id);
-            if !cfg.exits.contains(&a_id) { cfg.exits.push(a_id); }
+            if !cfg.exits.contains(&a_id) {
+                cfg.exits.push(a_id);
+            }
         }
 
         deleted.insert(b_id);
@@ -519,75 +626,86 @@ fn compact(cfg: &mut ControlFlowGraph) {
     // into that predecessor. Statements are kept (visible in the parent block)
     // and the parent is flagged with absorbed_trampoline so the visualiser can
     // render the section differently.
+    /* 
     loop {
         let trampoline = cfg.blocks.iter()
-            .filter(|b| !deleted.contains(&b.id) && b.id != cfg.entry)
-            .find_map(|block| {
-                let real_insts: Vec<_> = block.statements.iter().filter_map(|s| {
-                    if let FunctionStatement::Instruction { instruction, .. } = s { Some(instruction) } else { None }
-                }).collect();
-                if real_insts.len() != 1 { return None; }
+        .filter(|b| !deleted.contains(&b.id) && b.id != cfg.entry)
+        .find_map(|block| {
+            let real_insts: Vec<_> = block.statements.iter().filter_map(|s| {
+                if let FunctionStatement::Instruction { instruction, .. } = s { Some(instruction) } else { None }
+            }).collect();
+        if real_insts.len() != 1 { return None; }
                 let only = real_insts[0];
                 if only.predicate.is_some() { return None; }
                 if !matches!(only.inst, Inst::BraUni(_) | Inst::BraUni1(_)) { return None; }
-
+                
                 let succs = cfg.successors.get(&block.id)?;
                 if succs.len() != 1 { return None; }
                 let &target = succs.iter().next()?;
                 if target == block.id || deleted.contains(&target) { return None; }
-
+                
                 // only merge if there's exactly one predecessor to absorb into
                 let preds = cfg.predecessors.get(&block.id)?;
                 if preds.len() != 1 { return None; }
                 let &parent = preds.iter().next()?;
                 if deleted.contains(&parent) { return None; }
-
+                
                 Some((block.id, target, parent))
             });
+            
+            let Some((tramp_id, target_id, parent_id)) = trampoline else { break };
+            
+            // append trampoline's statements into the parent so they stay visible
+            let tramp_stmts = cfg.blocks[tramp_id].statements.clone();
+            cfg.blocks[parent_id].statements.extend(tramp_stmts);
+            cfg.blocks[parent_id].absorbed_trampoline = true;
+            
+            // rewire: parent now goes to target instead of trampoline
+            cfg.successors.get_mut(&parent_id).map(|s| { s.remove(&tramp_id); s.insert(target_id); });
+            cfg.predecessors.get_mut(&target_id).map(|p| { p.remove(&tramp_id); p.insert(parent_id); });
+            cfg.predecessors.remove(&tramp_id);
+            cfg.successors.remove(&tramp_id);
 
-        let Some((tramp_id, target_id, parent_id)) = trampoline else { break };
-
-        // append trampoline's statements into the parent so they stay visible
-        let tramp_stmts = cfg.blocks[tramp_id].statements.clone();
-        cfg.blocks[parent_id].statements.extend(tramp_stmts);
-        cfg.blocks[parent_id].absorbed_trampoline = true;
-
-        // rewire: parent now goes to target instead of trampoline
-        cfg.successors.get_mut(&parent_id).map(|s| { s.remove(&tramp_id); s.insert(target_id); });
-        cfg.predecessors.get_mut(&target_id).map(|p| { p.remove(&tramp_id); p.insert(parent_id); });
-        cfg.predecessors.remove(&tramp_id);
-        cfg.successors.remove(&tramp_id);
-
-        if cfg.exits.contains(&tramp_id) {
-            cfg.exits.retain(|&x| x != tramp_id);
+            if cfg.exits.contains(&tramp_id) {
+                cfg.exits.retain(|&x| x != tramp_id);
             if !cfg.exits.contains(&parent_id) { cfg.exits.push(parent_id); }
         }
-
+        
         deleted.insert(tramp_id);
     }
-
+    */
+    
     //compact the block vec — remove deleted slots and re-number from 0
     let old_blocks: Vec<BasicBlock> = std::mem::take(&mut cfg.blocks);
-    let id_map: HashMap<BlockId, BlockId> = old_blocks.iter()
+    let id_map: HashMap<BlockId, BlockId> = old_blocks
+        .iter()
         .filter(|b| !deleted.contains(&b.id))
         .enumerate()
         .map(|(new_id, b)| (b.id, new_id))
         .collect();
 
-    cfg.blocks = old_blocks.into_iter()
+    cfg.blocks = old_blocks
+        .into_iter()
         .filter(|b| !deleted.contains(&b.id))
         .enumerate()
-        .map(|(new_id, mut b)| { b.id = new_id; b })
+        .map(|(new_id, mut b)| {
+            b.id = new_id;
+            b
+        })
         .collect();
 
     let remap = |id: BlockId| *id_map.get(&id).unwrap_or(&id);
 
-    cfg.successors = cfg.successors.iter()
+    cfg.successors = cfg
+        .successors
+        .iter()
         .filter(|(id, _)| !deleted.contains(id))
         .map(|(id, succs)| (remap(*id), succs.iter().map(|s| remap(*s)).collect()))
         .collect();
 
-    cfg.predecessors = cfg.predecessors.iter()
+    cfg.predecessors = cfg
+        .predecessors
+        .iter()
         .filter(|(id, _)| !deleted.contains(id))
         .map(|(id, preds)| (remap(*id), preds.iter().map(|p| remap(*p)).collect()))
         .collect();
@@ -604,7 +722,9 @@ fn find_back_edges(cfg: &ControlFlowGraph) -> std::collections::HashSet<(BlockId
 
     //one DFS per connected component — sharing in_stack across components gives false positives
     for start in cfg.blocks.iter().map(|b| b.id) {
-        if visited.contains(&start) { continue; }
+        if visited.contains(&start) {
+            continue;
+        }
 
         let mut in_stack: HashSet<BlockId> = HashSet::new();
         let mut stack: Vec<(BlockId, bool)> = vec![(start, false)];
@@ -637,7 +757,9 @@ fn find_back_edges(cfg: &ControlFlowGraph) -> std::collections::HashSet<(BlockId
 }
 
 fn html_esc(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }
 
 fn wrap_line(s: &str, max: usize) -> String {
@@ -647,9 +769,20 @@ fn wrap_line(s: &str, max: usize) -> String {
     let mut out = String::new();
     let mut remaining = s;
     while remaining.len() > max {
-        out.push_str(&remaining[..max]);
+        let slice = &remaining[..max];
+        // avoid cutting inside an HTML entity (e.g. &quot; split as &q + uot;)
+        let cut = if let Some(amp) = slice.rfind('&') {
+            if !slice[amp..].contains(';') {
+                amp
+            } else {
+                max
+            }
+        } else {
+            max
+        };
+        out.push_str(&remaining[..cut]);
         out.push_str("<BR/>");
-        remaining = &remaining[max..];
+        remaining = &remaining[cut..];
     }
     out.push_str(remaining);
     out
@@ -683,16 +816,25 @@ fn extract_symbol(operand: &GeneralOperand) -> Option<String> {
 ///   mov.pred %pX, 1;   @!%pX bra target;  — same, negated form
 fn is_dead_predicated_branch(stmts: &[FunctionStatement]) -> bool {
     // collect instructions only, in order
-    let insts: Vec<_> = stmts.iter().filter_map(|s| {
-        if let FunctionStatement::Instruction { instruction, .. } = s { Some(instruction) } else { None }
-    }).collect();
+    let insts: Vec<_> = stmts
+        .iter()
+        .filter_map(|s| {
+            if let FunctionStatement::Instruction { instruction, .. } = s {
+                Some(instruction)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let (Some(branch), Some(prev)) = (insts.last(), insts.iter().rev().nth(1)) else {
         return false;
     };
 
     // the branch must be predicated
-    let Some(pred) = &branch.predicate else { return false };
+    let Some(pred) = &branch.predicate else {
+        return false;
+    };
 
     // get branch predicate register name
     let pred_reg = match &pred.operand {
@@ -701,25 +843,37 @@ fn is_dead_predicated_branch(stmts: &[FunctionStatement]) -> bool {
     };
 
     // previous instruction must be mov.pred %pX, <imm>
-    let Inst::MovType(mov) = &prev.inst else { return false };
-    if mov.type_ != MovType::Pred { return false; }
+    let Inst::MovType(mov) = &prev.inst else {
+        return false;
+    };
+    if mov.type_ != MovType::Pred {
+        return false;
+    }
 
     // get destination register of the mov
     let dst_reg = match &mov.d {
-        GeneralOperand::Single { operand: Operand::Register { operand, .. }, .. } => &operand.name,
+        GeneralOperand::Single {
+            operand: Operand::Register { operand, .. },
+            ..
+        } => &operand.name,
         _ => return false,
     };
-    if dst_reg != pred_reg { return false; }
+    if dst_reg != pred_reg {
+        return false;
+    }
 
     // get immediate value from mov source
     let imm_val = match &mov.a {
-        GeneralOperand::Single { operand: Operand::Immediate { operand, .. }, .. } => operand.value.trim_end_matches('U'),
+        GeneralOperand::Single {
+            operand: Operand::Immediate { operand, .. },
+            ..
+        } => operand.value.trim_end_matches('U'),
         _ => return false,
     };
 
     // dead if: mov 0 + not-negated  OR  mov 1 + negated
     let mov_zero = imm_val == "0";
-    let mov_one  = imm_val == "1";
+    let mov_one = imm_val == "1";
     (mov_zero && !pred.negated) || (mov_one && pred.negated)
 }
 
