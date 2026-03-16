@@ -10,7 +10,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use super::common::{BasicBlock, BlockId, ControlFlowGraph, LoopInfo};
 
 pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
-    //grab all stmts from entry + device functions
+    // Build a map from function name -> its statements for inlining device functions.
+    let mut func_map: HashMap<String, Vec<FunctionStatement>> = HashMap::new();
     let mut all_stmts: Vec<FunctionStatement> = Vec::new();
     for directive in &module.directives {
         match directive {
@@ -21,7 +22,7 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
             }
             ModuleDirective::FuncFunction { directive, .. } => {
                 if let Some(body) = &directive.body {
-                    all_stmts.extend(body.statements.clone());
+                    func_map.insert(directive.name.val.clone(), body.statements.clone());
                 }
             }
             _ => {}
@@ -42,42 +43,93 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
     flatten(all_stmts, &mut flat);
 
     // split on every branch/call/ret/exit — that's the only time we start a new block
-    let mut blocks: Vec<BasicBlock> = Vec::new();
-    let mut current: Vec<FunctionStatement> = Vec::new();
-
-    for stmt in flat {
-        let is_end = match &stmt {
-            FunctionStatement::Instruction { instruction, .. } => {
-                is_branch_or_call(&instruction.inst)
+    fn split_blocks(stmts: Vec<FunctionStatement>, id_offset: usize) -> Vec<BasicBlock> {
+        let mut blocks: Vec<BasicBlock> = Vec::new();
+        let mut current: Vec<FunctionStatement> = Vec::new();
+        for stmt in stmts {
+            let is_end = match &stmt {
+                FunctionStatement::Instruction { instruction, .. } => {
+                    is_branch_or_call(&instruction.inst)
+                }
+                _ => false,
+            };
+            current.push(stmt);
+            if is_end {
+                let id = id_offset + blocks.len();
+                blocks.push(BasicBlock {
+                    id,
+                    label: None,
+                    statements: current,
+                    meta: Vec::new(),
+                    absorbed_trampoline: false,
+                    is_inlined: false,
+                    inlined_from: None,
+                });
+                current = Vec::new();
             }
-            _ => false,
-        };
-
-        current.push(stmt);
-
-        if is_end {
-            let id = blocks.len();
+        }
+        if !current.is_empty() {
+            let id = id_offset + blocks.len();
             blocks.push(BasicBlock {
                 id,
                 label: None,
                 statements: current,
                 meta: Vec::new(),
                 absorbed_trampoline: false,
+                is_inlined: false,
+                inlined_from: None,
             });
-            current = Vec::new();
         }
+        blocks
     }
 
-    if !current.is_empty() {
-        let id = blocks.len();
-        blocks.push(BasicBlock {
-            id,
-            label: None,
-            statements: current,
-            meta: Vec::new(),
-            absorbed_trampoline: false,
-        });
+    let blocks = split_blocks(flat, 0);
+
+    // Post-split inlining: for each block ending with a direct call, insert the
+    // callee's blocks immediately after it so the CFG becomes
+    // (caller) -> (callee blocks...) -> (succ after call).
+    // Unconditional rets in the callee are stripped so its last block falls through.
+    const MAX_INLINE_DEPTH: usize = 8;
+    fn inline_blocks(
+        blocks: Vec<BasicBlock>,
+        func_map: &HashMap<String, Vec<FunctionStatement>>,
+        depth: usize,
+    ) -> Vec<BasicBlock> {
+        let mut result: Vec<BasicBlock> = Vec::new();
+        for block in blocks {
+            let callee_name = block.statements.iter().rev().find_map(|s| {
+                if let FunctionStatement::Instruction { instruction, .. } = s {
+                    extract_callee_name(&instruction.inst)
+                } else {
+                    None
+                }
+            });
+            result.push(block);
+            if let Some(name) = callee_name {
+                if depth < MAX_INLINE_DEPTH {
+                    if let Some(body) = func_map.get(&name) {
+                        let mut body_flat: Vec<FunctionStatement> = Vec::new();
+                        flatten(body.clone(), &mut body_flat);
+                        let callee_blocks = split_blocks(body_flat, 0);
+                        let mut callee_blocks = inline_blocks(callee_blocks, func_map, depth + 1);
+                        for b in &mut callee_blocks {
+                            b.is_inlined = true;
+                            b.inlined_from.get_or_insert_with(|| name.clone());
+                        }
+                        result.extend(callee_blocks);
+                    } else {
+                        println!("[cfg] warn: callee '{name}' not found for inlining");
+                    }
+                }
+            }
+        }
+        // Renumber block IDs sequentially.
+        for (i, b) in result.iter_mut().enumerate() {
+            b.id = i;
+        }
+        result
     }
+    let blocks = inline_blocks(blocks, &func_map, 0);
 
     //label -> block_id, needed to resolve branch targets
     let mut label_to_block: HashMap<String, BlockId> = HashMap::new();
@@ -127,12 +179,16 @@ pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
         let is_predicated = inst.predicate.is_some();
 
         match &inst.inst {
-            // ret/exit terminates the thread
+            // ret/exit terminates the thread — but an inlined ret just returns to
+            // the caller's continuation (the next block in the expanded sequence).
             Inst::RetUni(_) | Inst::Exit(_) => {
-                exits.push(id);
-                // predicated so there's still a fall-through path
-                if is_predicated && has_next {
+                if block.is_inlined && matches!(inst.inst, Inst::RetUni(_)) && has_next {
                     add_edge(id, next, &mut successors, &mut predecessors);
+                } else {
+                    exits.push(id);
+                    if is_predicated && has_next {
+                        add_edge(id, next, &mut successors, &mut predecessors);
+                    }
                 }
             }
 
@@ -279,6 +335,7 @@ header {{ padding: 8px 20px; background: #181825; border-bottom: 1px solid #3132
 <header>CFG &mdash; {source} &nbsp;&middot;&nbsp; {total} blocks &nbsp;&middot;&nbsp;
   <span style="color:#a6e3a1">&#9632; exit</span> &nbsp;
   <span style="color:#f9e2af">&#9632; entry</span> &nbsp;
+  <span style="color:#74c7ec">&#9632; inlined</span> &nbsp;
   <span style="color:#f38ba8">dashed = back edge</span>
   {legend}
 </header>
@@ -353,6 +410,8 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
             ("#40a02b", "#1e1e2e", "#1e2e1e")
         } else if block.id == cfg.entry {
             ("#df8e1d", "#1e1e2e", "#2e2a1e")
+        } else if block.is_inlined {
+            ("#74c7ec", "#1e1e2e", "#1e2530")
         } else {
             ("#45475a", "#cdd6f4", "#1e1e2e")
         };
@@ -418,12 +477,18 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
             ));
         }
 
-        //header row — loop blocks get a subtitle showing which loop they belong to
+        //header row — loop/inlined blocks get a subtitle
         let header_content = if let Some(lbl) = loop_label {
             format!(
                 "<B>&#160;BB{id}&#160;</B><BR/><FONT POINT-SIZE=\"8\">&#x27F3; {lbl}</FONT>",
                 id = block.id,
                 lbl = html_esc(lbl),
+            )
+        } else if let Some(fname) = &block.inlined_from {
+            format!(
+                "<B>&#160;BB{id}&#160;</B><BR/><FONT POINT-SIZE=\"8\">&#x2B9F; {fname}</FONT>",
+                id = block.id,
+                fname = html_esc(fname),
             )
         } else {
             format!("<B>&#160;BB{id}&#160;</B>", id = block.id)
@@ -626,7 +691,7 @@ fn compact(cfg: &mut ControlFlowGraph) {
     // into that predecessor. Statements are kept (visible in the parent block)
     // and the parent is flagged with absorbed_trampoline so the visualiser can
     // render the section differently.
-    /* 
+    /*
     loop {
         let trampoline = cfg.blocks.iter()
         .filter(|b| !deleted.contains(&b.id) && b.id != cfg.entry)
@@ -638,28 +703,28 @@ fn compact(cfg: &mut ControlFlowGraph) {
                 let only = real_insts[0];
                 if only.predicate.is_some() { return None; }
                 if !matches!(only.inst, Inst::BraUni(_) | Inst::BraUni1(_)) { return None; }
-                
+
                 let succs = cfg.successors.get(&block.id)?;
                 if succs.len() != 1 { return None; }
                 let &target = succs.iter().next()?;
                 if target == block.id || deleted.contains(&target) { return None; }
-                
+
                 // only merge if there's exactly one predecessor to absorb into
                 let preds = cfg.predecessors.get(&block.id)?;
                 if preds.len() != 1 { return None; }
                 let &parent = preds.iter().next()?;
                 if deleted.contains(&parent) { return None; }
-                
+
                 Some((block.id, target, parent))
             });
-            
+
             let Some((tramp_id, target_id, parent_id)) = trampoline else { break };
-            
+
             // append trampoline's statements into the parent so they stay visible
             let tramp_stmts = cfg.blocks[tramp_id].statements.clone();
             cfg.blocks[parent_id].statements.extend(tramp_stmts);
             cfg.blocks[parent_id].absorbed_trampoline = true;
-            
+
             // rewire: parent now goes to target instead of trampoline
             cfg.successors.get_mut(&parent_id).map(|s| { s.remove(&tramp_id); s.insert(target_id); });
             cfg.predecessors.get_mut(&target_id).map(|p| { p.remove(&tramp_id); p.insert(parent_id); });
@@ -670,11 +735,11 @@ fn compact(cfg: &mut ControlFlowGraph) {
                 cfg.exits.retain(|&x| x != tramp_id);
             if !cfg.exits.contains(&parent_id) { cfg.exits.push(parent_id); }
         }
-        
+
         deleted.insert(tramp_id);
     }
     */
-    
+
     //compact the block vec — remove deleted slots and re-number from 0
     let old_blocks: Vec<BasicBlock> = std::mem::take(&mut cfg.blocks);
     let id_map: HashMap<BlockId, BlockId> = old_blocks
@@ -798,6 +863,17 @@ fn add_edge(
     predecessors.entry(to).or_default().insert(from);
 }
 
+/// Extract the callee name from a direct call instruction (CallUni/1/2).
+/// Returns None for indirect calls (fptr-based variants).
+fn extract_callee_name(inst: &Inst) -> Option<String> {
+    match inst {
+        Inst::CallUni(c) => extract_symbol(&c.func),
+        Inst::CallUni1(c) => extract_symbol(&c.func),
+        Inst::CallUni2(c) => extract_symbol(&c.func),
+        _ => None,
+    }
+}
+
 fn extract_symbol(operand: &GeneralOperand) -> Option<String> {
     match operand {
         GeneralOperand::Single { operand, .. } => match operand {
@@ -878,6 +954,11 @@ fn is_dead_predicated_branch(stmts: &[FunctionStatement]) -> bool {
 }
 
 fn is_branch_or_call(inst: &Inst) -> bool {
+    
+    return is_branch(inst) || is_call(inst);
+}
+
+fn is_branch(inst: &Inst) -> bool {
     matches!(
         inst,
         Inst::BraUni(_)
@@ -886,7 +967,13 @@ fn is_branch_or_call(inst: &Inst) -> bool {
             | Inst::BrxIdxUni1(_)
             | Inst::RetUni(_)
             | Inst::Exit(_)
-            | Inst::CallUni(_)
+    )
+}
+
+fn is_call(inst: &Inst) -> bool {
+    matches!(
+        inst,
+        Inst::CallUni(_)
             | Inst::CallUni1(_)
             | Inst::CallUni2(_)
             | Inst::CallUni3(_)

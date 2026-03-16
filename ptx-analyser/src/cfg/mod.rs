@@ -96,6 +96,8 @@ fn build_cfg_with_header(
                 statements: vec![],
                 meta: vec![],
                 absorbed_trampoline: false,
+                is_inlined: false,
+                inlined_from: None,
             }],
             successors: BTreeMap::new(),
             predecessors: BTreeMap::new(),
@@ -184,6 +186,8 @@ fn build_cfg_with_header(
             statements: block_stmts,
             meta: block_meta,
             absorbed_trampoline: false,
+            is_inlined: false,
+            inlined_from: None,
         });
     }
 
@@ -735,6 +739,8 @@ impl ControlFlowGraph {
                 statements,
                 meta,
                 absorbed_trampoline: false,
+                is_inlined: false,
+                inlined_from: None,
             });
         }
         new_blocks.sort_by_key(|b| b.id);

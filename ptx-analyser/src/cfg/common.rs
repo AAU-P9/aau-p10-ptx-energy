@@ -50,6 +50,11 @@ pub struct BasicBlock {
     /// True if this block absorbed one or more trampoline blocks during compaction.
     /// The trampoline statements are still present at the end of `statements`.
     pub absorbed_trampoline: bool,
+    /// True if this block was inlined from a callee — its `ret` should be treated
+    /// as fall-through to the caller's continuation, not as a program exit.
+    pub is_inlined: bool,
+    /// Name of the callee this block was inlined from, if any.
+    pub inlined_from: Option<String>,
 }
 
 /// The kind of terminator at the end of a basic block.

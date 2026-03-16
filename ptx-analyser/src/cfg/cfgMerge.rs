@@ -113,6 +113,8 @@ fn inline_call_site(merged: &mut MergedCfg, call_block_id: BlockId, callee_cfg: 
             statements: block.statements.clone(),
             meta: vec![],
             absorbed_trampoline: false,
+            is_inlined: false,
+            inlined_from: None,
         })
         .collect();
 
