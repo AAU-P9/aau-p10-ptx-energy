@@ -1,6 +1,7 @@
 #[allow(non_snake_case)]
 mod cfgMerge;
 mod common;
+pub mod cfg;
 mod html;
 mod util;
 
@@ -94,6 +95,7 @@ fn build_cfg_with_header(
                 label: None,
                 statements: vec![],
                 meta: vec![],
+                absorbed_trampoline: false,
             }],
             successors: BTreeMap::new(),
             predecessors: BTreeMap::new(),
@@ -101,6 +103,7 @@ fn build_cfg_with_header(
             exits: vec![0],
             meta: vec![],
             maxntid,
+            loops: Vec::new(),
         };
     }
 
@@ -180,6 +183,7 @@ fn build_cfg_with_header(
             label,
             statements: block_stmts,
             meta: block_meta,
+            absorbed_trampoline: false,
         });
     }
 
@@ -252,9 +256,10 @@ fn build_cfg_with_header(
         exits,
         meta,
         maxntid,
+        loops: Vec::new(),
     };
 
-    cfg.compact() 
+    cfg.compact()
 }
 
 
@@ -729,6 +734,7 @@ impl ControlFlowGraph {
                 label,
                 statements,
                 meta,
+                absorbed_trampoline: false,
             });
         }
         new_blocks.sort_by_key(|b| b.id);
@@ -777,6 +783,7 @@ impl ControlFlowGraph {
             exits: new_exits,
             meta: new_meta,
             maxntid: self.maxntid.clone(),
+            loops: Vec::new(),
         }
     }
 }
