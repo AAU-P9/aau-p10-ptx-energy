@@ -2,7 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cmath>  // for fabs()
+#include <cuda.h>
 #include "cupti_timing.h"
+#include "ptx_meta.h"
 
 
 #define ITERATIONS 1000000
@@ -10,6 +12,7 @@
 #define N 1024
 
 __global__ void matrix_transpose(float *A, float *B) {
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; i++) {
         int x = blockIdx.x * blockDim.x + threadIdx.x;
         int y = blockIdx.y * blockDim.y + threadIdx.y;

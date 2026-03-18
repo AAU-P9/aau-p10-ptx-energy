@@ -5,7 +5,7 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
-#define ITERATIONS 10000000
+#define ITERATIONS 100000000
 
 // Pure FP32 arithmetic: FMAD/FADD/FMUL chain with no memory access.
 // Measures baseline FP32 power cost per instruction.

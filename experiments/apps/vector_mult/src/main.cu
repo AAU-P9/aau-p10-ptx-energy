@@ -1,6 +1,7 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cuda.h>
 #include "cupti_timing.h"
 
 #define ITERATIONS 10000000
@@ -59,12 +60,6 @@ int main()
     
     // Check for kernel launch errors
     cudaDeviceSynchronize();
-    cudaError_t err = cudaGetLastError();
-    if (err != cudaSuccess) {
-        printf("CUDA error: %s\n", cudaGetErrorString(err));
-        return -1;
-    }
-
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
 

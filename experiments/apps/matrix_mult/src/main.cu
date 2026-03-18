@@ -3,14 +3,17 @@
 #include <stdlib.h>
 #include <cmath>  // for fabs()
 #include <cuda.h>
+#include "cupti_timing.h"
+#include "ptx_meta.h"
 
-#define ITERATIONS 1000
+#define ITERATIONS 10000
 
 #define M 1024
 #define N 1024
 #define K 1024
 
 __global__ void matrix_mul(float *A, float *B, float *C) {
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for(int k = 0; k < ITERATIONS; ++k) {
 
         int row = blockIdx.y * blockDim.y + threadIdx.y;
@@ -18,6 +21,7 @@ __global__ void matrix_mul(float *A, float *B, float *C) {
         float sum = 0.0f;
 
         if (row < M && col < K) {
+            META_LOOP(inner_loop, N, N, false);
             for (int i = 0; i < N; i++) {
                 sum += A[row * N + i] * B[i * K + col];
             }
@@ -27,7 +31,7 @@ __global__ void matrix_mul(float *A, float *B, float *C) {
 }
 
 int main() {
-    // initializeCUPTI();
+    initializeCUPTI();
     
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
@@ -66,7 +70,7 @@ int main() {
 
     printf("[LOG] Running kernel with %d iterations...\n");
 
-    // collectTimestampOffsets();
+    collectTimestampOffsets();
 
     // Launch kernel with 2D grid and block size
     matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c);
@@ -100,8 +104,8 @@ int main() {
         printf("Test failed with %d errors\n", errors);
     }
     
-    // flushCUPTIBuffers();
-    // printKernelTiming();
+    flushCUPTIBuffers();
+    printKernelTiming();
 
     // Clean up
     cudaFree(d_a);

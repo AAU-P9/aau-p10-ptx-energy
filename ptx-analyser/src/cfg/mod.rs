@@ -637,6 +637,8 @@ pub fn analyze_cfg(
     block_y: u32,
     block_z: u32,
     params: &Vec<Parameter>,
+    csv_kernel_name: &Option<String>,
+    csv_power_consumption_joules: &Option<f64>,
 ) {
     println!(
         "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
@@ -685,10 +687,10 @@ pub fn analyze_cfg(
         &mut None,  
     );
 // 
-    println!("Total instructions for the CFG: {}", total_instructions);
-    println!("Instruction occurrences:");
+    println!("[Output] Total instructions for the CFG: {}", total_instructions);
+    println!("[Output] CSV Rows:");
     for (inst, count) in &instruction_occurrences {
-        println!("  - {}: {}", inst, count);
+        println!("{}, {}, {}, {}, {}", csv_kernel_name.as_ref().unwrap_or(&"Unknown".into()), inst, count, total_instructions, csv_power_consumption_joules.unwrap_or(0.0));
     }
 }
 

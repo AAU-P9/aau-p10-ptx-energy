@@ -26,19 +26,29 @@
       "id": "ptx_path",
       "type": "promptString",
       "description": "Enter the path to the PTX file (e.g., ./experiments/artifacts/vector_add_bundle_.../main.ptx)",
+    },
+    {
+      "id": "kernel_name",
+      "type": "promptString",
+      "description": "Enter the kernel name (e.g., vector_add_kernel)",
+    },
+    {
+      "id": "power_consumption_joules",
+      "type": "promptString",
+      "description": "Enter the power consumption in joules (e.g., 0.5)",
     }
   ],
   "tasks": [
-    {
-      "label": "PTX: Run application",
-      "type": "shell",
-      "command": "uv run experiments/tools/runner.py experiments/apps/${input:app_name}/",
-      "problemMatcher": []
-    },
+  {
+    "label": "PTX: Run application",
+    "type": "shell",
+    "command": "uv run experiments/tools/runner.py ${input:cuda_path}",
+    "problemMatcher": []
+  },
 	{
 	  "label": "PTX: Create artifact",
 	  "type": "shell",
-	  "command": "uv run experiments/tools/artifact.py experiments/build/${input:app_name}/ experiments/apps/${input:app_name}/src/",
+	  "command": "uv run experiments/tools/artifact.py experiments/build/${input:app_name}/ experiments/apps/${input:app_name}/",
 	  "problemMatcher": []
 	},
 	{
@@ -62,7 +72,13 @@
   {
     "label": "PTX: Run CUDA file with big-chain",
     "type": "shell",
-    "command": "uv run big-chain.py ${input:cuda_path}",
+    "command": "uv run big-chain.py ${input:cuda_path} --csv-kernel-name ${input:app_name} --csv-power-consumption-joules ${input:power_consumption_joules}",
+    "problemMatcher": []
+  },
+  {
+    "label": "PTX: Power metrics from CSV",
+    "type": "shell",
+    "command": "uv run experiments/tools/power.py ${input:artifact_path}",
     "problemMatcher": []
   }
   ]

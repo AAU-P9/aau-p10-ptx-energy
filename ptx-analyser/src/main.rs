@@ -71,6 +71,14 @@ enum Command {
         /// Path to JSON file containing kernel parameters
         #[arg(long, conflicts_with = "kernel_params")]
         kernel_params_file: Option<PathBuf>,
+
+        #[arg(long)]
+        // Kernel name for CSV format
+        csv_kernel_name: Option<String>,
+
+        #[arg(long)]
+        // Power consumption for CSV format
+        csv_power_consumption_joules: Option<f64>,
     },
 
     BuildCfg {
@@ -148,6 +156,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             input_file,
             kernel_params,
             kernel_params_file,
+            csv_kernel_name,
+            csv_power_consumption_joules,
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
@@ -184,6 +194,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 kernel_config.block_dim.y,
                 kernel_config.block_dim.z,
                 &kernel_config.parameters,
+                &csv_kernel_name,
+                &csv_power_consumption_joules,
             );
         }
         Command::BuildCfg {

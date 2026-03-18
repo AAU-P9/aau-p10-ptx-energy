@@ -38,6 +38,18 @@ def main():
         default=None,
         help="Output directory for intermediate files (default: temp directory)",
     )
+    parser.add_argument(
+        "--csv-kernel-name",
+        type=str,
+        default=None,
+        help="Optional kernel name value to forward to ptx-analyser",
+    )
+    parser.add_argument(
+        "--csv-power-consumption-joules",
+        type=str,
+        default=None,
+        help="Optional power consumption (joules) value to forward to ptx-analyser",
+    )
     
     args = parser.parse_args()
     cuda_file = args.cuda_file.resolve()
@@ -167,8 +179,18 @@ def main():
         "ptx-analyser",
         "analyze-cfg",
         "--kernel-params", json.dumps(kernel_params),
-        str(ptx_path)
     ]
+
+    if args.csv_kernel_name is not None:
+        ptx_analyser_cmd.extend(["--csv-kernel-name", args.csv_kernel_name])
+
+    if args.csv_power_consumption_joules is not None:
+        ptx_analyser_cmd.extend([
+            "--csv-power-consumption-joules",
+            args.csv_power_consumption_joules,
+        ])
+
+    ptx_analyser_cmd.append(str(ptx_path))
 
     print(f"Running ptx-analyser to analyze PTX")
     try:

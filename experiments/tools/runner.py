@@ -16,8 +16,8 @@ from typing import Optional, List
 @dataclass
 class RunnerConfig:
     """Configuration for the runner."""
-    """folder: Path to the folder containing source code to compile and run."""
-    folder: Path
+    """cuda: Path to the CUDA source file."""
+    cuda: Path
     """output_dir: Path to the directory where output artifacts will be stored."""
     output_dir: Path
     """run_args: Optional list of arguments to pass to the compiled binary when running."""
@@ -72,15 +72,23 @@ def run_runner(config: RunnerConfig) -> int:
     Returns:
         Exit code (0 for success, non-zero for failure)
     """
-    folder = config.folder.resolve()
+    cuda_source = config.cuda.resolve()
+    folder = cuda_source.parent
+
+    if not cuda_source.exists() or not cuda_source.is_file():
+        print(f"CUDA source file not found: {cuda_source}", file=sys.stderr)
+        return 2
+
+    if cuda_source.suffix != ".cu":
+        print(f"Expected a .cu source file, got: {cuda_source}", file=sys.stderr)
+        return 2
+
     if not folder.exists() or not folder.is_dir():
         print(f"Folder not found: {folder}", file=sys.stderr)
         return 2
 
-    compiler, sources = find_sources(folder)
-    if not compiler:
-        print("No .cu/.cpp/.c sources found.", file=sys.stderr)
-        return 2
+    compiler = "nvcc"
+    sources = [cuda_source]
 
     if shutil.which(compiler) is None:
         print(f"Compiler not found in PATH: {compiler}", file=sys.stderr)
@@ -237,6 +245,8 @@ def run_runner(config: RunnerConfig) -> int:
     manifest_path = build_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
 
+    print(f"Build and run completed. Output files stored in: {build_dir}")
+
     print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
     return 0
 
@@ -246,8 +256,8 @@ def parse_args() -> RunnerConfig:
         description="Compile, run, capture output, and zip source+binary+output."
     )
     parser.add_argument(
-        "folder",
-        help="Folder to compile and run (e.g., app)",
+        "cuda",
+        help="Path to the CUDA source file to compile and run (e.g., app/main.cu)",
     )
     parser.add_argument(
         "--output-dir",
@@ -263,7 +273,7 @@ def parse_args() -> RunnerConfig:
     args = parser.parse_args()
 
     return RunnerConfig(
-        folder=Path(args.folder),
+        cuda=Path(args.cuda),
         output_dir=Path(args.output_dir),
         run_args=args.run_args,
     )

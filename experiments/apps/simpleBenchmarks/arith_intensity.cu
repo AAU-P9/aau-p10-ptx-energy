@@ -5,7 +5,7 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
-#define ITERATIONS 10000000
+#define ITERATIONS 500000
 #define DATA_LEN (1024 * 1024)
 
 // Compile-time configurable: -DFLOPS_PER_LOAD=N
