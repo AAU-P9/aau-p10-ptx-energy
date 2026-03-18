@@ -9,4 +9,4 @@ vector_mult, MulModeType, 1024, 39936, 0
 vector_mult, RetUni, 1024, 39936, 0
 vector_mult, NotType, 2048, 39936, 0
 vector_mult, StWeakSsCopLevelCacheHintVecType, 1024, 39936, 0
-vector_mult, MovType, 8192, 39936, 0½
+vector_mult, MovType, 8192, 39936, 0
