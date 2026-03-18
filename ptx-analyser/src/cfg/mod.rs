@@ -12,9 +12,7 @@ pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
 pub use html::{cfg_to_html, merged_cfg_to_html};
 
 use ptx_parser::r#type::{
-    EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective,
-    Module, ModuleDirective, Operand,
-    instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType},
+    EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective, MetaTag, Module, ModuleDirective, Operand, instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType}
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use crate::{Parameter, cfg::common::format_inst_short};
@@ -402,6 +400,7 @@ impl GetCmpInfo for BasicBlock {
     }
 }
 
+
 /// Recursively count all instructions in the CFG starting from a given block.
 fn count_instructions_recursive(
     block_id: BlockId,
@@ -413,6 +412,7 @@ fn count_instructions_recursive(
     registers: &HashMap<String, u64>,
     previous_block_predecessor_count: usize,
     instruction_occurrences: &mut HashMap<String, u64>,
+    last_meta_loop: &mut Option<MetaTag>,
 ) {
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
@@ -448,7 +448,16 @@ fn count_instructions_recursive(
             instruction_occurrences.entry(format_inst_short(&instruction.inst))
                 .and_modify(|count| *count += *scope_iterations)
                 .or_insert(*scope_iterations);
-        }
+        } else if let FunctionStatement::Meta { directive, .. } = stmt {
+            if let MetaTag::Loop { .. } = directive.tag {
+                *last_meta_loop = Some(directive.tag.clone());
+            }
+            // Handle meta directives if needed for power estimation (e.g., loop annotations)
+            println!(
+                "[META] Found meta directive in block {}: {:?}",
+                block_id, directive
+            );
+        }   
     }
 
     // Recurse into successors
@@ -472,8 +481,21 @@ fn count_instructions_recursive(
                 registers,
                 block_predecessor_count,
                 instruction_occurrences,
+                last_meta_loop,
             );
         } else if successors.len() > 1 {
+            // Check if last_meta_loop is Some, and if so read the loop bounds
+            let mut branch_iterations_count: u64 = 1;
+            if let Some(MetaTag::Loop { max_iters, min_iters, .. }) = last_meta_loop {
+                println!(
+                    "[META_LOOP] Found loop meta directive in block {}: min_iters={}, max_iters={}",
+                    block_id, min_iters, max_iters
+                );
+
+                branch_iterations_count = min_iters.clone().into();
+                last_meta_loop.take(); // Clear the last_meta_loop after using it
+            }
+
             let branch_info = block.get_cmp_info(registers).unwrap();
             let is_loop = previous_block_predecessor_count > 1;
 
@@ -506,7 +528,7 @@ fn count_instructions_recursive(
             if is_block_a_true_branch {
                 let mut block_a_scope_iterations = *scope_iterations;
                 let mut block_b_scope_iterations = if is_loop {
-                    *scope_iterations * branch_info.iterations_count
+                    *scope_iterations * branch_iterations_count
                 } else {
                     *scope_iterations
                 };
@@ -525,6 +547,7 @@ fn count_instructions_recursive(
                     registers,
                     block_predecessor_count,
                     instruction_occurrences,
+                    last_meta_loop,
                 );
 
                 println!(
@@ -542,10 +565,11 @@ fn count_instructions_recursive(
                     registers,
                     block_predecessor_count,
                     instruction_occurrences,
+                    last_meta_loop,
                 );
             } else {
                 let mut block_a_scope_iterations = if is_loop {
-                    *scope_iterations * branch_info.iterations_count
+                    *scope_iterations * branch_iterations_count
                 } else {
                     *scope_iterations
                 };
@@ -566,6 +590,7 @@ fn count_instructions_recursive(
                     registers,
                     block_predecessor_count,
                     instruction_occurrences,
+                    last_meta_loop,
                 );
 
                 println!(
@@ -583,6 +608,7 @@ fn count_instructions_recursive(
                     registers,
                     block_predecessor_count,
                     instruction_occurrences,
+                    last_meta_loop,
                 );
             }
 
@@ -597,8 +623,8 @@ fn count_instructions_recursive(
 }
 
 // Analyze the cfg to get a power consumption estimate
-pub fn analyze_cfgs(
-    cfgs: &Vec<ControlFlowGraph>,
+pub fn analyze_cfg(
+    cfg: &ControlFlowGraph,
     grid_x: u32,
     grid_y: u32,
     grid_z: u32,
@@ -607,15 +633,6 @@ pub fn analyze_cfgs(
     block_z: u32,
     params: &Vec<Parameter>,
 ) {
-    let root_name = cfgs
-        .iter()
-        .find(|cfg| cfg.is_entry)
-        .map(|cfg| cfg.function_name.as_str())
-        .unwrap_or_else(|| cfgs[0].function_name.as_str());
-    let cfg = merge_cfgs(cfgs, root_name)
-        .map(|merged| merged.cfg)
-        .unwrap_or_else(|| cfgs[0].clone());
-
     println!(
         "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
         grid_x, grid_y, grid_z, block_x, block_y, block_z
@@ -661,6 +678,7 @@ pub fn analyze_cfgs(
         &registers,
         0,
         &mut instruction_occurrences,
+        &mut None,  
     );
 // 
     println!("Total instructions for the CFG: {}", total_instructions);

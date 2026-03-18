@@ -168,20 +168,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or_default()
                 .to_string_lossy()
                 .to_string();
-            let cfgs = cfg::build_cfgs(&module, &file_name);
-
-            if cfgs.is_empty() {
-                println!("No functions with bodies found in the module.");
-                return Ok(());
-            }
+            let cfg = cfg::cfg::build_cfg(&module, &file_name);
 
             println!("Analyzing CFGs with grid=({},{},{}), block=({},{},{}), parameters={:?}",
                 kernel_config.grid_dim.x, kernel_config.grid_dim.y, kernel_config.grid_dim.z,
                 kernel_config.block_dim.x, kernel_config.block_dim.y, kernel_config.block_dim.z,
                 kernel_config.parameters);
 
-            cfg::analyze_cfgs(
-                &cfgs,
+            cfg::analyze_cfg(
+                &cfg,
                 kernel_config.grid_dim.x,
                 kernel_config.grid_dim.y,
                 kernel_config.grid_dim.z,
