@@ -21,6 +21,11 @@
       "id": "cuda_path",
       "type": "promptString",
       "description": "Enter the path to the CUDA toolkit (e.g., ./experiments/apps/vector_add/src/main.cu)",
+    },
+    {
+      "id": "ptx_path",
+      "type": "promptString",
+      "description": "Enter the path to the PTX file (e.g., ./experiments/artifacts/vector_add_bundle_.../main.ptx)",
     }
   ],
   "tasks": [
@@ -45,13 +50,13 @@
   {
     "label": "PTX: Create analysis",
     "type": "shell",
-    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:artifact_path}/main.ptx",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml analyze-cfg --kernel-params '${input:kernel_params}' ${input:ptx_path}",
     "problemMatcher": []
   },
   {
     "label": "PTX: Create Control Flow Graph",
     "type": "shell",
-    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml build-cfg ${input:artifact_path}/main.ptx --html-output ${input:artifact_path}/cfg.html",
+    "command": "cargo run --manifest-path ptx-analyser/Cargo.toml build-cfg ${input:ptx_path}  --html-output ${input:artifact_path}/cfg.html",
     "problemMatcher": []
   },
   {

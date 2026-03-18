@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CFG – arith_intensity.ptx – _Z21bench_arith_intensityPKfPfi</title>
+<style>
+  body {
+    margin: 0;
+    background: #1e1e2e;
+    color: #cdd6f4;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  header {
+    padding: 12px 24px;
+    background: #181825;
+    border-bottom: 1px solid #313244;
+    font-size: 1.1em;
+  }
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    min-height: calc(100vh - 56px);
+  }
+  header code {
+    color: #f9e2af;
+  }
+  .source-file {
+    color: #89b4fa;
+  }
+  #graph-container {
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 24px;
+  }
+  .callsite-panel {
+    border-left: 1px solid #313244;
+    background: #181825;
+    padding: 20px;
+    overflow: auto;
+  }
+  .callsite-panel h2 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: #f9e2af;
+  }
+  .callsite-panel table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  .callsite-panel th,
+  .callsite-panel td {
+    text-align: left;
+    padding: 8px 0;
+    border-bottom: 1px solid #313244;
+    vertical-align: top;
+  }
+  .mermaid {
+    text-align: center;
+  }
+  /* mermaid node text */
+  .mermaid pre {
+    text-align: left;
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  @media (max-width: 1080px) {
+    main {
+      grid-template-columns: 1fr;
+    }
+    .callsite-panel {
+      border-left: 0;
+      border-top: 1px solid #313244;
+    }
+  }
+</style>
+</head>
+<body>
+<header>CFG for <code>_Z21bench_arith_intensityPKfPfi</code> <span class="source-file">(source: arith_intensity.ptx)</span></header>
+<main>
+<div id="graph-container">
+  <pre class="mermaid">
+graph TD
+    MAXNTID["&lt;b&gt;.maxntid&lt;/b&gt;&lt;br/&gt;.maxntid 256,1,1"]
+    style MAXNTID fill:#2d2a4a,stroke:#f9e2af,stroke-width:2px,color:#cdd6f4
+    MAXNTID -.-&gt; BB0
+    BB0["&lt;font color='#b4befe'&gt;&lt;b&gt;@META&lt;/b&gt;&lt;/font&gt;&lt;br/&gt;&lt;pre&gt;@META:3 BEGIN_KERNEL bench_arith_intensity
+@META:3 PARAM 0 data ptr_f32 input readonly noalias align=128
+@META:3 PARAM 1 out ptr_f32 output writeonly align=128
+@META:3 PARAM 2 dataLen i32 dim_n range=1:1048576 multiple=256
+@META:3 LOOP main_loop 10000000..10000000 unrolled=false
+@META:3 LAUNCH 256 1 1 (dataLen+255)/256 1 1
+@META:3 LAYOUT data linear dataLen
+@META:3 CUSTOM category roofline_sweep
+@META:3 CUSTOM flops_per_load 16
+@META:3 CUSTOM arithmetic_intensity_flop_per_byte 16/4
+@META:3 CUSTOM memory_pattern coalesced_sequential
+@META:3 END_KERNEL bench_arith_intensity&lt;/pre&gt;&lt;hr/&gt;&lt;b&gt;BB0&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;.reg .pred %p&lt;15&gt;;
+.reg .f32 %f&lt;17&gt;;
+.reg .b32 %r&lt;24&gt;;
+.reg .b64 %rd&lt;9&gt;;
+.loc 4 21 0
+$L__func_begin0:
+.loc 4 21 0
+[LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType]  ld.param.u64 %rd1, [_Z21bench_arith_intensityPKfPfi_param_0];
+[LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType]  ld.param.u64 %rd2, [_Z21bench_arith_intensityPKfPfi_param_1];
+[LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType]  ld.param.u32 %r9, [_Z21bench_arith_intensityPKfPfi_param_2];
+$L__tmp0:
+.loc 4 22 5
+.loc 4 35 5
+[BraUni]  bra.uni $L__BB0_1;&lt;/pre&gt;"]
+    BB1["&lt;b&gt;BB1&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_1:
+$L__tmp1:
+.loc 4 35 10
+[SetpCmpopFtzType]  setp.gt.s32 %p1, %r9, 0;
+[NotType]  not.pred %p2, %p1;
+[NotType]  not.pred %p3, %p2;
+[BraUni]  @%p3 bra $L__BB0_3;&lt;/pre&gt;"]
+    BB2["&lt;b&gt;BB2&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_2;
+$L__BB0_2:&lt;/pre&gt;"]
+    BB3["&lt;b&gt;BB3&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_3:
+$L__tmp2:
+.loc 4 35 30
+[BraUni]  bra.uni $L__BB0_4;&lt;/pre&gt;"]
+    BB4["&lt;b&gt;BB4&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp3:&lt;/pre&gt;"]
+    BB5["&lt;b&gt;BB5&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_4:
+.loc 4 35 64
+[MovType]  mov.pred %p4, 0;
+[BraUni]  @%p4 bra $L__BB0_1;&lt;/pre&gt;"]
+    BB6["&lt;b&gt;BB6&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_5;
+$L__BB0_5:
+.loc 4 36 5
+[BraUni]  bra.uni $L__BB0_6;&lt;/pre&gt;"]
+    BB7["&lt;b&gt;BB7&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_6:
+$L__tmp4:
+.loc 4 36 10
+[RemType]  rem.s32 %r10, %r9, 256;
+[SetpCmpopFtzType]  setp.eq.s32 %p5, %r10, 0;
+[NotType]  not.pred %p6, %p5;
+[NotType]  not.pred %p7, %p6;
+[BraUni]  @%p7 bra $L__BB0_8;&lt;/pre&gt;"]
+    BB8["&lt;b&gt;BB8&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_7;
+$L__BB0_7:&lt;/pre&gt;"]
+    BB9["&lt;b&gt;BB9&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_8:
+$L__tmp5:
+.loc 4 36 43
+[BraUni]  bra.uni $L__BB0_9;&lt;/pre&gt;"]
+    BB10["&lt;b&gt;BB10&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp6:&lt;/pre&gt;"]
+    BB11["&lt;b&gt;BB11&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_9:
+.loc 4 36 77
+[MovType]  mov.pred %p8, 0;
+[BraUni]  @%p8 bra $L__BB0_6;&lt;/pre&gt;"]
+    BB12["&lt;font color='#b4befe'&gt;&lt;b&gt;@META&lt;/b&gt;&lt;/font&gt;&lt;br/&gt;&lt;pre&gt;@META:3 LOOP main_loop 10000000..10000000 unrolled=false&lt;/pre&gt;&lt;hr/&gt;&lt;b&gt;BB12&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_10;
+$L__BB0_10:
+.loc 4 38 13
+[MovType]  mov.u32 %r11, %ctaid.x;
+[MovType]  mov.u32 %r12, %ntid.x;
+[MulModeType]  mul.lo.s32 %r13, %r11, %r12;
+[MovType]  mov.u32 %r14, %tid.x;
+[AddType]  add.s32 %r1, %r13, %r14;
+$L__tmp7:
+.loc 4 39 16
+[MovType]  mov.u32 %r15, %ntid.x;
+[MovType]  mov.u32 %r16, %nctaid.x;
+[MulModeType]  mul.lo.s32 %r2, %r15, %r16;
+$L__tmp8:
+.loc 4 40 15
+[MovType]  mov.f32 %f9, 0f00000000;
+[MovType]  mov.f32 %f1, %f9;
+$L__tmp9:
+.loc 4 41 15
+[CvtFrndFtzSatDtypeAtype]  cvt.rn.f32.s32 %f10, %r1;
+[MulRndFtzSatF32]  mul.f32 %f11, %f10, 0f3727C5AC;
+[AddRndFtzSatF32]  add.f32 %f2, %f11, 0f3F800347;
+$L__tmp10:
+.loc 4 43 5
+$L__tmp11:
+.loc 4 44 16
+[MovType]  mov.u32 %r17, 0;
+[MovType]  mov.b32 %r3, %r17;
+$L__tmp12:
+.loc 4 44 5
+[MovType]  mov.f32 %f14, %f1;
+$L__tmp13:
+[MovType]  mov.f32 %f15, %f2;
+$L__tmp14:
+[MovType]  mov.u32 %r22, %r3;
+$L__tmp15:
+[BraUni]  bra.uni $L__BB0_11;&lt;/pre&gt;"]
+    BB13["&lt;b&gt;BB13&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_11:
+[MovType]  mov.u32 %r4, %r22;
+[MovType]  mov.f32 %f4, %f15;
+[MovType]  mov.f32 %f3, %f14;
+$L__tmp16:
+[SetpCmpopFtzType]  setp.lt.s32 %p9, %r4, 10000000;
+$L__tmp17:
+[NotType]  not.pred %p10, %p9;
+[BraUni]  @%p10 bra $L__BB0_18;&lt;/pre&gt;"]
+    BB14["&lt;b&gt;BB14&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_12;
+$L__BB0_12:
+$L__tmp18:
+.loc 4 46 18
+[MulModeType]  mul.lo.s32 %r18, %r4, %r2;
+[AddType]  add.s32 %r19, %r1, %r18;
+[RemType]  rem.s32 %r20, %r19, %r9;
+$L__tmp19:
+.loc 4 47 19
+[CvtIrndFtzSatDtypeAtype]  cvt.s64.s32 %rd6, %r20;
+[ShlType]  shl.b64 %rd7, %rd6, 2;
+[AddType]  add.s64 %rd8, %rd1, %rd7;
+[LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType]  ld.f32 %f12, [%rd8];
+[MovType]  mov.f32 %f5, %f12;
+$L__tmp20:
+.loc 4 51 20
+[MovType]  mov.u32 %r21, 0;
+[MovType]  mov.b32 %r5, %r21;
+$L__tmp21:
+.loc 4 51 9
+[MovType]  mov.f32 %f16, %f4;
+$L__tmp22:
+[MovType]  mov.u32 %r23, %r5;
+$L__tmp23:
+[BraUni]  bra.uni $L__BB0_13;&lt;/pre&gt;"]
+    BB15["&lt;b&gt;BB15&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_13:
+[MovType]  mov.u32 %r6, %r23;
+[MovType]  mov.f32 %f6, %f16;
+$L__tmp24:
+[SetpCmpopFtzType]  setp.lt.s32 %p13, %r6, 16;
+[NotType]  not.pred %p14, %p13;
+[BraUni]  @%p14 bra $L__BB0_16;&lt;/pre&gt;"]
+    BB16["&lt;b&gt;BB16&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_14;
+$L__BB0_14:
+$L__tmp25:
+.loc 4 52 13
+[MulRndFtzSatF32]  mul.f32 %f13, %f6, %f5;
+[AddRndFtzSatF32]  add.f32 %f7, %f13, %f3;
+$L__tmp26:
+.loc 4 51 33
+[BraUni]  bra.uni $L__BB0_15;
+$L__BB0_15:
+[AddType]  add.s32 %r7, %r6, 1;
+$L__tmp27:
+[MovType]  mov.f32 %f16, %f7;
+$L__tmp28:
+[MovType]  mov.u32 %r23, %r7;
+$L__tmp29:
+[BraUni]  bra.uni $L__BB0_13;&lt;/pre&gt;"]
+    BB17["&lt;b&gt;BB17&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp30:&lt;/pre&gt;"]
+    BB18["&lt;b&gt;BB18&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_16:
+.loc 4 54 9
+[MovType]  mov.f32 %f8, %f6;
+$L__tmp31:
+.loc 4 44 35
+[BraUni]  bra.uni $L__BB0_17;
+$L__BB0_17:
+[AddType]  add.s32 %r8, %r4, 1;
+$L__tmp32:
+[MovType]  mov.f32 %f14, %f8;
+$L__tmp33:
+[MovType]  mov.f32 %f15, %f6;
+$L__tmp34:
+[MovType]  mov.u32 %r22, %r8;
+$L__tmp35:
+[BraUni]  bra.uni $L__BB0_11;&lt;/pre&gt;"]
+    BB19["&lt;b&gt;BB19&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp36:&lt;/pre&gt;"]
+    BB20["&lt;b&gt;BB20&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_18:
+.loc 4 57 5
+[SetpCmpopFtzType]  setp.lt.s32 %p11, %r1, %r9;
+[NotType]  not.pred %p12, %p11;
+[BraUni]  @%p12 bra $L__BB0_20;&lt;/pre&gt;"]
+    BB21["&lt;b&gt;BB21&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;[BraUni]  bra.uni $L__BB0_19;
+$L__BB0_19:
+$L__tmp37:
+.loc 4 58 9
+[CvtIrndFtzSatDtypeAtype]  cvt.s64.s32 %rd3, %r1;
+[ShlType]  shl.b64 %rd4, %rd3, 2;
+[AddType]  add.s64 %rd5, %rd2, %rd4;
+[StWeakSsCopLevelCacheHintVecType]  st.f32 [%rd5], %f3;
+[BraUni]  bra.uni $L__BB0_20;&lt;/pre&gt;"]
+    BB22["&lt;b&gt;BB22&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp38:&lt;/pre&gt;"]
+    BB23[["&lt;b&gt;BB23&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__BB0_20:
+.loc 4 60 1
+[RetUni]  ret;&lt;/pre&gt;"]]
+    BB24[["&lt;b&gt;BB24&lt;/b&gt;&lt;br/&gt;&lt;pre&gt;$L__tmp39:
+$L__func_end0:&lt;/pre&gt;"]]
+    BB0 --&gt; BB1
+    BB1 --&gt; BB2
+    BB1 --&gt; BB3
+    BB2 --&gt; BB3
+    BB3 --&gt; BB5
+    BB4 --&gt; BB5
+    BB5 --&gt; BB1
+    BB5 --&gt; BB6
+    BB6 --&gt; BB7
+    BB7 --&gt; BB8
+    BB7 --&gt; BB9
+    BB8 --&gt; BB9
+    BB9 --&gt; BB11
+    BB10 --&gt; BB11
+    BB11 --&gt; BB7
+    BB11 --&gt; BB12
+    BB12 --&gt; BB13
+    BB13 --&gt; BB14
+    BB13 --&gt; BB20
+    BB14 --&gt; BB15
+    BB15 --&gt; BB16
+    BB15 --&gt; BB18
+    BB16 --&gt; BB15
+    BB17 --&gt; BB18
+    BB18 --&gt; BB13
+    BB19 --&gt; BB20
+    BB20 --&gt; BB21
+    BB20 --&gt; BB23
+    BB21 --&gt; BB23
+    BB22 --&gt; BB23
+    style BB0 stroke-width:3px,stroke:#d35400
+    style BB23 stroke-width:3px,stroke:#27ae60
+    style BB24 stroke-width:3px,stroke:#27ae60
+    style BB0 fill:#1e1e3a,stroke:#b4befe,stroke-width:2px
+    style BB12 fill:#1e1e3a,stroke:#b4befe,stroke-width:2px
+
+  </pre>
+</div>
+
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    flowchart: {
+      useMaxWidth: false,
+      htmlLabels: true,
+      curve: 'basis'
+    }
+  });
+</script>
+</body>
+</html>

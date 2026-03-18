@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>CFG</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #1e1e2e; color: #cdd6f4; font-family: monospace; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+header { padding: 8px 20px; background: #181825; border-bottom: 1px solid #313244; font-size: .85em; color: #89b4fa; flex-shrink: 0; }
+#graph { flex: 1; overflow: auto; padding: 16px; }
+#graph svg { max-width: none; display: block; }
+#err { color: #f38ba8; padding: 16px; }
+</style>
+</head>
+<body>
+<header>CFG &mdash; arith_intensity.ptx &nbsp;&middot;&nbsp; 16 blocks &nbsp;&middot;&nbsp;
+  <span style="color:#a6e3a1">&#9632; exit</span> &nbsp;
+  <span style="color:#f9e2af">&#9632; entry</span> &nbsp;
+  <span style="color:#74c7ec">&#9632; inlined</span> &nbsp;
+  <span style="color:#f38ba8">dashed = back edge</span>
+  &nbsp;&middot;&nbsp; loops: <span style="display:inline-flex;align-items:center;margin-right:14px"><span style="width:12px;height:12px;background:#e64553;border-radius:2px;margin-right:5px;flex-shrink:0"></span>main_loop</span>
+</header>
+<div id="graph"><div id="err"></div></div>
+<script type="module">
+import { Graphviz } from "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm@2/dist/graphviz.js";
+const dot = `digraph CFG {
+  graph [bgcolor="#1e1e2e" rankdir=TB fontname=Courier];
+  node  [fontname=Courier fontsize=10 shape=none margin=0];
+  edge  [color="#89b4fa" arrowsize=0.7];
+
+  BB0 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#2e2a1e" COLOR="#df8e1d"><TR><TD BGCOLOR="#df8e1d" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB0&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#89b4fa" FACE="Courier">.reg .pred %p&lt;15&gt;;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#89b4fa" FACE="Courier">.reg .f32 %f&lt;17&gt;;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#89b4fa" FACE="Courier">.reg .b32 %r&lt;24&gt;;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#89b4fa" FACE="Courier">.reg .b64 %rd&lt;9&gt;;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 21 0</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">\$L__func_begin0:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 21 0</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">ld.param.u64 %rd1, [_Z21bench_arith_intensityPKfPfi_param_0]<BR/>;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">ld.param.u64 %rd2, [_Z21bench_arith_intensityPKfPfi_param_1]<BR/>;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">ld.param.u32 %r9, [_Z21bench_arith_intensityPKfPfi_param_2];</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp0:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 22 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 BeginKernel { name: &quot;bench_arith_intensity&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Param { index: 0, name: &quot;data&quot;, param_type: <BR/>&quot;ptr_f32&quot;, role: &quot;input&quot;, constraints: [<BR/>ReadOnly, NoAlias, Align { value: &quot;128&quot; }] }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Param { index: 1, name: &quot;out&quot;, param_type: <BR/>&quot;ptr_f32&quot;, role: &quot;output&quot;, constraints: <BR/>[WriteOnly, Align { value: &quot;128&quot; }] }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Param { index: 2, name: &quot;dataLen&quot;, param_type: <BR/>&quot;i32&quot;, role: &quot;dim_n&quot;, constraints: [Rang<BR/>e { lo: &quot;1&quot;, hi: &quot;1048576&quot; }, Multiple {<BR/> value: &quot;256&quot; }] }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Loop { label: &quot;main_loop&quot;, min_iters: 10000000,<BR/> max_iters: 10000000, is_unrolled: false }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Launch { block_x: 256, block_y: 1, block_z: 1, grid_expr:<BR/> &quot;(dataLen+255)/256 1 1&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Layout { name: &quot;data&quot;, order: &quot;linear<BR/>&quot;, dims: &quot;dataLen&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Custom { key: &quot;category&quot;, value: &quot;roofline<BR/>_sweep&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Custom { key: &quot;flops_per_load&quot;, value: &quot;16<BR/>&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Custom { key: &quot;arithmetic_intensity_flop_per_byte<BR/>&quot;, value: &quot;16/4&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Custom { key: &quot;memory_pattern&quot;, value: &quot;co<BR/>alesced_sequential&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cba6f7" FACE="Courier">:3 EndKernel { name: &quot;bench_arith_intensity&quot; }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 35 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_1:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp1:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 35 10</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">setp.gt.s32 %p1, %r9, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p2, %p1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p3, %p2;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#2e2a1e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p3 bra \$L__BB0_3;</FONT></TD></TR>
+</TABLE>>];
+  BB1 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB1&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_2;</FONT></TD></TR>
+</TABLE>>];
+  BB2 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB2&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_2:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_3:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp2:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 35 30</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_4;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp3:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_4:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 35 64</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.pred %p4, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p4 bra \$L__BB0_1;</FONT></TD></TR>
+</TABLE>>];
+  BB3 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB3&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_5;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_5:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 36 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_6;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_6:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp4:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 36 10</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">rem.s32 %r10, %r9, 256;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">setp.eq.s32 %p5, %r10, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p6, %p5;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p7, %p6;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p7 bra \$L__BB0_8;</FONT></TD></TR>
+</TABLE>>];
+  BB4 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB4&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_7;</FONT></TD></TR>
+</TABLE>>];
+  BB5 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB5&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_7:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_8:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp5:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 36 43</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_9;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp6:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_9:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 36 77</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.pred %p8, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p8 bra \$L__BB0_6;</FONT></TD></TR>
+</TABLE>>];
+  BB6 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB6&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_10;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_10:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 38 13</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r11, %ctaid.x;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r12, %ntid.x;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mul.lo.s32 %r13, %r11, %r12;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r14, %tid.x;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s32 %r1, %r13, %r14;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp7:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 39 16</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r15, %ntid.x;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r16, %nctaid.x;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mul.lo.s32 %r2, %r15, %r16;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp8:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 40 15</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f9, 0f00000000;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f1, %f9;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp9:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 41 15</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">cvt.rn.f32.s32 %f10, %r1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mul.f32 %f11, %f10, 0f3727C5AC;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.f32 %f2, %f11, 0f3F800347;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp10:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 43 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cba6f7" FACE="Courier">:3 Loop { label: &quot;main_loop&quot;, min_iters: 10000000,<BR/> max_iters: 10000000, is_unrolled: false }</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp11:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 44 16</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r17, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.b32 %r3, %r17;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp12:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 44 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f14, %f1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp13:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f15, %f2;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp14:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r22, %r3;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp15:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_11;</FONT></TD></TR>
+</TABLE>>];
+  BB7 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#e64553"><TR><TD BGCOLOR="#e64553" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB7&#160;</B><BR/><FONT POINT-SIZE="8">&#x27F3; main_loop [10000000..10000000]</FONT></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_11:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r4, %r22;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f4, %f15;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f3, %f14;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp16:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">setp.lt.s32 %p9, %r4, 10000000;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp17:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p10, %p9;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p10 bra \$L__BB0_18;</FONT></TD></TR>
+</TABLE>>];
+  BB8 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#e64553"><TR><TD BGCOLOR="#e64553" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB8&#160;</B><BR/><FONT POINT-SIZE="8">&#x27F3; main_loop [10000000..10000000]</FONT></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_12;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_12:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp18:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 46 18</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mul.lo.s32 %r18, %r4, %r2;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s32 %r19, %r1, %r18;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">rem.s32 %r20, %r19, %r9;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp19:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 47 19</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">cvt.s64.s32 %rd6, %r20;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">shl.b64 %rd7, %rd6, 2;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s64 %rd8, %rd1, %rd7;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">ld.f32 %f12, [%rd8];</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f5, %f12;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp20:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 51 20</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r21, 0;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.b32 %r5, %r21;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp21:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 51 9</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f16, %f4;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp22:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r23, %r5;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp23:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_13;</FONT></TD></TR>
+</TABLE>>];
+  BB9 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#e64553"><TR><TD BGCOLOR="#e64553" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB9&#160;</B><BR/><FONT POINT-SIZE="8">&#x27F3; main_loop [10000000..10000000]</FONT></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_13:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r6, %r23;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f6, %f16;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp24:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">setp.lt.s32 %p13, %r6, 16;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p14, %p13;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p14 bra \$L__BB0_16;</FONT></TD></TR>
+</TABLE>>];
+  BB10 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#e64553"><TR><TD BGCOLOR="#e64553" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB10&#160;</B><BR/><FONT POINT-SIZE="8">&#x27F3; main_loop [10000000..10000000]</FONT></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_14;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_14:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp25:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 52 13</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mul.f32 %f13, %f6, %f5;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.f32 %f7, %f13, %f3;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp26:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 51 33</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_15;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_15:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s32 %r7, %r6, 1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp27:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f16, %f7;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp28:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r23, %r7;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp29:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_13;</FONT></TD></TR>
+</TABLE>>];
+  BB11 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#e64553"><TR><TD BGCOLOR="#e64553" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB11&#160;</B><BR/><FONT POINT-SIZE="8">&#x27F3; main_loop [10000000..10000000]</FONT></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp30:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_16:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 54 9</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f8, %f6;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp31:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 44 35</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_17;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_17:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s32 %r8, %r4, 1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp32:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f14, %f8;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp33:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.f32 %f15, %f6;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp34:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">mov.u32 %r22, %r8;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp35:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_11;</FONT></TD></TR>
+</TABLE>>];
+  BB12 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB12&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp36:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_18:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 57 5</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">setp.lt.s32 %p11, %r1, %r9;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">not.pred %p12, %p11;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">@%p12 bra \$L__BB0_20;</FONT></TD></TR>
+</TABLE>>];
+  BB13 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e1e2e" COLOR="#45475a"><TR><TD BGCOLOR="#45475a" ALIGN="CENTER"><FONT COLOR="#cdd6f4" FACE="Courier"><B>&#160;BB13&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_19;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_19:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp37:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 58 9</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">cvt.s64.s32 %rd3, %r1;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">shl.b64 %rd4, %rd3, 2;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">add.s64 %rd5, %rd2, %rd4;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">st.f32 [%rd5], %f3;</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e1e2e"><FONT COLOR="#cdd6f4" FACE="Courier">bra.uni \$L__BB0_20;</FONT></TD></TR>
+</TABLE>>];
+  BB14 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e2e1e" COLOR="#40a02b"><TR><TD BGCOLOR="#40a02b" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB14&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp38:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#585b70" FACE="Courier">\$L__BB0_20:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#585b70" FACE="Courier">.loc 4 60 1</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#cdd6f4" FACE="Courier">ret;</FONT></TD></TR>
+</TABLE>>];
+  BB15 [label=<<TABLE BORDER="1" CELLBORDER="0" CELLSPACING="0" CELLPADDING="2" BGCOLOR="#1e2e1e" COLOR="#40a02b"><TR><TD BGCOLOR="#40a02b" ALIGN="CENTER"><FONT COLOR="#1e1e2e" FACE="Courier"><B>&#160;BB15&#160;</B></FONT></TD></TR><TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#585b70" FACE="Courier">\$L__tmp39:</FONT></TD></TR>
+<TR><TD ALIGN="LEFT" BGCOLOR="#1e2e1e"><FONT COLOR="#585b70" FACE="Courier">\$L__func_end0:</FONT></TD></TR>
+</TABLE>>];
+
+  BB0 -> BB1;
+  BB0 -> BB2;
+  BB1 -> BB2;
+  BB2 -> BB3;
+  BB3 -> BB4;
+  BB3 -> BB5;
+  BB4 -> BB5;
+  BB5 -> BB6;
+  BB6 -> BB7;
+  BB7 -> BB8;
+  BB7 -> BB12;
+  BB8 -> BB9;
+  BB9 -> BB10;
+  BB9 -> BB11;
+  BB10 -> BB9 [style=dashed color="#f38ba8" constraint=false];
+  BB11 -> BB7 [style=dashed color="#f38ba8" constraint=false];
+  BB12 -> BB13;
+  BB12 -> BB14;
+  BB13 -> BB14;
+}
+`;
+try {
+  const gv = await Graphviz.load();
+  const svg = gv.dot(dot, "svg");
+  document.getElementById("graph").innerHTML = svg;
+} catch(e) {
+  document.getElementById("err").textContent = "Render error: " + e;
+}
+</script>
+</body>
+</html>

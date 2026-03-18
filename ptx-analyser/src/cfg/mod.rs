@@ -414,7 +414,6 @@ fn count_instructions_recursive(
     scope_instructions: &mut u64,
     scope_iterations: &mut u64,
     registers: &HashMap<String, u64>,
-    previous_block_predecessor_count: usize,
     instruction_occurrences: &mut HashMap<String, u64>,
     last_meta_loop: &mut Option<MetaTag>,
 ) {
@@ -448,8 +447,15 @@ fn count_instructions_recursive(
     // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
     for stmt in &block.statements {
         if let FunctionStatement::Instruction { instruction, .. } = stmt {
+            let formatted_inst = format_inst_short(&instruction.inst);
+
+            println!(
+                "[INSTRUCTION] Found instruction in block {}: {:?}",
+                block_id, formatted_inst
+            );
+
             *scope_instructions += 1;
-            instruction_occurrences.entry(format_inst_short(&instruction.inst))
+            instruction_occurrences.entry(formatted_inst)
                 .and_modify(|count| *count += *scope_iterations)
                 .or_insert(*scope_iterations);
         } else if let FunctionStatement::Meta { directive, .. } = stmt {
@@ -483,7 +489,6 @@ fn count_instructions_recursive(
                 scope_instructions,
                 scope_iterations,
                 registers,
-                block_predecessor_count,
                 instruction_occurrences,
                 last_meta_loop,
             );
@@ -501,7 +506,7 @@ fn count_instructions_recursive(
             }
 
             let branch_info = block.get_cmp_info(registers).unwrap();
-            let is_loop = previous_block_predecessor_count > 1;
+            let is_loop = cfg.loops.iter().any(|loop_info| loop_info.header == block_id);
 
             let successor_a_id = *successors.iter().nth(0).unwrap();
             let successor_b_id = *successors.iter().nth(1).unwrap();
@@ -515,14 +520,14 @@ fn count_instructions_recursive(
                     "[LOOP_BRANCH] Loop branch found at block {}: true branch is {}, iteration count is {}",
                     block_id,
                     if is_block_a_true_branch { "A" } else { "B" },
-                    branch_info.iterations_count
+                    branch_iterations_count
                 );
             } else {
                 println!(
                     "[BRANCH] Branch found at block {}: true branch is {}, iteration count is {}",
                     block_id,
                     if is_block_a_true_branch { "A" } else { "B" },
-                    branch_info.iterations_count
+                    branch_iterations_count
                 );
             }
 
@@ -549,7 +554,6 @@ fn count_instructions_recursive(
                     &mut block_b_scope_instructions,
                     &mut block_b_scope_iterations,
                     registers,
-                    block_predecessor_count,
                     instruction_occurrences,
                     last_meta_loop,
                 );
@@ -567,7 +571,6 @@ fn count_instructions_recursive(
                     &mut block_a_scope_instructions,
                     &mut block_a_scope_iterations,
                     registers,
-                    block_predecessor_count,
                     instruction_occurrences,
                     last_meta_loop,
                 );
@@ -592,7 +595,6 @@ fn count_instructions_recursive(
                     &mut block_a_scope_instructions,
                     &mut block_a_scope_iterations,
                     registers,
-                    block_predecessor_count,
                     instruction_occurrences,
                     last_meta_loop,
                 );
@@ -610,7 +612,6 @@ fn count_instructions_recursive(
                     &mut block_b_scope_instructions,
                     &mut block_b_scope_iterations,
                     registers,
-                    block_predecessor_count,
                     instruction_occurrences,
                     last_meta_loop,
                 );
@@ -680,7 +681,6 @@ pub fn analyze_cfg(
         &mut scope_instructions,
         &mut scope_iterations,
         &registers,
-        0,
         &mut instruction_occurrences,
         &mut None,  
     );

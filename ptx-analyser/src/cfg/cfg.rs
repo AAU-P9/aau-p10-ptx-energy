@@ -10,6 +10,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use super::common::{BasicBlock, BlockId, ControlFlowGraph, LoopInfo};
 
 pub fn build_cfg(module: &Module, source_file: &str) -> ControlFlowGraph {
+    println!("[cfg] building CFG for {source_file} with Lasses shit code...");
+
     // Build a map from function name -> its statements for inlining device functions.
     let mut func_map: HashMap<String, Vec<FunctionStatement>> = HashMap::new();
     let mut all_stmts: Vec<FunctionStatement> = Vec::new();
