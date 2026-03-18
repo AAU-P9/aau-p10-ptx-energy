@@ -40,6 +40,7 @@ bench_arith_intensity(const float * __restrict__ data, float *out, int dataLen) 
     float acc = 0.0f;
     float tmp = 1.0001f + (float)idx * 0.00001f;
 
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
     for (int i = 0; i < ITERATIONS; ++i) {
         // One global load
         int addr = (idx + i * stride) % dataLen;

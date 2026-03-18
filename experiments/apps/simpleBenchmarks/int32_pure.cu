@@ -30,6 +30,7 @@ bench_int32_pure(int *out, int N) {
     int b = 37;
     int c = 73;
 
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
     for (int i = 0; i < ITERATIONS; ++i) {
         a = a * b + c;   // IMAD
         b = b + a * c;   // IMAD

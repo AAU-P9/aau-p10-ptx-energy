@@ -49,6 +49,7 @@ bench_reg_pressure(float *out, int N) {
     float r28 = seed + 0.29f;  float r29 = seed + 0.30f;
     float r30 = seed + 0.31f;  float r31 = seed + 0.32f;
 
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
     for (int i = 0; i < ITERATIONS; ++i) {
         r00 = r00 * r01 + r02;  r01 = r01 * r02 + r03;
         r02 = r02 * r03 + r04;  r03 = r03 * r04 + r05;

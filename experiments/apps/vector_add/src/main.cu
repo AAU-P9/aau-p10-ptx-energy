@@ -11,7 +11,9 @@
 // Vector add kernel: out[i] = a[i] + b[i]
 __global__ void vector_add(float *a, float *b, float *out, int N)
 {
-    META_LOOP(iterations, ITERATIONS, 0, false);
+    int half_iterations = ITERATIONS / 2;
+
+    META_LOOP(iterations, 5000000, 0, false);
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         

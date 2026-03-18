@@ -30,6 +30,7 @@ bench_fp64_pure(double *out, int N) {
     double b = 0.9999;
     double c = 1.0;
 
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
     for (int i = 0; i < ITERATIONS; ++i) {
         a = a * b + c;   // DMAD
         b = b + a * c;   // DMAD

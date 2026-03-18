@@ -33,6 +33,7 @@ bench_gmem_coalesced(const float * __restrict__ data, float *out, int dataLen) {
     int stride = blockDim.x * gridDim.x;
     float acc = 0.0f;
 
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
     for (int i = 0; i < ITERATIONS; ++i) {
         int addr = (idx + i * stride) % dataLen;
         acc += data[addr];
