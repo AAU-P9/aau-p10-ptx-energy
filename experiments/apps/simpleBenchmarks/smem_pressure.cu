@@ -41,7 +41,7 @@ bench_smem_pressure(float *out, int N) {
 
     float acc = 0.0f;
 
-    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; ++i) {
         // Even iterations: stride-1 (no bank conflicts)
         // Odd iterations:  stride-2 (2-way bank conflicts)

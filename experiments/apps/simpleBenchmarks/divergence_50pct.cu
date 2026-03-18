@@ -34,7 +34,7 @@ bench_divergence_50pct(float *out, int N) {
     float b = 0.9999f;
     float c = 1.0f;
 
-    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; ++i) {
         if (lane < 16) {
             // Path A: FMAD-heavy (4 ops)

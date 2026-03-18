@@ -28,8 +28,8 @@ bench_fp32_pure(float *out, int N) {
     float a = 1.0001f + (float)idx * 0.00001f;
     float b = 0.9999f;
     float c = 1.0f;
-    
-    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
+
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; ++i) {
         a = a * b + c;   // FMAD
         b = b + a * c;   // FMAD

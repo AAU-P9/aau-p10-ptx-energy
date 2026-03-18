@@ -38,7 +38,7 @@ bench_fp32_int32_mix(float *fout, int *iout, int N) {
     int ib = 37;
     int ic = 73;
 
-    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false)
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; ++i) {
         // FP32 ops (4 ops)
         fa = fa * fb + fc;   // FMAD
