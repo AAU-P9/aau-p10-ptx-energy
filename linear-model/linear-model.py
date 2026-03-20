@@ -36,11 +36,16 @@ def load_instruction_power_map(weights_path: Path) -> dict[str, float]:
 			per_occurrence_power = ((count / total_instructions) * power_joules) / count
 
 			_sum += per_occurrence_power * count
-
-			print(instruction, count, total_instructions, power_joules, per_occurrence_power)
 			
 			samples[instruction].append(per_occurrence_power)
-	print("TOTAL SUM:", _sum)
+
+	# Print span of the samples for each instructions
+	for instruction, values in samples.items():
+		if values:
+			min_val = min(values)
+			max_val = max(values)
+			percent_diff = (max_val - min_val) / min_val * 100 if min_val > 0 else float('inf')
+			print(f"[INFO] '{instruction}' samples {len(values)}, span: {min_val:.12f} J - {max_val:.12f} J" f" (diff: {percent_diff:.2f}%)")
 
 	return {
 		instruction: sum(values) / len(values)
@@ -118,12 +123,6 @@ def main() -> None:
 		else 0.0
 	)
 
-	print("Instruction average power map (joules per occurrence):")
-	for instruction in sorted(instruction_power_map):
-		print(f"{instruction},{instruction_power_map[instruction]:.12f}")
-	print(f"FALLBACK_AVG,{fallback_power:.12f}")
-
-	print("\nInput estimates:")
 	estimates = estimate_input_instruction_power(
 		input_path,
 		instruction_power_map,
