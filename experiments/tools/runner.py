@@ -63,6 +63,23 @@ def add_tree_to_folder(output_folder: Path, root: Path, base_parent: Path):
         shutil.copy2(path, destination)
 
 
+def resolve_app_name(cuda_source: Path) -> str:
+    parts = cuda_source.parts
+    app_index = None
+    for index, part in enumerate(parts):
+        if part == "apps":
+            app_index = index
+
+    if app_index is not None and app_index + 1 < len(parts):
+        return parts[app_index + 1]
+
+    folder = cuda_source.parent
+    if folder.name == "src" and folder.parent != folder:
+        return folder.parent.name
+
+    return folder.name
+
+
 def run_runner(config: RunnerConfig) -> int:
     """Run madsens jank, does (compilation, execution) 
     
@@ -100,7 +117,7 @@ def run_runner(config: RunnerConfig) -> int:
     build_root = Path("experiments/build").resolve()
     build_root.mkdir(parents=True, exist_ok=True)
 
-    binary_name = folder.name
+    binary_name = resolve_app_name(cuda_source)
     build_dir = build_root / binary_name
     build_dir.mkdir(parents=True, exist_ok=True)
     binary_path = build_dir / binary_name
