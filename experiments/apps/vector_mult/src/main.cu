@@ -3,12 +3,14 @@
 #include <stdlib.h>
 #include <cuda.h>
 #include "cupti_timing.h"
+#include "ptx_meta.h"
 
 #define ITERATIONS 10000000
 
 #define N 1024
 
 __global__ void vector_mul(float *A, float *B, float *C) {
+    META_LOOP(iterations, ITERATIONS, 0, false);
     for (int i = 0; i < ITERATIONS; i++) {
         int index = threadIdx.x + blockIdx.x * blockDim.x;
         if (index < N) {

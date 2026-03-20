@@ -9,6 +9,8 @@ def load_instruction_power_map(weights_path: Path) -> dict[str, float]:
 	"""Build average per-occurrence power (joules) for each instruction."""
 	samples: dict[str, list[float]] = defaultdict(list)
 
+	_sum = 0.0
+
 	with weights_path.open("r", newline="", encoding="utf-8") as handle:
 		reader = csv.DictReader(handle, skipinitialspace=True)
 		for row in reader:
@@ -32,9 +34,13 @@ def load_instruction_power_map(weights_path: Path) -> dict[str, float]:
 
 
 			per_occurrence_power = ((count / total_instructions) * power_joules) / count
+
+			_sum += per_occurrence_power * count
+
 			print(instruction, count, total_instructions, power_joules, per_occurrence_power)
 			
 			samples[instruction].append(per_occurrence_power)
+	print("TOTAL SUM:", _sum)
 
 	return {
 		instruction: sum(values) / len(values)

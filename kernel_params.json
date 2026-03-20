@@ -1,7 +1,7 @@
 {
-  "gridDim": { "x": 4, "y": 1, "z": 1 },
-  "blockDim": { "x": 256, "y": 1, "z": 1 },
-  "parameters_length": 3,
+  "gridDim": { "x": 64, "y": 64, "z": 1 },
+  "blockDim": { "x": 16, "y": 16, "z": 1 },
+  "parameters_length": 2,
   "parameters": [
     {
       "name": "A",
@@ -11,12 +11,6 @@
     },
     {
       "name": "B",
-      "type": "Unknown",
-      "size": 8,
-      "value": null
-    },
-    {
-      "name": "C",
       "type": "Unknown",
       "size": 8,
       "value": null
