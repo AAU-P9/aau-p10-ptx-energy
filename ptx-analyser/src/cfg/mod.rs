@@ -15,7 +15,7 @@ use ptx_parser::r#type::{
     EntryFunctionHeaderDirective, FunctionBody, FunctionDim, FunctionStatement, MetaDirective, MetaTag, Module, ModuleDirective, Operand, instruction::{Inst, ld::LdWeakSsCopLevelCacheHintLevelPrefetchSizeVecType}
 };
 use std::collections::{BTreeMap, BTreeSet, HashMap};
-use crate::{Parameter, cfg::common::format_inst_short};
+use crate::{Parameter, cfg::common::{format_inst_short, statement_opcode}};
 
 use util::{add_edge, add_edges_for_instruction, is_call_inst, is_terminator_inst};
 
@@ -447,11 +447,11 @@ fn count_instructions_recursive(
     // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
     for stmt in &block.statements {
         if let FunctionStatement::Instruction { instruction, .. } = stmt {
-            let formatted_inst = format_inst_short(&instruction.inst);
+            let formatted_inst = statement_opcode(&stmt).unwrap_or("Unknown".to_string());
 
             println!(
-                "[INSTRUCTION] Found instruction in block {}: {:?}",
-                block_id, formatted_inst
+                "[INSTRUCTION] Found instruction in block {}: {:?} {:?}",
+                block_id, formatted_inst, statement_opcode(&stmt)
             );
 
             *scope_instructions += 1;
