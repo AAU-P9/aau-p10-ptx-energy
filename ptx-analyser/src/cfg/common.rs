@@ -1,4 +1,5 @@
 use ptx_parser::PtxUnparser;
+use ptx_parser::PtxToken;
 use ptx_parser::r#type::instruction::Inst;
 use ptx_parser::r#type::meta::{MetaConstraint, MetaDirective, MetaTag};
 use ptx_parser::r#type::{FunctionDim, FunctionStatement, Predicate};
@@ -236,6 +237,47 @@ fn format_stmt_line(stmt: &FunctionStatement) -> String {
     match tag {
         Some(t) => format!("[{t}]  {ptx}"),
         None => ptx,
+    }
+}
+
+/// return the instruction opcode (including dot modifiers) for a function statement maybe
+/// containing an instruction, or "None" if the statement is not an instruction.
+pub fn statement_opcode(stmt: &FunctionStatement) -> Option<String> {
+    if !matches!(stmt, FunctionStatement::Instruction { .. }) {
+        return None;
+    }
+
+    let tokens = stmt.to_tokens_spaced();
+    let mut i = 0;
+
+    while i < tokens.len() && matches!(tokens[i], PtxToken::Space | PtxToken::Newline) {
+        i += 1;
+    }
+
+    // Skip optional predicate prefix like  @%p0 or @!%p0 as ptx make it as @%p0 <inst> <target> (@%p37 bra $L__BB2_45;).
+    if matches!(tokens.get(i), Some(PtxToken::At)) {
+        i += 1;
+        while i < tokens.len() && !matches!(tokens[i], PtxToken::Space | PtxToken::Newline) {
+            i += 1;
+        }
+        while i < tokens.len() && matches!(tokens[i], PtxToken::Space | PtxToken::Newline) {
+            i += 1;
+        }
+    }
+
+    let mut opcode = String::new();
+    while i < tokens.len() {
+        match &tokens[i] {
+            PtxToken::Space | PtxToken::Newline | PtxToken::Semicolon => break,
+            tok => opcode.push_str(tok.as_str()),
+        }
+        i += 1;
+    }
+
+    if opcode.is_empty() {
+        None
+    } else {
+        Some(opcode)
     }
 }
 

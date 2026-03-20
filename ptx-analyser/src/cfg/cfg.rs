@@ -473,9 +473,9 @@ fn cfg_to_dot(cfg: &ControlFlowGraph) -> String {
                     _ => "#89b4fa",
                 }
             };
-            let text = wrap_line(&html_esc(line), 60);
+            let fmt_text = wrap_line(&html_esc(line), 60);
             rows.push_str(&format!(
-                "<TR><TD ALIGN=\"LEFT\" BGCOLOR=\"{bg}\"><FONT COLOR=\"{color}\" FACE=\"Courier\">{text}</FONT></TD></TR>\n",
+                "<TR><TD ALIGN=\"LEFT\" BGCOLOR=\"{bg}\"><FONT COLOR=\"{color}\" FACE=\"Courier\">{fmt_text}</FONT></TD></TR>\n",
             ));
         }
 
