@@ -164,6 +164,16 @@ extern "C"
         return cudaSuccess;
     }
 
+    cudaError_t cudaGetLastError()
+    {
+        return cudaSuccess;
+    }
+
+    const char *cudaGetErrorString(cudaError_t error)
+    {
+        return "cudaSuccess";
+    }
+
     cudaError_t cudaLaunchKernel(const void *func,
                                  dim3 gridDim,
                                  dim3 blockDim,
