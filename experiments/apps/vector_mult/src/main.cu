@@ -56,9 +56,19 @@ int main()
     collectTimestampOffsets();
 
     // Launch kernel: 1 block with 256 threads
-    int block_size = 256;
+    int block_size = 1024;
     int grid_size = (N + block_size - 1) / block_size;
+    
     vector_mul<<<grid_size, block_size>>>(d_a, d_b, d_out);
+
+    printf("[LOG] Kernel launched. Waiting for completion...\n");
+
+    // Verify that the kernel didn't have any errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("[ERROR] Failed to launch vector_mul kernel (error code %s)!\n", cudaGetErrorString(err));
+        return -1;
+    }
     
     // Check for kernel launch errors
     cudaDeviceSynchronize();

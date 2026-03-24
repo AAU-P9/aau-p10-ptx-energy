@@ -122,6 +122,8 @@ def main() -> None:
 		if instruction_power_map
 		else 0.0
 	)
+	
+	print(f"[INFO] Fallback power: {fallback_power:.12f} J")
 
 	estimates = estimate_input_instruction_power(
 		input_path,

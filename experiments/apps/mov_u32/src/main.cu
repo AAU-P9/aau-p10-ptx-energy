@@ -1,4 +1,6 @@
 #include "cupti_timing.h"
+#include "ptx_meta.h"
+#include <cuda.h>
 
 #define ITERATIONS 40000000
 
@@ -8,6 +10,7 @@ __global__ void ptx_kernel()
     int tmp = tid;
 
     // Repeat the instruction in a C loop
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for(int i = 0; i < ITERATIONS; ++i)
     {
         asm volatile (
@@ -34,7 +37,17 @@ int main()
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<1,4>>>();
+    ptx_kernel<<<8,1024>>>();
+
+    printf("[LOG] Kernel launched. Waiting for completion...\n");
+
+    // Verify that the kernel didn't have any errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("[ERROR] Failed to launch vector_mul kernel (error code %s)!\n", cudaGetErrorString(err));
+        return -1;
+    }
+
     cudaDeviceSynchronize();
 
     // Possibly read back results (not necessary for timing, but included for completeness)

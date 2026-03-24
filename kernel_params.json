@@ -1,19 +1,31 @@
 {
-  "gridDim": { "x": 64, "y": 64, "z": 1 },
-  "blockDim": { "x": 16, "y": 16, "z": 1 },
-  "parameters_length": 2,
+  "gridDim": { "x": 1024, "y": 1, "z": 1 },
+  "blockDim": { "x": 1024, "y": 1, "z": 1 },
+  "parameters_length": 4,
   "parameters": [
     {
-      "name": "A",
+      "name": "a",
       "type": "Unknown",
       "size": 8,
       "value": null
     },
     {
-      "name": "B",
+      "name": "b",
       "type": "Unknown",
       "size": 8,
       "value": null
+    },
+    {
+      "name": "out",
+      "type": "Unknown",
+      "size": 8,
+      "value": null
+    },
+    {
+      "name": "N",
+      "type": "Int",
+      "size": 4,
+      "value": 1048576
     }
   ]
 }

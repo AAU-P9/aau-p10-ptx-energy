@@ -27,7 +27,7 @@ int main()
 {
     initializeCUPTI();
     
-    int N = 1024;
+    int N = 1048576; // 1 million elements
     size_t bytes = N * sizeof(float);
     
     // Host vectors
@@ -56,10 +56,22 @@ int main()
 
     collectTimestampOffsets();
     
-    // Launch kernel: 1 block with 256 threads
-    int block_size = 256;
+    // Launch kernel: 1 block with 1024 threads
+    int block_size = 1024;
     int grid_size = (N + block_size - 1) / block_size;
+    
+    printf("[LOG] Launching kernel with grid size %d and block size %d...\n", grid_size, block_size);
+
     vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, N);
+
+    printf("[LOG] Kernel launched. Waiting for completion...\n");
+
+    // Verify that the kernel didn't have any errors
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        printf("[ERROR] Failed to launch vector_add kernel (error code %s)!\n", cudaGetErrorString(err));
+        return -1;
+    }
     
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);

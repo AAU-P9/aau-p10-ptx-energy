@@ -53,6 +53,43 @@ def run_command(cmd, cwd=None):
     )
 
 
+def run_command_with_live_output(cmd, cwd=None, stop_on_output_token: Optional[str] = None):
+    process = subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+
+    output_lines = []
+    detected_stop_token = False
+    if process.stdout is not None:
+        for line in process.stdout:
+            print(line, end="")
+            output_lines.append(line)
+            if stop_on_output_token and stop_on_output_token in line:
+                detected_stop_token = True
+                print(
+                    f"Detected '{stop_on_output_token}' in program output. Stopping execution.",
+                    file=sys.stderr,
+                )
+                process.terminate()
+                break
+
+    if detected_stop_token:
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+    returncode = process.wait()
+    completed = subprocess.CompletedProcess(cmd, returncode, "".join(output_lines))
+    completed.detected_stop_token = detected_stop_token
+    return completed
+
+
 def add_tree_to_folder(output_folder: Path, root: Path, base_parent: Path):
     for path in root.rglob("*"):
         if path.is_dir():
@@ -214,7 +251,14 @@ def run_runner(config: RunnerConfig) -> int:
     if monitor_process is not None or pmd2_process is not None:
         time.sleep(1)
 
-    run_result = run_command(run_cmd)
+    error_marker = "[ERROR]"
+    run_result = run_command_with_live_output(run_cmd, stop_on_output_token=error_marker)
+
+    # Surface application-level error markers even when process exit code is 0.
+    run_output = run_result.stdout or ""
+    has_error_marker = error_marker in run_output or bool(
+        getattr(run_result, "detected_stop_token", False)
+    )
 
     # Give monitors a moment to capture final data
     if monitor_process is not None or pmd2_process is not None:
@@ -222,7 +266,6 @@ def run_runner(config: RunnerConfig) -> int:
 
     end_time = datetime.datetime.now()
     duration = (end_time - start_time).total_seconds()
-    print(f"Execution time: {duration:.2f} seconds")
 
     # Stop nvidia-smi monitoring
     if monitor_process is not None:
@@ -252,6 +295,7 @@ def run_runner(config: RunnerConfig) -> int:
         "compile_command": compile_cmd,
         "run_command": run_cmd,
         "run_returncode": run_result.returncode,
+        "stdout_contains_error_marker": has_error_marker,
     }
     if compiler == "nvcc":
         manifest["ptx_files"] = [str(p) for p in ptx_files]
@@ -262,9 +306,14 @@ def run_runner(config: RunnerConfig) -> int:
     manifest_path = build_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2))
 
-    print(f"Build and run completed. Output files stored in: {build_dir}")
-
-    print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
+    if has_error_marker:
+        print("Run marked as failed due to error marker in stdout.", file=sys.stderr)
+        return run_result.returncode if run_result.returncode != 0 else 1
+    else:
+        print(f"Build and run completed. Output files stored in: {build_dir}")
+        print(f"Execution time: {duration:.2f} seconds")
+        print("NOTE: Artifact feature removed. Use tools/artifact.py to zip build folder.")
+        
     return 0
 
 
