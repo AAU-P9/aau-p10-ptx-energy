@@ -20,8 +20,17 @@ __global__ void ptx_kernel()
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // Read the grid and block dimensions from command line arguments
+    if (argc != 3) {
+        printf("Usage: %s <gridDim> <blockDim>\n", argv[0]);
+        return -1;
+    }
+
+    int _gridDim = atoi(argv[1]);
+    int _blockDim = atoi(argv[2]);
+
     int h[4] = {0}; 
     int *d;
 
@@ -37,7 +46,7 @@ int main()
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<8,1024>>>();
+    ptx_kernel<<<_gridDim, _blockDim>>>();
 
     printf("[LOG] Kernel launched. Waiting for completion...\n");
 

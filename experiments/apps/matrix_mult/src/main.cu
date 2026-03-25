@@ -8,11 +8,7 @@
 
 #define ITERATIONS 10000
 
-#define M 1024
-#define N 1024
-#define K 1024
-
-__global__ void matrix_mul(float *A, float *B, float *C) {
+__global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
     META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for(int k = 0; k < ITERATIONS; ++k) {
 
@@ -30,7 +26,18 @@ __global__ void matrix_mul(float *A, float *B, float *C) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+
+// Read the size of the matrices (M, N, K) from command line arguments
+    if (argc != 4) {
+        printf("Usage: %s <M> <N> <K>\n", argv[0]);
+        return -1;
+    }
+
+    int M = atoi(argv[1]);
+    int N = atoi(argv[2]);
+    int K = atoi(argv[3]);
+
     initializeCUPTI();
     
     size_t bytes_a = M * N * sizeof(float);
@@ -68,12 +75,15 @@ int main() {
     dim3 grid_size((K + block_size.x - 1) / block_size.x, 
                    (M + block_size.y - 1) / block_size.y);
 
-    printf("[LOG] Running kernel with %d iterations...\n");
+    printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     collectTimestampOffsets();
 
+    print("[LOG] Launching kernel with grid size (%d, %d) and block size (%d, %d)...\n", 
+           grid_size.x, grid_size.y, block_size.x, block_size.y);
+
     // Launch kernel with 2D grid and block size
-    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c);
+    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K);
 
     // Check for errors after kernel launch
     cudaDeviceSynchronize();

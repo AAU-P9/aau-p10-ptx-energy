@@ -9,8 +9,6 @@
 
 #define ITERATIONS 1000000
 
-#define N 1024
-
 __global__ void matrix_transpose(float *A, float *B) {
     META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for (int i = 0; i < ITERATIONS; i++) {
@@ -23,7 +21,14 @@ __global__ void matrix_transpose(float *A, float *B) {
     }
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("Usage: %s <N>\n", argv[0]);
+        return -1;
+    }
+
+    int N = atoi(argv[1]);
+
     initializeCUPTI();
     
     size_t bytes = N * N * sizeof(float);

@@ -23,11 +23,18 @@ __global__ void vector_add(float *a, float *b, float *out, int N)
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // Read the size of the vectors (N) from command line arguments
+    if (argc != 2) {
+        printf("Usage: %s <N>\n", argv[0]);
+        return -1;
+    }
+
+    int N = atoi(argv[1]); // 1 million elements
+    
     initializeCUPTI();
     
-    int N = 1048576; // 1 million elements
     size_t bytes = N * sizeof(float);
     
     // Host vectors

@@ -7,9 +7,7 @@
 
 #define ITERATIONS 10000000
 
-#define N 1024
-
-__global__ void vector_mul(float *A, float *B, float *C) {
+__global__ void vector_mul(float *A, float *B, float *C, int N) {
     META_LOOP(iterations, ITERATIONS, 0, false);
     for (int i = 0; i < ITERATIONS; i++) {
         int index = threadIdx.x + blockIdx.x * blockDim.x;
@@ -19,8 +17,16 @@ __global__ void vector_mul(float *A, float *B, float *C) {
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // Read the size of the vectors (N) from command line arguments
+    if (argc != 2) {
+        printf("Usage: %s <N>\n", argv[0]);
+        return -1;
+    }
+
+    int N = atoi(argv[1]); // 1 million elements
+
     printf("Running vector multiplication with %d iterations...\n", ITERATIONS);
 
     // Initialize CUPTI profiling
@@ -59,7 +65,7 @@ int main()
     int block_size = 1024;
     int grid_size = (N + block_size - 1) / block_size;
     
-    vector_mul<<<grid_size, block_size>>>(d_a, d_b, d_out);
+    vector_mul<<<grid_size, block_size>>>(d_a, d_b, d_out, N);
 
     printf("[LOG] Kernel launched. Waiting for completion...\n");
 
