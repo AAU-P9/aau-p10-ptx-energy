@@ -1,0 +1,9 @@
+[
+  {
+    "cuda": "experiments/apps/vector_add/src/main.cu",
+    "run_args": ["1024"]
+  },
+  {
+    "cuda": "experiments/apps/matrix_mult/src/main.cu",
+    "run_args": ["1024", "1024", "1024"]}
+]

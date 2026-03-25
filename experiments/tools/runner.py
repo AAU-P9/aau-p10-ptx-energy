@@ -18,8 +18,6 @@ class RunnerConfig:
     """Configuration for the runner."""
     """cuda: Path to the CUDA source file."""
     cuda: Path
-    """output_dir: Path to the directory where output artifacts will be stored."""
-    output_dir: Path
     """run_args: Optional list of arguments to pass to the compiled binary when running."""
     run_args: Optional[List[str]] = None
 
@@ -148,9 +146,6 @@ def run_runner(config: RunnerConfig) -> int:
         print(f"Compiler not found in PATH: {compiler}", file=sys.stderr)
         return 2
 
-    output_dir = config.output_dir.resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
     build_root = Path("experiments/build").resolve()
     build_root.mkdir(parents=True, exist_ok=True)
 
@@ -170,6 +165,7 @@ def run_runner(config: RunnerConfig) -> int:
 
     if compile_result.returncode != 0:
         print("Compilation failed. See compile.log.")
+        print(compile_log)
         return compile_result.returncode
 
     ptx_files = []
@@ -192,6 +188,7 @@ def run_runner(config: RunnerConfig) -> int:
         ptx_log.write_text("\n".join(ptx_outputs))
         if ptx_failed:
             print("PTX generation failed. See ptx.log.")
+            print(ptx_log)
             return 2
 
     run_cmd = [str(binary_path)]
@@ -340,7 +337,6 @@ def parse_args() -> RunnerConfig:
 
     return RunnerConfig(
         cuda=Path(args.cuda),
-        output_dir=Path(args.output_dir),
         run_args=args.run_args,
     )
 

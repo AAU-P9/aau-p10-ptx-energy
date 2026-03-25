@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
     collectTimestampOffsets();
 
-    print("[LOG] Launching kernel with grid size (%d, %d) and block size (%d, %d)...\n", 
+    printf("[LOG] Launching kernel with grid size (%d, %d) and block size (%d, %d)...\n", 
            grid_size.x, grid_size.y, block_size.x, block_size.y);
 
     // Launch kernel with 2D grid and block size

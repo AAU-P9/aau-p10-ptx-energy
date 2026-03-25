@@ -2,6 +2,11 @@
   "version": "2.0.0",
   "inputs": [
     {
+      "id": "bentr_config",
+      "type": "promptString",
+      "description": "Enter the path to the Rasmus configuration file (e.g., experiments/apps/vector_add/rasmus_config.json)"
+    },
+    {
       "id": "app_name",
       "type": "promptString",
       "description": "Enter the name of the application (e.g., vector_add)"
@@ -79,6 +84,12 @@
     "label": "PTX: Power metrics from CSV",
     "type": "shell",
     "command": "uv run experiments/tools/power.py ${input:artifact_path}",
+    "problemMatcher": []
+  },
+  {
+    "label": "PTX: Run Bentr from a configuration file",
+    "type": "shell",
+    "command": "uv run experiments/tools/bentr.py ${input:bentr_config}",
     "problemMatcher": []
   }
   ]

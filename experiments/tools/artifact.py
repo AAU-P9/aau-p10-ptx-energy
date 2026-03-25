@@ -16,6 +16,8 @@ class ArtifactConfig:
     src_folder: Path
     """output_dir: Path to the directory where artifact bundles will be placed."""
     output_dir: Path
+    """prefix: Optional prefix for the artifact bundle name."""
+    prefix: str = ""
 
 
 def run_artifact(config: ArtifactConfig) -> int:
@@ -39,7 +41,11 @@ def run_artifact(config: ArtifactConfig) -> int:
 
     output_dir = config.output_dir.resolve()
     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    bundle_name = f"{build_dir.name}_bundle_{timestamp}"
+    prefix = config.prefix.strip()
+    if prefix:
+        bundle_name = f"{prefix}_{build_dir.name}_bundle_{timestamp}"
+    else:
+        bundle_name = f"{build_dir.name}_bundle_{timestamp}"
     bundle_path = output_dir / bundle_name
     output_dir.mkdir(parents=True, exist_ok=True)
     bundle_path.mkdir(parents=True, exist_ok=True)
@@ -72,12 +78,18 @@ def parse_args() -> ArtifactConfig:
         default="experiments/artifacts",
         help="Directory to place artifact bundles",
     )
+    parser.add_argument(
+        "--prefix",
+        default="",
+        help="Optional prefix added to artifact bundle names",
+    )
     args = parser.parse_args()
 
     return ArtifactConfig(
         build_folder=Path(args.build_folder),
         src_folder=Path(args.src_folder),
         output_dir=Path(args.output_dir),
+        prefix=args.prefix,
     )
 
 
