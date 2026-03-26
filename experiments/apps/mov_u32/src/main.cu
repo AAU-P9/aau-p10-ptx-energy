@@ -19,7 +19,7 @@ __global__ void ptx_kernel()
         );
     }
 }
-
+    
 int main(int argc, char *argv[])
 {
     // Read the grid and block dimensions from command line arguments

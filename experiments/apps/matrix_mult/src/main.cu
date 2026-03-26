@@ -6,7 +6,7 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
-#define ITERATIONS 10000
+#define ITERATIONS 1000000
 
 __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
     META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     cudaMemcpy(d_b, h_b, bytes_b, cudaMemcpyHostToDevice);
 
     // Define block size (e.g., 16x16 threads per block)
-    dim3 block_size(16, 16);
+    dim3 block_size(32, 32);  // 
     dim3 grid_size((K + block_size.x - 1) / block_size.x, 
                    (M + block_size.y - 1) / block_size.y);
 

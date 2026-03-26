@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any, List, Tuple
 
@@ -102,6 +103,12 @@ def parse_args() -> argparse.Namespace:
         help="Stop after the first failed run",
     )
     parser.add_argument(
+        "--cooldown-seconds",
+        type=float,
+        default=10,
+        help="Seconds to wait between runs (default: 10)",
+    )
+    parser.add_argument(
         "--artifact-output-dir",
         default="experiments/artifacts",
         help="Directory where artifact bundles are created after each run",
@@ -126,7 +133,7 @@ def main() -> int:
     artifact_output_dir = Path(args.artifact_output_dir)
     results: List[Tuple[Path, int, int]] = []
     prefix = random_prefix()
-    for config in configs:
+    for index, config in enumerate(configs):
         print(f"\n=== Running: (prefix: {prefix}) {config.cuda} ===")
         code = runner.run_runner(config)
 
@@ -136,6 +143,11 @@ def main() -> int:
 
         if code != 0 and args.fail_fast:
             break
+
+        is_last_run = index == len(configs) - 1
+        if not is_last_run and args.cooldown_seconds > 0:
+            print(f"=== Cooling down for {args.cooldown_seconds} seconds ===")
+            time.sleep(args.cooldown_seconds)
 
         print(
             f"\n=== Finished: {config.cuda} run={code}, artifact={artifact_code} ==="
