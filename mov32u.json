@@ -1,0 +1,156 @@
+[
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "1",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "2",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "4",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "8",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "16",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "32",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "64",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "128",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "256",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "512",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "1024",
+      "1024"
+    ]
+  },
+    {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "1",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "2",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "4",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "8",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "16",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "32",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "64",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "128",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "256",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "512",
+      "1024"
+    ]
+  },
+  {
+    "cuda": "experiments/apps/mov_mov_u32/src/main.cu",
+    "run_args": [
+      "1024",
+      "1024"
+    ]
+  }
+]

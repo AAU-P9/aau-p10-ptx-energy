@@ -38,7 +38,10 @@ int main()
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<1,4>>>(d_out);
+    printf("[LOG] Launching kernel with gridDim=%d and blockDim=%d...\n", _gridDim, _blockDim);
+
+    ptx_kernel<<<_gridDim,_blockDim>>>(d_out);
+
     cudaDeviceSynchronize();
 
     // Flush all activity buffers

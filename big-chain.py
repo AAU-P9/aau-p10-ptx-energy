@@ -50,6 +50,13 @@ def main():
         default=None,
         help="Optional power consumption (joules) value to forward to ptx-analyser",
     )
+    parser.add_argument(
+        "--args",
+        dest="lli_args",
+        nargs=argparse.REMAINDER,
+        default=[],
+        help="Additional arguments passed to lli (must be last argument)",
+    )
     
     args = parser.parse_args()
     cuda_file = args.cuda_file.resolve()
@@ -121,7 +128,8 @@ def main():
 
     lli_cmd = [
         "lli",
-        str(ll_path)
+        str(ll_path),
+        *args.lli_args,
     ]
 
     print(f"Running LLVM LLI to execute LLVM IR")

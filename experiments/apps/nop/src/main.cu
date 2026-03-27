@@ -1,6 +1,6 @@
 #include "cupti_timing.h"
 
-#define ITERATIONS 40000000
+#define ITERATIONS 40_000_000
 
 __global__ void ptx_kernel(int *out)
 {
@@ -10,6 +10,7 @@ __global__ void ptx_kernel(int *out)
     // Repeat the instruction in a C loop
     for(int i = 0; i < ITERATIONS; ++i)
     {
+        
     }
 }
 

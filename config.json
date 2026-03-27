@@ -1,22 +1,16 @@
 [
   {
-    "cuda": "experiments/apps/matrix_mult/src/main.cu",
-    "run_args": ["8192", "32", "32"]
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "1",
+      "1024"
+    ]
   },
   {
-    "cuda": "experiments/apps/matrix_mult/src/main.cu",
-    "run_args": ["16384", "32", "32"]
-  },
-  {
-    "cuda": "experiments/apps/matrix_mult/src/main.cu",
-    "run_args": ["32768", "32", "32"]
-  },
-  {
-    "cuda": "experiments/apps/matrix_mult/src/main.cu",
-    "run_args": ["65536", "32", "32"]
-  },
-  {
-    "cuda": "experiments/apps/matrix_mult/src/main.cu",
-    "run_args": ["131072", "32", "32"]
+    "cuda": "experiments/apps/mov_u32/src/main.cu",
+    "run_args": [
+      "2",
+      "1024"
+    ]
   }
 ]

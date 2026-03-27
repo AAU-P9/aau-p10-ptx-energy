@@ -19,6 +19,10 @@ class ArtifactConfig:
     """prefix: Optional prefix for the artifact bundle name."""
     prefix: str = ""
 
+@dataclass
+class ArtifactResult:
+    code: int
+    output_dir: Path
 
 def run_artifact(config: ArtifactConfig) -> int:
     """Copy build folder and source folder contents into an artifact bundle.
@@ -55,7 +59,7 @@ def run_artifact(config: ArtifactConfig) -> int:
     # Copy source folder contents
     shutil.copytree(src_dir, bundle_path / "src", dirs_exist_ok=True)
     print(f"Bundle created: {bundle_path}")
-    return 0
+    return ArtifactResult(code=0, output_dir=bundle_path)
 
 
 def parse_args() -> ArtifactConfig:

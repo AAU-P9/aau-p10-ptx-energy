@@ -17,6 +17,10 @@ __global__ void ptx_kernel()
             "mov.u32 %0, %0;\n\t"  // move tmp to tmp (self-move)
             : "+r"(tmp)             // %0 is a register mapped to tmp
         );
+        asm volatile (
+            "mov.u32 %0, %0;\n\t"  // move tmp to tmp (self-move)
+            : "+r"(tmp)             // %0 is a register mapped to tmp
+        );
     }
 }
     
@@ -40,7 +44,7 @@ int main(int argc, char *argv[])
     cudaMalloc(&d, 4*sizeof(int));
     cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
 
-    printf("[LOG] Running kernel mov_32u with %d iterations...\n", ITERATIONS);
+    printf("[LOG] Running kernel mov_mov_u32 with %d iterations...\n", ITERATIONS);
 
     // Get CPU/GPU offsets
     collectTimestampOffsets();

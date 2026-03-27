@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
 import argparse
+import csv
 import json
 import time
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
+from dataclasses import dataclass
 
 import artifact
 import runner
 import random
+import power
 
 sizes = ["small", "medium", "large", "giant"]
 animals = ["cat", "dog", "mouse", "elephant", "giraffe", "lion", "tiger", "bear", "wolf", "fox", "monkey", "panda", "koala", "kangaroo", "zebra", "hippo", "rhino", "deer", "squirrel", "rabbit"]
 colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "brown", "black", "white", "gray", "cyan", "magenta", "lime", "teal", "navy", "maroon", "olive", "silver", "gold"]
+
+@dataclass
+class BentrResult:
+    cuda_source: Path
+    run_args: Optional[List[str]]
+    artifact_path: Path
+    run_code: int
+    artifact_code: int
+    total_energy_j: float
 
 def random_prefix() -> str:
     return f"{random.choice(sizes)}_{random.choice(colors)}_{random.choice(animals)}"
@@ -89,6 +101,23 @@ def _run_artifact_for_config(config: runner.RunnerConfig, artifact_output_dir: P
     return artifact.run_artifact(artifact_config)
 
 
+def _write_summary_csv(results: List[BentrResult], prefix: str) -> Path:
+    summary_path = Path(f"{prefix}.csv")
+    with summary_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.writer(file)
+        writer.writerow(["cuda_source", "run_args", "artifact_path", "run_code", "artifact_code", "total_energy_j"])
+        for result in results:
+            writer.writerow([
+                str(result.cuda_source),
+                json.dumps(result.run_args) if result.run_args is not None else "",
+                str(result.artifact_path),
+                result.run_code,
+                result.artifact_code,
+                result.total_energy_j,
+            ])
+    return summary_path
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run multiple RunnerConfig entries from a JSON file in sequence"
@@ -131,15 +160,31 @@ def main() -> int:
         return 2
 
     artifact_output_dir = Path(args.artifact_output_dir)
-    results: List[Tuple[Path, int, int]] = []
+    results: List[BentrResult] = []
     prefix = random_prefix()
     for index, config in enumerate(configs):
         print(f"\n=== Running: (prefix: {prefix}) {config.cuda} ===")
         code = runner.run_runner(config)
 
+        print(f"=== Running power estimator ===")
+        power_cfg = power.PowerConfig(
+            path=Path("experiments/build") / runner.resolve_app_name(config.cuda),
+        )
+        power_metrics = power.extract_power_metrics(power_cfg)
+        total_energy_j = power_metrics.total_energy_j
+
         print(f"=== Creating artifact for: {config.cuda} ===")
-        artifact_code = _run_artifact_for_config(config, artifact_output_dir, prefix)
-        results.append((config.cuda, code, artifact_code))
+        artifact_result = _run_artifact_for_config(config, artifact_output_dir, prefix)
+
+        # Save results for summary at the end
+        results.append(BentrResult(
+            config.cuda,
+            config.run_args.copy() if config.run_args is not None else None,
+            artifact_result.output_dir / f"{prefix}_{config.cuda.stem}_artifact.zip",
+            code,
+            artifact_result.code,
+            total_energy_j
+        ))
 
         if code != 0 and args.fail_fast:
             break
@@ -149,17 +194,22 @@ def main() -> int:
             print(f"=== Cooling down for {args.cooldown_seconds} seconds ===")
             time.sleep(args.cooldown_seconds)
 
-        print(
-            f"\n=== Finished: {config.cuda} run={code}, artifact={artifact_code} ==="
-        )
 
     print("\n=== Summary ===")
-    for cuda_source, run_code, artifact_code in results:
-        run_status = "OK" if run_code == 0 else f"FAILED ({run_code})"
-        artifact_status = "OK" if artifact_code == 0 else f"FAILED ({artifact_code})"
-        print(f"{cuda_source}: run={run_status}, artifact={artifact_status}")
+    # CSV columns: cuda_source, run_args, artifact_path, run_code, artifact_code, total_energy_j
+    print("cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j")
+    for result in results:
+        run_args_csv = json.dumps(result.run_args) if result.run_args is not None else ""
+        print(f"{result.cuda_source},{run_args_csv},{result.artifact_path},{result.run_code},{result.artifact_code},{result.total_energy_j}")
 
-    failed = [1 for _, run_code, artifact_code in results if run_code != 0 or artifact_code != 0]
+    try:
+        summary_csv_path = _write_summary_csv(results, prefix)
+        print(f"Saved summary CSV to: {summary_csv_path.resolve()}")
+    except OSError as exc:
+        print(f"Failed to write summary CSV: {exc}")
+        return 1
+
+    failed = [1 for result in results if result.run_code != 0 or result.artifact_code != 0]
     return 0 if not failed else 1
 
 

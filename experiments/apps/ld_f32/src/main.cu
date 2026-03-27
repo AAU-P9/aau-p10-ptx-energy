@@ -21,8 +21,17 @@ __global__ void ptx_kernel(const float *in, float *out)
     out[tid] = tmp;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    // Read the grid and block dimensions from command line arguments
+    if (argc != 3) {
+        printf("Usage: %s <gridDim> <blockDim>\n", argv[0]);
+        return -1;
+    }
+
+    int _gridDim = atoi(argv[1]);
+    int _blockDim = atoi(argv[2]);
+
     float h_in[4] = {1.0f, 2.0f, 3.0f, 4.0f};
     float h_out[4] = {0.0f};
     float *d_in;
@@ -42,7 +51,10 @@ int main()
     collectTimestampOffsets();
 
     // Run kernel
-    ptx_kernel<<<1,4>>>(d_in, d_out);
+    printf("[LOG] Launching kernel with gridDim=%d and blockDim=%d...\n", _gridDim, _blockDim);
+
+    ptx_kernel<<<_gridDim,_blockDim>>>(d_in, d_out);
+
     cudaDeviceSynchronize();
 
     // Flush all activity buffers

@@ -28,6 +28,12 @@
       "description": "Enter the path to the CUDA toolkit (e.g., ./experiments/apps/vector_add/src/main.cu)",
     },
     {
+      "id": "cuda_args",
+      "type": "promptString",
+      "description": "Enter additional arguments for the CUDA application (e.g., --arg1 value1 --arg2 value2)",
+      "default": ""
+    }
+    {
       "id": "ptx_path",
       "type": "promptString",
       "description": "Enter the path to the PTX file (e.g., ./experiments/artifacts/vector_add_bundle_.../main.ptx)",
@@ -77,7 +83,7 @@
   {
     "label": "PTX: Run CUDA file with big-chain",
     "type": "shell",
-    "command": "uv run big-chain.py ${input:cuda_path} --csv-kernel-name ${input:app_name} --csv-power-consumption-joules ${input:power_consumption_joules}",
+    "command": "uv run big-chain.py ${input:cuda_path} --csv-kernel-name ${input:app_name} --csv-power-consumption-joules ${input:power_consumption_joules} --args ${input:cuda_args}",
     "problemMatcher": []
   },
   {
