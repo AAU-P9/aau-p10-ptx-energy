@@ -26,13 +26,15 @@ __global__ void vector_add(float *a, float *b, float *out, int N)
 int main(int argc, char *argv[])
 {
     // Read the size of the vectors (N) from command line arguments
-    if (argc != 2) {
+    if (argc < 3) {
         printf("Usage: %s <N>\n", argv[0]);
         return -1;
     }
 
     int N = atoi(argv[1]); // 1 million elements
-    
+    int BLOCKSIZE = atoi(argv[2]); // Block size for kernel launch
+    int GRIDSIZE = (N + BLOCKSIZE - 1) / BLOCKSIZE; // Grid size for kernel launch
+
     initializeCUPTI();
     
     size_t bytes = N * sizeof(float);
@@ -64,8 +66,8 @@ int main(int argc, char *argv[])
     collectTimestampOffsets();
     
     // Launch kernel: 1 block with 1024 threads
-    int block_size = 1024;
-    int grid_size = (N + block_size - 1) / block_size;
+    int block_size = BLOCKSIZE;
+    int grid_size = GRIDSIZE; 
     
     printf("[LOG] Launching kernel with grid size %d and block size %d...\n", grid_size, block_size);
 
