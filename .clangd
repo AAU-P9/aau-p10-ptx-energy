@@ -1,0 +1,8 @@
+CompileFlags:
+  Add:
+    - -Iinclude
+    - -Iexperiments/include
+    - -I/usr/local/cuda/include
+    - -I/usr/local/cuda/targets/x86_64-linux/include
+    - -I/usr/lib/llvm-18/include
+  Compiler: clang++
