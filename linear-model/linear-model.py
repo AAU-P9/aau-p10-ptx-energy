@@ -19,6 +19,8 @@ def load_instruction_power_map(weights_path: Path) -> dict[str, float]:
 			total_instructions = row.get("total_instructions")
 			power_raw = row.get("power_consumption_joules")
 
+			print(f"[DEBUG] Processing row: instruction='{instruction}', count='{count_raw}', total_instructions='{total_instructions}', power_consumption_joules='{power_raw}'")
+
 			if not instruction or count_raw is None or power_raw is None:
 				continue
 

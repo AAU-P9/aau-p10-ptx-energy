@@ -32,7 +32,7 @@
       "type": "promptString",
       "description": "Enter additional arguments for the CUDA application (e.g., --arg1 value1 --arg2 value2)",
       "default": ""
-    }
+    },
     {
       "id": "ptx_path",
       "type": "promptString",
@@ -53,7 +53,7 @@
   {
     "label": "PTX: Run application",
     "type": "shell",
-    "command": "uv run experiments/tools/runner.py ${input:cuda_path}",
+    "command": "uv run experiments/tools/runner.py ${input:cuda_path} --run-args ${input:cuda_args}",
     "problemMatcher": []
   },
 	{
@@ -96,6 +96,12 @@
     "label": "PTX: Run Bentr from a configuration file",
     "type": "shell",
     "command": "uv run experiments/tools/bentr.py ${input:bentr_config}",
+    "problemMatcher": []
+  },
+  {
+    "label": "PTX: Run Linear Model",
+    "type": "shell",
+    "command": "uv run linear-model/linear-model.py",
     "problemMatcher": []
   }
   ]
