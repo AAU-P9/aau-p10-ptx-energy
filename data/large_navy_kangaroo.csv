@@ -1,0 +1,7 @@
+cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""8"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143600/large_navy_kangaroo_main_artifact.zip,0,0,774.3388594840001
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""16"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143628/large_navy_kangaroo_main_artifact.zip,0,0,868.9302026675001
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""32"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143655/large_navy_kangaroo_main_artifact.zip,0,0,1075.1520360039997
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""64"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143723/large_navy_kangaroo_main_artifact.zip,0,0,1473.806981291
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""128"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143802/large_navy_kangaroo_main_artifact.zip,0,0,2892.0352780945
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/cvt_s64_s32_2x/src/main.cu,"[""256"", ""1024""]",/home/p10/sambashare/artifacts/large_navy_kangaroo_cvt_s64_s32_2x_bundle_20260331_143903/large_navy_kangaroo_main_artifact.zip,0,0,5835.945179312999

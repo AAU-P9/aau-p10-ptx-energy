@@ -13,11 +13,14 @@ __global__ void ptx_kernel(long long *out)
     {
         asm volatile (
             "cvt.s64.s32 %0, %1;\n\t"
+            : "=l"(tmp_s64)
+            : "r"(tmp_s32)
+        );
+        asm volatile (
             "cvt.s64.s32 %0, %1;\n\t"
             : "=l"(tmp_s64)
             : "r"(tmp_s32)
         );
-
         ++tmp_s32;
     }
 
