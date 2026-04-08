@@ -155,8 +155,8 @@ impl GpuTopology {
             total_sms: sms,
 
             cuda_cores_per_sm: 128,
-            fp32_only_lanes_per_sm: 64,
-            fp32_int32_lanes_per_sm: 64,
+            fp32_only_lanes: 64,
+            fp32_int32_lanes: 64,
             tensor_core_gen: 4,
             fp64_cores_per_sm: 2,
             tensor_cores_per_sm: 4,
@@ -169,7 +169,7 @@ impl GpuTopology {
             max_threads_per_sm: 1536,
             max_threads_per_block: 1024,
 
-            warps_per_sm: 4,
+            max_warps_per_sm: 48, // 1536 max_threads_per_sm / 32 threads_per_warp
             regs_per_sm,
             reg_file_bytes_per_sm: regs_per_sm * 4,
             max_regs_per_thread: 255,

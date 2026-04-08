@@ -151,7 +151,6 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
       //   // @META:3 LOOP grid_stride 1 4096 false
       //   // @META:3 LOOP warp_reduce 5 5 true
       // -----------------------------------------------------------------
-      META_LOOP(grid_stride, 1, 4096, false) META_LOOP(warp_reduce, 5, 5, true)
 
       // -----------------------------------------------------------------
       // LAYOUT — Memory layout of arrays
@@ -261,6 +260,7 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
 
   // ----- Phase 1: grid-stride accumulation into shared memory ----------
   float sum = 0.0f;
+  META_LOOP(grid_stride, 1, 4096, false);
   for (int i = gid; i < N; i += gridSize) {
     sum += input[i];
   }
@@ -286,6 +286,7 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
     __syncwarp();
     float val = sdata[tid];
 #pragma unroll
+    META_LOOP(warp_reduce, 5, 5, true);
     for (int offset = 16; offset >= 1; offset >>= 1) {
       val += __shfl_down_sync(0xFFFFFFFF, val, offset);
     }

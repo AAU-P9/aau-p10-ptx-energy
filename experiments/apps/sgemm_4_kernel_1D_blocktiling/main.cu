@@ -1,0 +1,117 @@
+/*
+ *  Benchmark: UBench
+ *  Author: Trasgo Research Group
+ *  Source: https://trasgo.infor.uva.es/ubench/
+ */
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+#include <cstdlib>
+#include <ctime>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdio.h>
+#include <string.h>
+#include <thread>
+#include <vector>
+
+#ifdef _WIN32
+#define strdup _strdup
+#endif
+
+// CUDA headers
+#include "cupti_timing.h"
+#include "../../include/simple_cuda_utils.h"
+#include "kernel.cuh"
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <vector>
+
+// NVML headers
+#include <nvml.h>
+
+
+void runSgemm1DBlocktiling(int M, int N, int K, float alpha, float *A, float *B,
+                           float beta, float *C) {
+  const uint BM = 64;
+  const uint BN = 64;
+  const uint BK = 8;
+  const uint TM = 8;
+  dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
+  dim3 blockDim((BM * BN) / TM);
+  sgemm1DBlocktiling<BM, BN, BK, TM>
+      <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+}
+
+void run_kernel(int M, int N, int K, float alpha, float *A, float *B,
+                float beta, float *C) {
+  runSgemm1DBlocktiling(M, N, K, alpha, A, B, beta, C);
+}
+
+// cuBLAS FLOPs ceiling is reached at 8192
+std::vector<int> SIZE = {128, 
+    /*256, 512, 1024, 2048, 4096,*/
+                         /*  8192 */
+                        };
+
+long m, n, k;
+long max_size = SIZE[SIZE.size() - 1];
+
+float alpha = 0.5, beta = 3.0; // GEMM input parameters, C=α*AB+β*C
+
+float *A = nullptr, *B = nullptr, *C = nullptr; // host matrices
+float *dA = nullptr, *dB = nullptr, *dC = nullptr;
+
+void benchmark() {
+
+  int repeat_times = 500;
+  for (int size : SIZE) {
+    m = n = k = size;
+
+    cudaMemcpy(C, dC, sizeof(float) * m * n, cudaMemcpyDeviceToHost);
+
+    for (int j = 0; j < repeat_times; j++) {
+      // We don't reset dC between runs to save time
+      run_kernel(m, n, k, alpha, dA, dB, beta, dC);
+      cudaCheck(cudaDeviceSynchronize());
+    }
+    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
+  }
+}
+
+int main(int argc, char *argv[]) {
+  A = (float *)malloc(sizeof(float) * max_size * max_size);
+  B = (float *)malloc(sizeof(float) * max_size * max_size);
+  C = (float *)malloc(sizeof(float) * max_size * max_size);
+
+  randomize_matrix(A, max_size * max_size);
+  randomize_matrix(B, max_size * max_size);
+  randomize_matrix(C, max_size * max_size);
+
+  cudaCheck(cudaMalloc((void **)&dA, sizeof(float) * max_size * max_size));
+  cudaCheck(cudaMalloc((void **)&dB, sizeof(float) * max_size * max_size));
+  cudaCheck(cudaMalloc((void **)&dC, sizeof(float) * max_size * max_size));
+
+  cudaCheck(cudaMemcpy(dA, A, sizeof(float) * max_size * max_size,
+                       cudaMemcpyHostToDevice));
+  cudaCheck(cudaMemcpy(dB, B, sizeof(float) * max_size * max_size,
+                       cudaMemcpyHostToDevice));
+  cudaCheck(cudaMemcpy(dC, C, sizeof(float) * max_size * max_size,
+                       cudaMemcpyHostToDevice));
+
+  initializeCUPTI();
+  collectTimestampOffsets();
+  benchmark();
+  flushCUPTIBuffers();
+  printKernelTiming();
+
+  // Free up CPU and GPU space
+  free(A);
+  free(B);
+  free(C);
+  cudaFree(dA);
+  cudaFree(dB);
+  cudaFree(dC);
+  return 0;
+}

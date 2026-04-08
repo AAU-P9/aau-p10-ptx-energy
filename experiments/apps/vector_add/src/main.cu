@@ -21,8 +21,8 @@ __global__ void vector_add(float *a, float *b, float *out, int N)
             out[idx] = a[idx] + b[idx];
         }
     }
+    
 }
-
 int main(int argc, char *argv[])
 {
     // Read the size of the vectors (N) from command line arguments
