@@ -188,6 +188,7 @@ impl fmt::Display for ControlFlowGraph {
     }
 }
 
+
 // ---------------------------------------------------------------------------
 // Statement rendering helpers
 // ---------------------------------------------------------------------------
@@ -206,7 +207,7 @@ pub fn format_inst_short(inst: &Inst) -> String {
 /// Render a single `FunctionStatement` as a one-line PTX string using the
 /// parser's built-in unparser.  Newlines and leading/trailing whitespace are
 /// stripped so the result is safe for embedding in graph labels.
-fn format_stmt_ptx(stmt: &FunctionStatement) -> String {
+pub(crate) fn format_stmt_ptx(stmt: &FunctionStatement) -> String {
     let tokens = stmt.to_tokens_spaced();
     let raw: String = tokens.iter().map(|t| t.as_str()).collect();
     raw.lines()
@@ -457,7 +458,7 @@ impl ControlFlowGraph {
 // ---------------------------------------------------------------------------
 
 /// Escape a string for use inside a Graphviz HTML label.
-fn dot_html_escape(s: &str) -> String {
+pub(crate) fn dot_html_escape(s: &str) -> String {
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")

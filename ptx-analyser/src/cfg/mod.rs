@@ -2,6 +2,7 @@
 mod cfgMerge;
 mod common;
 pub mod cfg;
+pub mod ddg;
 mod html;
 mod util;
 pub mod count_instructions;

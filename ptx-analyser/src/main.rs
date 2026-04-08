@@ -256,6 +256,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         dot_path.display(),
                         dot.len()
                     );
+
+                    let ddg = cfg::ddg::build_ddg(graph);
+                    let ddg_html_path = base.parent().unwrap_or(std::path::Path::new(".")).join("ddg.html");
+                    let ddg_html = ddg.to_html(graph);
+                    fs::write(&ddg_html_path, &ddg_html)?;
+                    println!(
+                        "  -> DDG HTML written to {} ({} bytes)\n",
+                        ddg_html_path.display(),
+                        ddg_html.len()
+                    );
                 }
 
                 if let Some(base) = &html_output {
@@ -266,6 +276,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "  -> HTML written to {} ({} bytes)\n",
                         html_path.display(),
                         html.len()
+                    );
+
+                    let ddg = cfg::ddg::build_ddg(graph);
+                    let ddg_html_path = base.parent().unwrap_or(std::path::Path::new(".")).join("ddg.html");
+                    let ddg_html = ddg.to_html(graph);
+                    fs::write(&ddg_html_path, &ddg_html)?;
+                    println!(
+                        "  -> DDG HTML written to {} ({} bytes)\n",
+                        ddg_html_path.display(),
+                        ddg_html.len()
                     );
                 }
 
@@ -278,6 +298,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "  -> SVG written to {} ({} bytes)\n",
                         svg_path.display(),
                         svg.len()
+                    );
+
+                    let ddg = cfg::ddg::build_ddg(graph);
+                    let ddg_svg_path = base.with_extension("ddg.svg");
+                    let ddg_dot = ddg.to_dot(graph);
+                    let ddg_svg = render_dot_to_svg(&ddg_dot)?;
+                    fs::write(&ddg_svg_path, &ddg_svg)?;
+                    println!(
+                        "  -> DDG SVG written to {} ({} bytes)\n",
+                        ddg_svg_path.display(),
+                        ddg_svg.len()
                     );
                 }
             } else {
@@ -304,6 +335,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             dot_path.display(),
                             dot.len()
                         );
+
+                        let ddg = cfg::ddg::build_ddg(graph);
+                        let ddg_dot_path = if cfgs.len() == 1 {
+                            base.with_extension("ddg.dot")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.ddg.dot"))
+                        };
+                        let ddg_dot = ddg.to_dot(graph);
+                        fs::write(&ddg_dot_path, &ddg_dot)?;
+                        println!(
+                            "  -> DDG DOT written to {} ({} bytes)\n",
+                            ddg_dot_path.display(),
+                            ddg_dot.len()
+                        );
                     }
 
                     // Optionally write HTML files.
@@ -325,6 +375,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             "  -> HTML written to {} ({} bytes)\n",
                             html_path.display(),
                             html.len()
+                        );
+
+                        let ddg = cfg::ddg::build_ddg(graph);
+                        let ddg_dot_path = if cfgs.len() == 1 {
+                            base.with_extension("ddg.dot")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.ddg.dot"))
+                        };
+                        let ddg_dot = ddg.to_dot(graph);
+                        fs::write(&ddg_dot_path, &ddg_dot)?;
+                        println!(
+                            "  -> DDG DOT written to {} ({} bytes)\n",
+                            ddg_dot_path.display(),
+                            ddg_dot.len()
                         );
                     }
 
@@ -348,6 +417,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                             "  -> SVG written to {} ({} bytes)\n",
                             svg_path.display(),
                             svg.len()
+                        );
+
+                        let ddg = cfg::ddg::build_ddg(graph);
+                        let ddg_svg_path = if cfgs.len() == 1 {
+                            base.with_extension("ddg.svg")
+                        } else {
+                            let stem = base
+                                .file_stem()
+                                .unwrap_or_default()
+                                .to_string_lossy()
+                                .to_string();
+                            base.with_file_name(format!("{stem}.{i}.ddg.svg"))
+                        };
+                        let ddg_dot = ddg.to_dot(graph);
+                        let ddg_svg = render_dot_to_svg(&ddg_dot)?;
+                        fs::write(&ddg_svg_path, &ddg_svg)?;
+                        println!(
+                            "  -> DDG SVG written to {} ({} bytes)\n",
+                            ddg_svg_path.display(),
+                            ddg_svg.len()
                         );
                     }
                 }
