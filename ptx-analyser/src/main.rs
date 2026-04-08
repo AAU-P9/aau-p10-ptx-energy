@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 mod cfg;
 pub mod gpu_context;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ParameterType {
     Int,
     Float,
@@ -23,7 +23,7 @@ pub enum ParameterType {
     Unknown, 
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Parameter {
     pub name: String,
     pub r#type: ParameterType,
@@ -31,14 +31,14 @@ pub struct Parameter {
     pub value: Option<serde_json::Value>, // replaces void*
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Dim3 {
     pub x: u32,
     pub y: u32,
     pub z: u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct KernelParameters {
     pub grid_dim: Dim3,
@@ -74,12 +74,16 @@ enum Command {
         kernel_params_file: Option<PathBuf>,
 
         #[arg(long)]
-        // Kernel name for CSV format
-        csv_kernel_name: Option<String>,
+        /// Optional path to write the analysis result as JSON.
+        output_json_path: Option<PathBuf>,
 
         #[arg(long)]
-        // Power consumption for CSV format
-        csv_power_consumption_joules: Option<f64>,
+        /// Kernel name to include in the JSON output.
+        kernel_name: Option<String>,
+
+        #[arg(long)]
+        /// Power consumption to include in the JSON output.
+        power_consumption_joules: Option<f64>,
     },
 
     BuildCfg {
@@ -157,8 +161,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             input_file,
             kernel_params,
             kernel_params_file,
-            csv_kernel_name,
-            csv_power_consumption_joules,
+            output_json_path,
+            kernel_name,
+            power_consumption_joules,
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
@@ -195,8 +200,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 kernel_config.block_dim.y,
                 kernel_config.block_dim.z,
                 &kernel_config.parameters,
-                &csv_kernel_name,
-                &csv_power_consumption_joules,
+                &output_json_path,
+                &kernel_name,
+                &power_consumption_joules,
             );
         }
         Command::BuildCfg {

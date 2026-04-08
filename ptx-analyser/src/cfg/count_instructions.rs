@@ -1,10 +1,26 @@
 use ptx_parser::r#type::FunctionStatement;
-use std::collections::{BTreeSet, HashMap};
-use crate::Parameter;
+use crate::{Dim3, Parameter};
+use serde::Serialize;
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::fs;
+use std::path::PathBuf;
 use super::common::{BlockId, ControlFlowGraph, statement_opcode};
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstructionAnalysisReport {
+    pub kernel_name: Option<String>,
+    pub power_consumption_joules: Option<f64>,
+    pub grid_dim: Dim3,
+    pub block_dim: Dim3,
+    pub parameters: Vec<Parameter>,
+    pub total_instructions: u64,
+    pub instruction_occurrences: BTreeMap<String, u64>,
+}
 
 /// Walk the CFG and return a map of opcode weighted execution count.
 /// Loop bodies are multiplied by their `min_iters` from `cfg.loops`.
+#[allow(dead_code)]
 pub fn collect_instruction_counts(cfg: &ControlFlowGraph) -> HashMap<String, u64> {
     let mut visited = BTreeSet::new();
     let mut total = 0u64;
@@ -181,8 +197,9 @@ pub fn analyze_cfg(
     block_y: u32,
     block_z: u32,
     params: &Vec<Parameter>,
-    csv_kernel_name: &Option<String>,
-    csv_power_consumption_joules: &Option<f64>,
+    output_json_path: &Option<PathBuf>,
+    kernel_name: &Option<String>,
+    power_consumption_joules: &Option<f64>,
 ) {
     println!(
         "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
@@ -223,16 +240,34 @@ pub fn analyze_cfg(
         &mut instruction_occurrences,
     );
 
-    println!("[Output] Total instructions for the CFG: {}", total_instructions);
-    println!("[Output] CSV Rows:");
-    for (inst, count) in &instruction_occurrences {
-        println!(
-            "{}, {}, {}, {}, {}",
-            csv_kernel_name.as_ref().unwrap_or(&"Unknown".into()),
-            inst,
-            count,
-            total_instructions,
-            csv_power_consumption_joules.unwrap_or(0.0)
-        );
+    let report = InstructionAnalysisReport {
+        kernel_name: kernel_name.clone(),
+        power_consumption_joules: *power_consumption_joules,
+        grid_dim: Dim3 {
+            x: grid_x,
+            y: grid_y,
+            z: grid_z,
+        },
+        block_dim: Dim3 {
+            x: block_x,
+            y: block_y,
+            z: block_z,
+        },
+        parameters: params.clone(),
+        total_instructions,
+        instruction_occurrences: instruction_occurrences
+            .into_iter()
+            .collect::<BTreeMap<_, _>>(),
+    };
+
+    let json = serde_json::to_string_pretty(&report)
+        .expect("failed to serialize instruction analysis report to JSON");
+
+    if let Some(output_path) = output_json_path {
+        fs::write(output_path, json)
+            .unwrap_or_else(|e| panic!("failed to write JSON report to {}: {}", output_path.display(), e));
+        println!("[Output] JSON report written to {}", output_path.display());
+    } else {
+        println!("{json}");
     }
 }
