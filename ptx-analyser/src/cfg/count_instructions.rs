@@ -1,11 +1,10 @@
-<<<<<<< Updated upstream
-use ptx_parser::r#type::FunctionStatement;
+use ptx_parser::r#type::{FunctionStatement, MetaTag, Operand};
 use crate::{Dim3, Parameter};
 use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::fs;
 use std::path::PathBuf;
-use super::common::{BlockId, ControlFlowGraph, statement_opcode};
+use super::common::{BasicBlock, BlockId, ControlFlowGraph, statement_opcode};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -19,39 +18,11 @@ pub struct InstructionAnalysisReport {
     pub instruction_occurrences: BTreeMap<String, u64>,
 }
 
-/// Walk the CFG and return a map of opcode weighted execution count.
-/// Loop bodies are multiplied by their `min_iters` from `cfg.loops`.
-#[allow(dead_code)]
-pub fn collect_instruction_counts(cfg: &ControlFlowGraph) -> HashMap<String, u64> {
-    let mut visited = BTreeSet::new();
-    let mut total = 0u64;
-    let mut scope_instructions = 0u64;
-    let mut scope_iterations = 1u64;
-    let mut occurrences = HashMap::new();
-    count_instructions_recursive(
-        cfg.entry,
-        cfg,
-        &mut visited,
-        &mut total,
-        &mut scope_instructions,
-        &mut scope_iterations,
-        &mut occurrences,
-    );
-    occurrences
-=======
-use ptx_parser::r#type::{FunctionStatement, MetaTag, Operand};
-use std::collections::{BTreeSet, HashMap};
-use crate::{Parameter, cfg::common::statement_opcode};
-
-use super::common::{BasicBlock, BlockId, ControlFlowGraph};
-
-
 #[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub struct Bound {
     pub min: i128,
     pub max: i128,
->>>>>>> Stashed changes
 }
 
 #[allow(dead_code)]
@@ -248,7 +219,7 @@ fn count_instructions_recursive(
                 "[META] Found meta directive in block {}: {:?}",
                 block_id, directive
             );
-        }   
+        }
     }
 
     // Recurse into successors
@@ -466,9 +437,8 @@ pub fn analyze_cfg(
         &mut scope_iterations,
         &registers,
         &mut instruction_occurrences,
-        &mut None,  
+        &mut None,
     );
-<<<<<<< Updated upstream
 
     let report = InstructionAnalysisReport {
         kernel_name: kernel_name.clone(),
@@ -499,12 +469,5 @@ pub fn analyze_cfg(
         println!("[Output] JSON report written to {}", output_path.display());
     } else {
         println!("{json}");
-=======
-// 
-    println!("[Output] Total instructions for the CFG: {}", total_instructions);
-    println!("[Output] CSV Rows:");
-    for (inst, count) in &instruction_occurrences {
-        println!("{}, {}, {}, {}, {}", csv_kernel_name.as_ref().unwrap_or(&"Unknown".into()), inst, count, total_instructions, csv_power_consumption_joules.unwrap_or(0.0));
->>>>>>> Stashed changes
     }
 }
