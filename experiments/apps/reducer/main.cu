@@ -44,8 +44,8 @@ __global__ void KERNEL_LAUNCH_BOUNDS(BLOCK_SIZE, 1)
   ASSUME_RANGE(tid, 0, BLOCK_SIZE - 1);
 
   // ----- Phase 1: grid-stride accumulation into shared memory ----------
-  META_LOOP(grid_stride, 1, 4096, false);
   float sum = 0.0f;
+  META_LOOP(grid_stride, 1, 4096, false);
   for (int i = gid; i < N; i += gridSize) {
     sum += input[i];
   }

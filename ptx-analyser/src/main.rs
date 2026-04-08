@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use clap::{Parser, Subcommand};
 
 mod cfg;
+pub mod gpu_context;
+pub mod flipflop;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum ParameterType {

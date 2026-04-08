@@ -9,7 +9,7 @@ pub mod count_instructions;
 #[allow(unused_imports)]
 pub use cfgMerge::{CallSite, MergedCfg, merge_cfgs};
 #[allow(unused_imports)]
-pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, Terminator};
+pub use common::{BasicBlock, BlockId, CfgEdge, ControlFlowGraph, LoopInfo, Terminator, statement_opcode};
 pub use html::{cfg_to_html, merged_cfg_to_html};
 pub use count_instructions::analyze_cfg;
 

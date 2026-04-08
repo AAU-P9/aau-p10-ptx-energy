@@ -3,7 +3,7 @@ use std::collections::{BTreeSet, HashMap};
 use crate::Parameter;
 use super::common::{BlockId, ControlFlowGraph, statement_opcode};
 
-/// Walk the CFG and return a map of opcode → weighted execution count.
+/// Walk the CFG and return a map of opcode weighted execution count.
 /// Loop bodies are multiplied by their `min_iters` from `cfg.loops`.
 pub fn collect_instruction_counts(cfg: &ControlFlowGraph) -> HashMap<String, u64> {
     let mut visited = BTreeSet::new();

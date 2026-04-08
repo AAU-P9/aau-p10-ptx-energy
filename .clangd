@@ -2,7 +2,18 @@ CompileFlags:
   Add:
     - -Iinclude
     - -Iexperiments/include
+    - -I../include
+    - -I../../include
+    - -I../../../include
+    - -I../../../../include
+    - -I../experiments/include
+    - -I../../experiments/include
+    - -I../../../experiments/include
+    - -I../../../../experiments/include
     - -I/usr/local/cuda/include
     - -I/usr/local/cuda/targets/x86_64-linux/include
     - -I/usr/lib/llvm-18/include
+    - -x
+    - cuda
+    - --cuda-gpu-arch=sm_89 #cuda 8.9
   Compiler: clang++

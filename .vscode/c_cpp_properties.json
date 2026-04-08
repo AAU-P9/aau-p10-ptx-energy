@@ -4,6 +4,10 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/experiments/include",
+                "/usr/local/cuda/include",
+                "/usr/local/cuda/targets/x86_64-linux/include",
                 "/usr/lib/llvm-18/include"
             ],
             "defines": [],
