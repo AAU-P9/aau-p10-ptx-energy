@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
+import argparse
 import csv
+import json
 from collections import defaultdict
 from pathlib import Path
-from decimal import Decimal
 
 def load_instruction_power_map(weights_path: Path) -> dict[str, float]:
 	"""Build average per-occurrence power (joules) for each instruction."""
@@ -63,46 +64,42 @@ def estimate_input_instruction_power(
 ) -> list[dict[str, str | float]]:
 	estimates: list[dict[str, str | float]] = []
 
-	with input_path.open("r", newline="", encoding="utf-8") as handle:
-		reader = csv.reader(handle, skipinitialspace=True)
-		rows = list(reader)
+	with input_path.open("r", encoding="utf-8") as handle:
+		payload = json.load(handle)
 
-		if not rows:
-			return estimates
+	analysis_items = payload if isinstance(payload, list) else [payload]
 
-		first_row = [cell.strip() for cell in rows[0]]
-		header = {name.lower(): idx for idx, name in enumerate(first_row)}
-		has_header = all(key in header for key in ("kernel_name", "instruction", "count"))
+	for index, item in enumerate(analysis_items):
+		if not isinstance(item, dict):
+			continue
 
-		data_rows = rows[1:] if has_header else rows
-		kernel_idx = header.get("kernel_name", 0)
-		instruction_idx = header.get("instruction", 1)
-		count_idx = header.get("count", 2)
+		kernel_name = str(item.get("kernelName") or input_path.stem or f"kernel_{index}")
+		instruction_occurrences = item.get("instructionOccurrences")
 
-		for row in data_rows:
-			if len(row) <= max(kernel_idx, instruction_idx, count_idx):
-				continue
+		if not isinstance(instruction_occurrences, dict):
+			continue
 
-			kernel_name = row[kernel_idx].strip()
-			instruction = row[instruction_idx].strip()
-			count_raw = row[count_idx].strip()
-
-			if not instruction or not count_raw:
+		for instruction, count_raw in instruction_occurrences.items():
+			instruction_name = str(instruction).strip()
+			if not instruction_name:
 				continue
 
 			try:
 				count = float(count_raw)
-			except ValueError:
+			except (TypeError, ValueError):
 				continue
 
-			used_fallback = instruction not in instruction_power_map
-			avg_per_occurrence = instruction_power_map.get(instruction, fallback_power)
+			if count <= 0:
+				continue
+
+			used_fallback = instruction_name not in instruction_power_map
+			avg_per_occurrence = instruction_power_map.get(instruction_name, fallback_power)
 			estimated_power_joules = count * avg_per_occurrence
 
 			estimates.append(
 				{
 					"kernel_name": kernel_name,
-					"instruction": instruction,
+					"instruction": instruction_name,
 					"count": count,
 					"avg_power_per_occurrence_joules": avg_per_occurrence,
 					"estimated_power_joules": estimated_power_joules,
@@ -113,10 +110,39 @@ def estimate_input_instruction_power(
 	return estimates
 
 
-def main() -> None:
+def parse_args() -> argparse.Namespace:
 	base_dir = Path(__file__).resolve().parent
-	weights_path = base_dir / "weights.csv"
-	input_path = base_dir / "input.csv"
+	project_root = base_dir.parent
+
+	parser = argparse.ArgumentParser(
+		description="Estimate instruction-level power from PTX analysis JSON.",
+	)
+	parser.add_argument(
+		"--weights-path",
+		type=Path,
+		default=base_dir / "weights.csv",
+		help="Path to weights CSV file (default: linear-model/weights.csv)",
+	)
+	parser.add_argument(
+		"--input-path",
+		type=Path,
+		default=project_root / "ptx_analysis.json",
+		help="Path to PTX analysis JSON file (default: ptx_analysis.json)",
+	)
+
+	return parser.parse_args()
+
+
+def main() -> None:
+	args = parse_args()
+	weights_path = args.weights_path
+	input_path = args.input_path
+
+	if not weights_path.is_file():
+		raise FileNotFoundError(f"Weights CSV not found: {weights_path}")
+
+	if not input_path.is_file():
+		raise FileNotFoundError(f"Input JSON not found: {input_path}")
 
 	instruction_power_map = load_instruction_power_map(weights_path)
 	fallback_power = (
@@ -137,6 +163,7 @@ def main() -> None:
 		total_estimated += float(entry["estimated_power_joules"])
 		fallback_tag = " (fallback)" if entry.get("used_fallback") else ""
 		print(
+			"[ESTIMATE]"
 			f"{entry['kernel_name']},{entry['instruction']},"
 			f"count={entry['count']:.0f},"
 			f"avg={entry['avg_power_per_occurrence_joules']:.12f},"
@@ -144,7 +171,7 @@ def main() -> None:
 			f"{fallback_tag}"
 		)
 
-	print(f"\nTotal estimated power for input rows: {total_estimated:.12f} J")
+	print(f"[TOTAL] {total_estimated:.12f} J")
 
 
 if __name__ == "__main__":
