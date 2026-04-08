@@ -1,29 +1,25 @@
 #include "cupti_timing.h"
-#include "ptx_meta.h"
-#include <cuda.h>
 
 #define ITERATIONS 40000000
 
-__global__ void ptx_kernel(long long *out)
+__global__ void ptx_kernel(int *out)
 {
     int tid = threadIdx.x;
-    int tmp_s32 = tid;
-    long long tmp_s64 = 0;
+    int tmp = tid;
 
     // Repeat the instruction in a C loop
-    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for(int i = 0; i < ITERATIONS; ++i)
     {
         asm volatile (
-            "cvt.s64.s32 %0, %1;\n\t"
-            : "=l"(tmp_s64)
-            : "r"(tmp_s32)
+            "add.s32 %0, %0, 1;\n\t"  // add tmp + 0 to tmp
+            : "+r"(tmp)               // %0 is a register mapped to tmp
+        );
+        asm volatile (
+            "add.s32 %0, %0, 1;\n\t"  // add tmp + 0 to tmp
+            : "+r"(tmp)               // %0 is a register mapped to tmp
         );
 
-        ++tmp_s32;
     }
-
-    out[tid] = tmp_s64;
 }
 
 int main(int argc, char *argv[])
@@ -37,14 +33,14 @@ int main(int argc, char *argv[])
     int _gridDim = atoi(argv[1]);
     int _blockDim = atoi(argv[2]);
 
-    long long h[4] = {0};
-    long long *d;
+    int h[4] = {0}; 
+    int *d;
 
     // Initialize CUPTI profiling
     initializeCUPTI();
 
-    cudaMalloc(&d, 4*sizeof(long long));
-    cudaMemcpy(d, h, 4*sizeof(long long), cudaMemcpyHostToDevice);
+    cudaMalloc(&d, 4*sizeof(int));
+    cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 

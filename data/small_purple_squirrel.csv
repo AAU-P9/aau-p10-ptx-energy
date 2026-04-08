@@ -1,0 +1,6 @@
+cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""16384""]",/home/p10/sambashare/artifacts/small_purple_squirrel_vector_add_old_bundle_20260401_124617/small_purple_squirrel_main_artifact.zip,0,0,467.79589382949996
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""32768""]",/home/p10/sambashare/artifacts/small_purple_squirrel_vector_add_old_bundle_20260401_124639/small_purple_squirrel_main_artifact.zip,0,0,592.7565668860001
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""65536""]",/home/p10/sambashare/artifacts/small_purple_squirrel_vector_add_old_bundle_20260401_124702/small_purple_squirrel_main_artifact.zip,0,0,883.6183397010001
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""131072""]",/home/p10/sambashare/artifacts/small_purple_squirrel_vector_add_old_bundle_20260401_124730/small_purple_squirrel_main_artifact.zip,0,0,1788.818441455
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""262144""]",/home/p10/sambashare/artifacts/small_purple_squirrel_vector_add_old_bundle_20260401_124809/small_purple_squirrel_main_artifact.zip,0,0,3668.2880670785003

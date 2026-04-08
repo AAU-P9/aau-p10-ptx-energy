@@ -9,11 +9,9 @@
 #define ITERATIONS 10000000
 
 // Vector add kernel: out[i] = a[i] + b[i]
-__global__ void vector_add(float *a, float *b, float *out, int N)
+__global__ void vector_add(float *a, float   *b, float *out, int N)
 {
-    int half_iterations = ITERATIONS / 2;
-
-    META_LOOP(iterations, 10000000, 0, false);
+    META_LOOP(iterations, ITERATIONS, 0, false);
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         
@@ -31,7 +29,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int N = 1024;
+    int N = atoi(argv[1]);
 
     initializeCUPTI();
     

@@ -1,0 +1,3 @@
+cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""524288""]",/home/p10/sambashare/artifacts/medium_purple_fox_vector_add_old_bundle_20260401_124945/medium_purple_fox_main_artifact.zip,0,0,7076.5822805165
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""1048576""]",/home/p10/sambashare/artifacts/medium_purple_fox_vector_add_old_bundle_20260401_125113/medium_purple_fox_main_artifact.zip,0,0,13848.583842393999

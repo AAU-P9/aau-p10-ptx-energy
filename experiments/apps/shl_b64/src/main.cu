@@ -1,4 +1,6 @@
 #include "cupti_timing.h"
+#include "ptx_meta.h"
+#include <cuda.h>
 
 #define ITERATIONS 40000000
 
@@ -8,6 +10,7 @@ __global__ void ptx_kernel(unsigned long long *out)
     unsigned long long tmp = (unsigned long long)tid + 1ULL;
 
     // Repeat the instruction in a C loop
+    META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
     for(int i = 0; i < ITERATIONS; ++i)
     {
         asm volatile (

@@ -1,5 +1,0 @@
-cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j
-/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""1024""]",/home/p10/sambashare/artifacts/giant_orange_monkey_vector_add_old_bundle_20260331_100751/giant_orange_monkey_main_artifact.zip,0,0,341.147481245
-/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""2048""]",/home/p10/sambashare/artifacts/giant_orange_monkey_vector_add_old_bundle_20260331_100814/giant_orange_monkey_main_artifact.zip,0,0,343.2597280885
-/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""4096""]",/home/p10/sambashare/artifacts/giant_orange_monkey_vector_add_old_bundle_20260331_100837/giant_orange_monkey_main_artifact.zip,0,0,362.1263896269999
-/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src/main.cu,"[""8192""]",/home/p10/sambashare/artifacts/giant_orange_monkey_vector_add_old_bundle_20260331_100900/giant_orange_monkey_main_artifact.zip,0,0,395.5528550205
