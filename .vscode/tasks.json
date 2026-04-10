@@ -59,7 +59,7 @@
   {
     "label": "PTX: Run application",
     "type": "shell",
-    "command": "uv run experiments/tools/runner.py ${input:cuda_path} --run-args ${input:cuda_args}",
+    "command": "uv run experiments/tools/runner.py ${input:cuda_path} --binary-args ${input:cuda_args}",
     "problemMatcher": []
   },
 	{

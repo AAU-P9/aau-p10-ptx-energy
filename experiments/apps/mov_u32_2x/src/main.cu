@@ -76,7 +76,7 @@ int main(int argc, char *argv[])
     printKernelTiming();
 
     EXPORT(_blockDim);
-    EXPORT_N(_gridDim, "gridDim");
+    EXPORT_N("gridDim", _gridDim);
     EXPORT(ITERATIONS);
     JSON_END
 

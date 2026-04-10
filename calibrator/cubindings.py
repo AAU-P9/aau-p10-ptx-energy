@@ -42,7 +42,7 @@ def executeProgram(
             flags=re.DOTALL
         )
 
-        program_str = "#include \"cubindings.h\"\n" + program_str
+        program_str = "#include \"cupti_timing.h\"\n" + program_str
 
     # Write the program string to a temporary file
     program_file = path / "program.cu"
@@ -51,7 +51,7 @@ def executeProgram(
 
     # Absolute path to the include directory for cubindings.h
     nvcc_cmd = ["nvcc", "-Xptxas", "-g", "-G", "-O0", "-arch=sm_89", "-lcupti"]
-    include_path = Path(__file__).parent / "include"
+    include_path = Path(__file__).parents[1] / "include"
     nvcc_cmd.append(f"-I{str(include_path)}")
     nvcc_cmd.extend(list(nvcc_args))
     nvcc_cmd.append(str(program_file))

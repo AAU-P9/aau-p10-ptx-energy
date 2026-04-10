@@ -20,6 +20,8 @@ class RunnerConfig:
     cuda: Path
     """run_args: Optional dictionary of preprocessor defines to pass during compilation."""
     run_args: Optional[Dict[str, str]] = None
+    """binary_args: Optional list of arguments to pass to the compiled binary at runtime."""
+    binary_args: Optional[List[str]] = None
 
 
 def get_define_flags(run_args: Optional[Dict[str, str]]) -> List[str]:
@@ -143,7 +145,8 @@ def run_runner(config: RunnerConfig) -> int:
     define_flags = get_define_flags(config.run_args)
 
     # We run with O0 to ensure we capture the original source.
-    default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./experiments/include", "-arch=sm_89"]
+    include_path = Path(__file__).parents[2] / "include"
+    default_args = ["-Xptxas", "-g", "-G", "-O0", f"-I{include_path}", "-arch=sm_89"]
 
     compile_cmd = [compiler] + default_args + define_flags + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
     compile_result = run_command(compile_cmd)
@@ -179,7 +182,7 @@ def run_runner(config: RunnerConfig) -> int:
             print(ptx_log)
             return 2
 
-    run_cmd = [str(binary_path)]
+    run_cmd = [str(binary_path)] + (config.binary_args or [])
 
     # Start nvidia-smi monitoring on a separate process
     monitor_log = build_dir / "nvidia-smi.csv"
@@ -318,6 +321,11 @@ def parse_args() -> RunnerConfig:
         nargs="*",
         help="Preprocessor defines as KEY=VALUE pairs (example: --run-args M=64 N=64 K=64)",
     )
+    parser.add_argument(
+        "--binary-args",
+        nargs="*",
+        help="Arguments to pass to the compiled binary at runtime (example: --binary-args 256 256)",
+    )
 
     args = parser.parse_args()
 
@@ -335,6 +343,7 @@ def parse_args() -> RunnerConfig:
     return RunnerConfig(
         cuda=Path(args.cuda),
         run_args=run_args,
+        binary_args=args.binary_args,
     )
 
 def main():

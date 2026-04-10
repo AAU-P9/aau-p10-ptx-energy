@@ -31,7 +31,7 @@ template<> inline void jim_auto(Jim *jim, const char *x) { jim_string(jim, x); }
 template<> inline void jim_auto(Jim *jim, char *x)       { jim_string(jim, x); }
 
 #define EXPORT(X)    jim_member_key(&json, #X); jim_auto(&json, X);
-#define EXPORT_N(X, N) jim_member_key(&json, N); jim_auto(&json, X);
+#define EXPORT_N(N, X) jim_member_key(&json, N); jim_auto(&json, X);
 
 
 // Global variables to store kernel timing information
@@ -106,12 +106,6 @@ inline void collectTimestampOffsets() {
         }
         jim_object_end(&json);
 
-        printf("[OFFSET] CUPTI Timestamp: %lu, CPU Timestamp #1: %lu, CPU Timestamp #2: %lu\n",
-            cuptiTimestamp,
-            cpuInitialNs,
-            cpuFinalNs
-        );
-
         // Sleep for a short time to avoid overwhelming the system
         struct timespec sleepTime = {0, 1000000 * 10}; // 10 ms
         nanosleep(&sleepTime, NULL);
@@ -123,17 +117,12 @@ inline void collectTimestampOffsets() {
 inline void printKernelTiming() {
 
     if (kernel_duration > 0) {
-
         jim_member_key(&json, "start_timestamp");
         jim_integer(&json, start_time);
         jim_member_key(&json, "end_timestamp");
         jim_integer(&json, end_time);
         jim_member_key(&json, "duration");
         jim_integer(&json, kernel_duration);
-
-        printf("[KERNEL] Start Time: %lu\n", start_time);
-        printf("[KERNEL] End Time: %lu\n", end_time);
-        printf("[KERNEL] Duration: %lu\n", kernel_duration);
     }
 }
 
@@ -149,11 +138,8 @@ inline void flushCUPTIBuffers() {
     cuptiActivityFlushAll(0);
 }
 
-// Get kernel timing values
-inline void getKernelTiming(uint64_t &duration, uint64_t &sTime, uint64_t &eTime) {
-    duration = kernel_duration;
-    sTime = start_time;
-    eTime = end_time;
-}
+#define METRICS_KERNEL_START JSON_START initializeCUPTI(); collectTimestampOffsets();
+
+#define METRICS_KERNEL_END flushCUPTIBuffers();printKernelTiming(); disableCUPTI(); JSON_END;
 
 #endif // CUPTI_TIMING_H
