@@ -46,6 +46,8 @@ int main(int argc, char *argv[])
 
     printf("[LOG] Running kernel mov_mov_u32 with %d iterations...\n", ITERATIONS);
 
+    JSON_START
+
     // Get CPU/GPU offsets
     collectTimestampOffsets();
 
@@ -72,6 +74,11 @@ int main(int argc, char *argv[])
     flushCUPTIBuffers();
 
     printKernelTiming();
+
+    EXPORT(_blockDim);
+    EXPORT_N(_gridDim, "gridDim");
+    EXPORT(ITERATIONS);
+    JSON_END
 
     // Clean up
     cudaFree(d);
