@@ -1,0 +1,3 @@
+cuda_source,run_args,artifact_path,run_code,artifact_code,total_energy_j,total_estimated_energy_j
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_1_naive/main.cu,"{""SIZE_M"": ""524288"", ""SIZE_K"": ""1024"", ""SIZE_N"": ""1024""}",/home/p10/sambashare/artifacts/large_green_bear_sgemm_1_naive_bundle_20260409_122342/large_green_bear_main_artifact.zip,0,0,589.5498252770003,758.077608781393
+/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_1_naive/main.cu,"{""SIZE_M"": ""1048576"", ""SIZE_K"": ""1024"", ""SIZE_N"": ""1024""}",/home/p10/sambashare/artifacts/large_green_bear_sgemm_1_naive_bundle_20260409_122630/large_green_bear_main_artifact.zip,0,0,1218.0846098049997,1516.155217562786

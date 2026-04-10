@@ -4,7 +4,7 @@ import csv
 import json
 import time
 from pathlib import Path
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Dict
 from dataclasses import dataclass
 import subprocess
 import re
@@ -22,7 +22,7 @@ colors = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "brown",
 @dataclass
 class BentrResult:
     cuda_source: Path
-    run_args: Optional[List[str]]
+    run_args: Optional[Dict[str, str]]
     artifact_path: Path
     run_code: int
     artifact_code: int
@@ -38,28 +38,33 @@ def _read_json(path: Path) -> Any:
 
 
 def _parse_config_entry(entry: Any, index: int) -> runner.RunnerConfig:
-	if not isinstance(entry, dict):
-		raise ValueError(f"Entry {index} must be an object.")
+    if not isinstance(entry, dict):
+        raise ValueError(f"Entry {index} must be an object.")
 
-	if "cuda" not in entry:
-		raise ValueError(f"Entry {index} is missing required field 'cuda'.")
+    if "cuda" not in entry:
+        raise ValueError(f"Entry {index} is missing required field 'cuda'.")
 
-	cuda = Path(entry["cuda"]).resolve()
-	if cuda.suffix != ".cu":
-		raise ValueError(f"Entry {index} has non-.cu cuda path: {entry['cuda']}")
+    cuda = Path(entry["cuda"]).resolve()
+    if cuda.suffix != ".cu":
+        raise ValueError(f"Entry {index} has non-.cu cuda path: {entry['cuda']}")
 
-	run_args_raw = entry.get("run_args")
-	if run_args_raw is None:
-		run_args = None
-	elif isinstance(run_args_raw, list) and all(isinstance(arg, str) for arg in run_args_raw):
-		run_args = run_args_raw
-	else:
-		raise ValueError(f"Entry {index} field 'run_args' must be an array of strings.")
+    run_args_raw = entry.get("run_args")
+    if run_args_raw is None:
+        run_args = None
+    elif isinstance(run_args_raw, dict) and all(
+        isinstance(k, str) and isinstance(v, (str, int, float, bool))
+        for k, v in run_args_raw.items()
+    ):
+        run_args = {k: str(v) for k, v in run_args_raw.items()}
+    else:
+        raise ValueError(
+            f"Entry {index} field 'run_args' must be an object with string keys and scalar values (string/number/bool)."
+        )
 
-	return runner.RunnerConfig(
-		cuda=cuda,
-		run_args=run_args,
-	)
+    return runner.RunnerConfig(
+        cuda=cuda,
+        run_args=run_args,
+    )
 
 
 def load_runner_configs(config_path: Path) -> List[runner.RunnerConfig]:
@@ -90,6 +95,13 @@ def _resolve_src_folder(cuda_path: Path) -> Path:
 
     return resolved.parent
 
+def _get_define_flags(run_args: Optional[Dict[str, str]]) -> List[str]:
+    """Convert run_args dictionary to -D compiler flags."""
+    if run_args is None:
+        return []
+    return [f"-D{key}={value}" for key, value in run_args.items()]
+
+
 
 def _run_artifact_for_config(config: runner.RunnerConfig, artifact_output_dir: Path, prefix: str) -> int:
     app_name = runner.resolve_app_name(config.cuda.resolve())
@@ -103,6 +115,7 @@ def _run_artifact_for_config(config: runner.RunnerConfig, artifact_output_dir: P
         prefix=prefix
     )
     return artifact.run_artifact(artifact_config)
+
 
 
 def _write_summary_csv(results: List[BentrResult], prefix: str) -> Path:
@@ -169,7 +182,11 @@ def main() -> int:
     prefix = random_prefix()
     for index, config in enumerate(configs):
         print(f"\n=== Running: (prefix: {prefix}) {config.cuda} ===")
-        code = runner.run_runner(config)
+        run_cfg = runner.RunnerConfig(
+            cuda=config.cuda,
+            run_args=config.run_args.copy() if config.run_args is not None else None,
+        )
+        code = runner.run_runner(run_cfg)
 
         print(f"=== Running power estimator ===")
         power_cfg = power.PowerConfig(
@@ -243,6 +260,11 @@ def main() -> int:
             "--no-cuda-version-check"
         ]
         
+        # Add run_args as -D defines
+        define_flags = _get_define_flags(config.run_args)
+        clang_ll_cmd.extend(define_flags)
+        clang_bc_cmd.extend(define_flags)
+        
         print(f"[DEBUG] Running clang to generate LLVM IR (.ll and .bc)")
 
         try:
@@ -272,10 +294,6 @@ def main() -> int:
             "lli",
             str(ll_path),
         ]
-
-        # Append all run args to lli command
-        if config.run_args is not None:
-            lli_cmd.extend(config.run_args)
 
         print(f"[DEBUG] Running LLVM LLI to execute LLVM IR")
         try:
@@ -319,6 +337,9 @@ def main() -> int:
             ptx_path,
             str(config.cuda),
         ]
+        
+        # Add run_args as -D defines to nvcc as well
+        nvcc_cmd.extend(define_flags)
 
         print(f"Running NVCC to compile CUDA to PTX")
         try:

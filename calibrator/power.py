@@ -1,18 +1,12 @@
-#!/usr/bin/env python3
-"""Extract power metrics from GPU power data from nvidia-smi and pmd2 CSVs."""
-from __future__ import annotations
-
-import argparse
-import re
 from pathlib import Path
 from dataclasses import dataclass
-
+from typing import Any
 import pandas as pd
 from scipy import integrate
 
 
 @dataclass
-class PowerMetrics:
+class PowerMetricsResult:
     """Power and energy metrics from kernel execution."""
     kernel_start_gpu_ns: float
     kernel_end_gpu_ns: float
@@ -29,12 +23,8 @@ class PowerMetrics:
     regression_intercept: float
     regression_samples: int
 
-
-@dataclass
-class PowerConfig:
-    """Configuration for the power metrics extractor."""
-    path: Path
-
+# Incremental regression class for timestamp conversion
+# source: https://github.com/wolfpld/tracy, tracy/public/tracy/TracyCUDA.hpp
 
 @dataclass
 class IncrementalRegression:
@@ -115,73 +105,53 @@ def load_pmd2(path: Path) -> pd.DataFrame:
     df["sensor7_power_w"] = pd.to_numeric(df["sensor7_power_mw"], errors="coerce") / 1000.0
     return df
 
-
-def parse_output_txt(path: Path) -> dict:
-    """Parse output.txt for OFFSET and KERNEL timing information."""
-    result = {
-        "offsets": [],
-        "kernel_start": None,
-        "kernel_end": None,
-        "kernel_duration": None,
-    }
-    
-    if not path.exists():
-        return result
-    
-    with open(path, "r") as f:
-        for line in f:
-            # Parse OFFSET lines
-            offset_match = re.match(
-                r"\[OFFSET\] CUPTI Timestamp: (\d+), CPU Timestamp #1: (\d+), CPU Timestamp #2: (\d+)",
-                line,
-            )
-            if offset_match:
-                cupti_ts = int(offset_match.group(1))
-                cpu_ts1 = int(offset_match.group(2))
-                cpu_ts2 = int(offset_match.group(3))
-                # Use average of CPU timestamps
-                cpu_ts_avg = (cpu_ts1 * 3.0 + cpu_ts2 * 5.0) / 8.0
-                result["offsets"].append((cupti_ts, cpu_ts_avg))
-            
-            # Parse KERNEL lines
-            kernel_start = re.match(r"\[KERNEL\] Start Time: (\d+)", line)
-            if kernel_start:
-                result["kernel_start"] = int(kernel_start.group(1))
-            
-            kernel_end = re.match(r"\[KERNEL\] End Time: (\d+)", line)
-            if kernel_end:
-                result["kernel_end"] = int(kernel_end.group(1))
-            
-            kernel_duration = re.match(r"\[KERNEL\] Duration: (\d+)", line)
-            if kernel_duration:
-                result["kernel_duration"] = int(kernel_duration.group(1))
-    
-    return result
-
-
 def gpu_to_cpu_time(gpu_timestamp: float, slope: float, intercept: float) -> float:
     """Convert GPU timestamp to CPU timestamp using linear regression."""
     return slope * gpu_timestamp + intercept
 
 
-def extract_power_metrics(config: PowerConfig) -> PowerMetrics:
+def _parse_output_exports(exports: Any) -> dict[str, Any]:
+    """Normalize metrics fields from output.json exports."""
+    raw_offsets = exports.get("timestamp_offsets", [])
+    offsets: list[tuple[float, float]] = []
+    for sample in raw_offsets:
+        gpu_ts = float(sample["cupti_timestamp"])
+        cpu_initial = float(sample["cpu_initial_timestamp"])
+        cpu_final = float(sample["cpu_final_timestamp"])
+        offsets.append((gpu_ts, (cpu_initial + cpu_final) / 2.0))
+
+    kernel_start = float(exports["start_timestamp"])
+    kernel_end = float(exports["end_timestamp"])
+    kernel_duration = float(exports.get("duration", kernel_end - kernel_start))
+
+    return {
+        "offsets": offsets,
+        "kernel_start": kernel_start,
+        "kernel_end": kernel_end,
+        "kernel_duration": kernel_duration,
+    }
+
+
+def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
     """Extract power metrics from GPU data.
 
     Args:
-        config: PowerConfig object containing path to data directory
+        path: Path to the directory containing CSV files
 
     Returns:
         PowerMetrics object containing calculated metrics
     """
-    nv_path = config.path / "nvidia-smi.csv"
-    pmd2_path = config.path / "pmd2.csv"
-    output_txt_path = config.path / "output.txt"
+    # nv_path = path / "nvidia-smi.csv"
+    pmd2_path = path / "pmd2.csv"
     
-    nv = load_nvidia_smi(nv_path)
+    # nv = load_nvidia_smi(nv_path)
+
+    print(pmd2_path)
+
     pmd2 = load_pmd2(pmd2_path)
     
-    # Parse timing information
-    output_info = parse_output_txt(output_txt_path)
+    # Parse timing information from output.json exports
+    output_info = _parse_output_exports(exports)
 
     # Build incremental regression model
     regression = IncrementalRegression()
@@ -227,7 +197,7 @@ def extract_power_metrics(config: PowerConfig) -> PowerMetrics:
     # Calculate duration error
     duration_error_s = abs(kernel_duration_cpu_s - output_info["kernel_duration"] / 1e9)
 
-    return PowerMetrics(
+    return PowerMetricsResult(
         kernel_start_gpu_ns=kernel_start_gpu,
         kernel_end_gpu_ns=kernel_end_gpu,
         kernel_duration_gpu_ns=float(output_info["kernel_duration"]),
@@ -244,52 +214,3 @@ def extract_power_metrics(config: PowerConfig) -> PowerMetrics:
         regression_samples=len(output_info["offsets"]),
     )
 
-
-def parse_args() -> PowerConfig:
-    """Parse command-line arguments and return configuration.
-
-    Returns:
-        PowerConfig object containing parsed arguments
-    """
-    parser = argparse.ArgumentParser(description="Extract power metrics from GPU data")
-    parser.add_argument("path", type=Path, help="Path to the directory containing CSV files")
-    args = parser.parse_args()
-
-    return PowerConfig(
-        path=args.path,
-    )
-
-
-def main() -> int:
-    """Main entry point."""
-    config = parse_args()
-    metrics = extract_power_metrics(config)
-    
-    # Print metrics in a readable format
-    print(f"Kernel Timing (GPU):")
-    print(f"  Start: {metrics.kernel_start_gpu_ns / 1e9:.9f} s")
-    print(f"  End: {metrics.kernel_end_gpu_ns / 1e9:.9f} s")
-    print(f"  Duration: {metrics.kernel_duration_gpu_ns / 1e9:.9f} s")
-    
-    print(f"\nKernel Timing (Estimated CPU):")
-    print(f"  Start: {metrics.kernel_start_cpu_s:.9f} s")
-    print(f"  End: {metrics.kernel_end_cpu_s:.9f} s")
-    print(f"  Duration: {metrics.kernel_duration_cpu_s:.9f} s")
-    print(f"  Duration error: {metrics.duration_error_s:.9f} s")
-    
-    print(f"\nRegression Model:")
-    print(f"  Slope: {metrics.regression_slope:.10f}")
-    print(f"  Intercept: {metrics.regression_intercept:.2f}")
-    print(f"  Samples used: {metrics.regression_samples}")
-    
-    print(f"\nEnergy Consumption:")
-    print(f"  Total energy: {metrics.total_energy_j:.6f} J")
-    print(f"  Sensor 4 energy: {metrics.sensor4_energy_j:.6f} J")
-    print(f"  Sensor 7 energy: {metrics.sensor7_energy_j:.6f} J")
-    print(f"  Samples used for integration: {metrics.num_samples}")
-    
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

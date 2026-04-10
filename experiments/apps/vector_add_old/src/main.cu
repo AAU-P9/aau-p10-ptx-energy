@@ -8,14 +8,19 @@
 
 #define ITERATIONS 10000000
 
+// Arguments for problem size
+#ifndef SIZE_N
+#define SIZE_N 1024
+#endif
+
 // Vector add kernel: out[i] = a[i] + b[i]
-__global__ void vector_add(float *a, float   *b, float *out, int N)
+__global__ void vector_add(float *a, float   *b, float *out, int _N)
 {
     META_LOOP(iterations, ITERATIONS, 0, false);
     for(int i = 0; i < ITERATIONS; ++i) {
         int idx = blockIdx.x * blockDim.x + threadIdx.x;
         
-        if (idx < N) {
+        if (idx < _N) {
             out[idx] = a[idx] + b[idx];
         }
     }
@@ -23,17 +28,9 @@ __global__ void vector_add(float *a, float   *b, float *out, int N)
 
 int main(int argc, char *argv[])
 {
-    // Read the size of the vectors (N) from command line arguments
-    if (argc != 2) {
-        printf("Usage: %s <N>\n", argv[0]);
-        return -1;
-    }
-
-    int N = atoi(argv[1]);
-
     initializeCUPTI();
     
-    size_t bytes = N * sizeof(float);
+    size_t bytes = SIZE_N * sizeof(float);
     
     // Host vectors
     float *h_a = (float *)malloc(bytes);
@@ -41,7 +38,7 @@ int main(int argc, char *argv[])
     float *h_out = (float *)malloc(bytes);
     
     // Initialize host vectors
-    for (int i = 0; i < N; i++) {
+    for (int i = 0; i < SIZE_N; i++) {
         h_a[i] = (float)i;
         h_b[i] = (float)(i * 2);
         h_out[i] = 0.0f;
@@ -63,11 +60,11 @@ int main(int argc, char *argv[])
     
     // Launch kernel: 1 block with 1024 threads
     int block_size = 1024;
-    int grid_size = (N + block_size - 1) / block_size;
+    int grid_size = (SIZE_N + block_size - 1) / block_size;
     
     printf("[LOG] Launching kernel with grid size %d and block size %d...\n", grid_size, block_size);
 
-    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, N);
+    vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, SIZE_N);
 
     printf("[LOG] Kernel launched. Waiting for completion...\n");
 

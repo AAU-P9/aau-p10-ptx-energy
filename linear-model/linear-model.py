@@ -163,7 +163,7 @@ def main() -> None:
 		total_estimated += float(entry["estimated_power_joules"])
 		fallback_tag = " (fallback)" if entry.get("used_fallback") else ""
 		print(
-			"[ESTIMATE]"
+			"[ESTIMATE] "
 			f"{entry['kernel_name']},{entry['instruction']},"
 			f"count={entry['count']:.0f},"
 			f"avg={entry['avg_power_per_occurrence_joules']:.12f},"

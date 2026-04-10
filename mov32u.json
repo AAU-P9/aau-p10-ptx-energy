@@ -1,8 +1,0 @@
-[
-  {
-    "cuda": "experiments/apps/vector_add_old/src/main.cu",
-    "run_args": [
-      "16384"
-    ]
-  }
-]

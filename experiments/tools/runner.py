@@ -10,7 +10,7 @@ import zipfile
 from pathlib import Path
 import datetime
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 
 @dataclass
@@ -18,27 +18,14 @@ class RunnerConfig:
     """Configuration for the runner."""
     """cuda: Path to the CUDA source file."""
     cuda: Path
-    """run_args: Optional list of arguments to pass to the compiled binary when running."""
-    run_args: Optional[List[str]] = None
+    """run_args: Optional dictionary of preprocessor defines to pass during compilation."""
+    run_args: Optional[Dict[str, str]] = None
 
 
-def find_sources(root: Path):
-    cu_files = list(root.rglob("*.cu"))
-    if cu_files:
-        return "nvcc", cu_files
-
-    cpp_files = []
-    for ext in ("*.cpp", "*.cc", "*.cxx"):
-        cpp_files.extend(root.rglob(ext))
-    if cpp_files:
-        return "g++", cpp_files
-
-    c_files = list(root.rglob("*.c"))
-    if c_files:
-        return "gcc", c_files
-
-    return None, []
-
+def get_define_flags(run_args: Optional[Dict[str, str]]) -> List[str]:
+    if run_args is None:
+        return []
+    return [f"-D{key}={value}" for key, value in run_args.items()]
 
 def run_command(cmd, cwd=None):
     return subprocess.run(
@@ -153,11 +140,12 @@ def run_runner(config: RunnerConfig) -> int:
     build_dir = build_root / binary_name
     build_dir.mkdir(parents=True, exist_ok=True)
     binary_path = build_dir / binary_name
+    define_flags = get_define_flags(config.run_args)
 
     # We run with O0 to ensure we capture the original source.
     default_args = ["-Xptxas", "-g", "-G", "-O0", "-I", "./experiments/include", "-arch=sm_89"]
 
-    compile_cmd = [compiler] + default_args + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
+    compile_cmd = [compiler] + default_args + define_flags + ["-o", str(binary_path), "-lcupti"] + [str(p) for p in sources]
     compile_result = run_command(compile_cmd)
 
     compile_log = build_dir / "compile.log"
@@ -175,7 +163,7 @@ def run_runner(config: RunnerConfig) -> int:
         ptx_failed = False
         for src in sources:
             ptx_out = build_dir / f"{src.stem}.ptx"
-            ptx_cmd = [compiler, "-ptx"] + default_args + ["-o", str(ptx_out), str(src)]
+            ptx_cmd = [compiler, "-ptx"] + default_args + define_flags + ["-o", str(ptx_out), str(src)]
             ptx_result = run_command(ptx_cmd)
             ptx_outputs.append(
                 " ".join(ptx_cmd) + "\n" + ptx_result.stdout + "\n"
@@ -192,8 +180,6 @@ def run_runner(config: RunnerConfig) -> int:
             return 2
 
     run_cmd = [str(binary_path)]
-    if config.run_args:
-        run_cmd += config.run_args
 
     # Start nvidia-smi monitoring on a separate process
     monitor_log = build_dir / "nvidia-smi.csv"
@@ -329,15 +315,26 @@ def parse_args() -> RunnerConfig:
     )
     parser.add_argument(
         "--run-args",
-        nargs=argparse.REMAINDER,
-        help="Arguments passed to the compiled binary",
+        nargs="*",
+        help="Preprocessor defines as KEY=VALUE pairs (example: --run-args M=64 N=64 K=64)",
     )
 
     args = parser.parse_args()
 
+    run_args: Optional[Dict[str, str]] = None
+    if args.run_args:
+        run_args = {}
+        for item in args.run_args:
+            if "=" not in item:
+                raise ValueError(f"Invalid --run-args entry '{item}'. Expected KEY=VALUE.")
+            key, value = item.split("=", 1)
+            if not key:
+                raise ValueError(f"Invalid --run-args entry '{item}'. Key cannot be empty.")
+            run_args[key] = value
+
     return RunnerConfig(
         cuda=Path(args.cuda),
-        run_args=args.run_args,
+        run_args=run_args,
     )
 
 def main():

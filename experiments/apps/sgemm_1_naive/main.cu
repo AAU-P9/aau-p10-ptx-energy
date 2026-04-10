@@ -19,84 +19,108 @@
 #endif
 
 // CUDA headers
-#include "../../include/simple_cuda_utils.h"
 #include "cupti_timing.h"
-#include "kernel.cuh"
+#include "ptx_meta.h"
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <vector>
 
+
 // NVML headers
 #include <nvml.h>
 
+#ifndef SIZE_M
+#define SIZE_M 1024
+#endif
+
+#ifndef SIZE_N
+#define SIZE_N 1024
+#endif
+
+#ifndef SIZE_K
+#define SIZE_K 1024
+#endif
+
+#define BLOCK_SIZE 32
+
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
-void run_sgemm_naive(int M, int N, int K, float alpha, float *A, float *B,
-                     float beta, float *C) {
-  dim3 gridDim(CEIL_DIV(M, 32), CEIL_DIV(N, 32));
-  dim3 blockDim(32, 32);
-  sgemm_naive<<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+inline void randomize_matrix(float *mat, int n) {
+  std::srand(static_cast<unsigned int>(0));
+
+  for (int i = 0; i < n; i++) {
+    float tmp = static_cast<float>(std::rand() % 5) +
+                0.01f * static_cast<float>(std::rand() % 5);
+    tmp = (std::rand() % 2 == 0) ? tmp : -tmp;
+    mat[i] = tmp;
+  }
 }
 
-// cuBLAS FLOPs ceiling is reached at 8192
-std::vector<int> SIZE = {128, 
-    /*256, 512, 1024, 2048, 4096,*/
-                         /*  8192 */
-                        };
+__global__ void sgemm_naive(int _M, int _N, int _K, float alpha, const float *A,
+            const float *B, float beta, float *C) {
 
-long m, n, k;
-long max_size = SIZE[SIZE.size() - 1];
+  const uint x = blockIdx.x * blockDim.x + threadIdx.x;
+  const uint y = blockIdx.y * blockDim.y + threadIdx.y;
+
+  // if statement is necessary to make things work under tile quantization
+  if (x < _M && y < _N) {
+    float tmp = 0.0;
+    META_LOOP(main_loop, SIZE_K, SIZE_K, false);
+    for (int i = 0; i < _K; ++i) {
+      tmp += A[x * _K + i] * B[i * _N + y];
+    }
+    // C = α*(A@B)+β*C
+    C[x * _N + y] = alpha * tmp + beta * C[x * _N + y];
+  }
+}
 
 float alpha = 0.5, beta = 3.0; // GEMM input parameters, C=α*AB+β*C
 
 float *A = nullptr, *B = nullptr, *C = nullptr; // host matrices
 float *dA = nullptr, *dB = nullptr, *dC = nullptr;
 
-void benchmark() {
-
-  int repeat_times = 10;
-  for (int size : SIZE) {
-    m = n = k = size;
-
-    cudaMemcpy(C, dC, sizeof(float) * m * n, cudaMemcpyDeviceToHost);
-    for (int j = 0; j < repeat_times; j++) {
-        // We don't reset dC between runs to save time
-        run_sgemm_naive(m, n, k, alpha, dA, dB, beta, dC);
-        cudaCheck(cudaDeviceSynchronize());
-    }
-
-    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
-  }
-}
-
 int main(int argc, char *argv[]) {
+  A = (float *)malloc(sizeof(float) * SIZE_M * SIZE_K);
+  B = (float *)malloc(sizeof(float) * SIZE_K * SIZE_N);
+  C = (float *)malloc(sizeof(float) * SIZE_M * SIZE_N);
 
-  A = (float *)malloc(sizeof(float) * max_size * max_size);
-  B = (float *)malloc(sizeof(float) * max_size * max_size);
-  C = (float *)malloc(sizeof(float) * max_size * max_size);
-
-  cudaCheck(cudaMalloc((void **)&dA, sizeof(float) * max_size * max_size));
-  cudaCheck(cudaMalloc((void **)&dB, sizeof(float) * max_size * max_size));
-  cudaCheck(cudaMalloc((void **)&dC, sizeof(float) * max_size * max_size));
-
+  cudaMalloc((void **)&dA, sizeof(float) * SIZE_M * SIZE_K);
+  cudaMalloc((void **)&dB, sizeof(float) * SIZE_K * SIZE_N);
+  cudaMalloc((void **)&dC, sizeof(float) * SIZE_M * SIZE_N);
+  
   // Should we pr itteration instead?
-  randomize_matrix(A, max_size * max_size);
-  randomize_matrix(B, max_size * max_size);
-  randomize_matrix(C, max_size * max_size);
-
-  cudaCheck(cudaMemcpy(dA, A, sizeof(float) * max_size * max_size,
-                       cudaMemcpyHostToDevice));
-  cudaCheck(cudaMemcpy(dB, B, sizeof(float) * max_size * max_size,
-                       cudaMemcpyHostToDevice));
-  cudaCheck(cudaMemcpy(dC, C, sizeof(float) * max_size * max_size,
-                       cudaMemcpyHostToDevice));
+  randomize_matrix(A, SIZE_M * SIZE_K);
+  randomize_matrix(B, SIZE_K * SIZE_N);
+  randomize_matrix(C, SIZE_M * SIZE_N);
+  
+  cudaMemcpy(dA, A, sizeof(float) * SIZE_M * SIZE_K,
+                       cudaMemcpyHostToDevice);
+  cudaMemcpy(dB, B, sizeof(float) * SIZE_K * SIZE_N,
+                       cudaMemcpyHostToDevice);
+  cudaMemcpy(dC, C, sizeof(float) * SIZE_M * SIZE_N,
+                       cudaMemcpyHostToDevice);
 
   initializeCUPTI();
   collectTimestampOffsets();
-  benchmark();
+  
+  dim3 gridDim(CEIL_DIV(SIZE_M, BLOCK_SIZE), CEIL_DIV(SIZE_N, BLOCK_SIZE));
+  dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE); 
+  printf("[INFO] gridDim: (%u, %u)\n", gridDim.x, gridDim.y);
+  printf("[INFO] blockDim: (%u, %u)\n", blockDim.x, blockDim.y);
+
+  sgemm_naive<<<gridDim, blockDim>>>(SIZE_M, SIZE_N, SIZE_K, alpha, dA, dB, beta, dC);
+
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+      printf("[ERROR] Failed to launch vector_mul kernel (error code %s)!\n", cudaGetErrorString(err));
+      return -1;
+  }
+
+  cudaDeviceSynchronize();
+
   flushCUPTIBuffers();
   printKernelTiming();
-
+  
   // Free up CPU and GPU space
   free(A);
   free(B);
@@ -104,5 +128,6 @@ int main(int argc, char *argv[]) {
   cudaFree(dA);
   cudaFree(dB);
   cudaFree(dC);
+
   return 0;
 }
