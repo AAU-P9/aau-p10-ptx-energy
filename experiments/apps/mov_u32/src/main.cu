@@ -2,7 +2,17 @@
 #include "ptx_meta.h"
 #include <cuda.h>
 
+#ifndef _GRID_DIM
+#define _GRID_DIM 1
+#endif
+
+#ifndef _BLOCK_DIM
+#define _BLOCK_DIM 256
+#endif
+
+#ifndef ITERATIONS
 #define ITERATIONS 40000000
+#endif
 
 __global__ void ptx_kernel()
 {
@@ -22,15 +32,6 @@ __global__ void ptx_kernel()
     
 int main(int argc, char *argv[])
 {
-    // Read the grid and block dimensions from command line arguments
-    if (argc != 3) {
-        printf("Usage: %s <gridDim> <blockDim>\n", argv[0]);
-        return -1;
-    }
-
-    int _gridDim = atoi(argv[1]);
-    int _blockDim = atoi(argv[2]);
-
     int h[4] = {0}; 
     int *d;
 
@@ -46,9 +47,9 @@ int main(int argc, char *argv[])
     collectTimestampOffsets();
 
     // Run kernel
-    printf("[LOG] Launching kernel with gridDim=%d and blockDim=%d...\n", _gridDim, _blockDim);
+    printf("[LOG] Launching kernel with gridDim=%d and blockDim=%d...\n", _GRID_DIM, _BLOCK_DIM);
     
-    ptx_kernel<<<_gridDim, _blockDim>>>();
+    ptx_kernel<<<_GRID_DIM, _BLOCK_DIM>>>();
 
     printf("[LOG] Kernel launched. Waiting for completion...\n");
 
