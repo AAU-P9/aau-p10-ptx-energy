@@ -7,8 +7,6 @@ from dataclasses import dataclass
 import time
 import re
 
-#
-
 @dataclass
 class Dim3:
     x: int
