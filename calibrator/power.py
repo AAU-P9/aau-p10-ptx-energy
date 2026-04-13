@@ -213,4 +213,3 @@ def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
         regression_intercept=intercept,
         regression_samples=len(output_info["offsets"]),
     )
-

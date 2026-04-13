@@ -1,11 +1,15 @@
-from cubindings import executeProgram
+from cubindings import execute_program
+from analyser import run_analyser
 
 gridDim = 1
 blockDim = 1024
 
-result = executeProgram("""
+
+
+result = execute_program("""
     #include <iostream>
     #include <cuda_runtime.h>
+    #include <cuda.h>
                         
     #define ITERATIONS 1
 
@@ -38,12 +42,11 @@ result = executeProgram("""
     nvcc_args=[],
     binary_args=[],
     enable_metrics=True,
-    enable_analyser=True,
-    analyser_kernel_params=f'{{"gridDim":{{"x":{gridDim},"y":1,"z":1}},"blockDim":{{"x":{blockDim},"y":1,"z":1}},"parameters":[]}}',
 )
+
+run_analyser(result.path)
 
 print("Path", result.path)
 print("Output", result.power_metric_result.total_energy_j)
 print("GPU Duration", result.power_metric_result.kernel_duration_gpu_ns)
 print("Exported X", result.exports["x"])
-print("Analyser Result", result.analyser_result)
