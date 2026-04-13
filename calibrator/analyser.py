@@ -53,8 +53,24 @@ def run_analyser(path: Path) -> AnalyserResult | None:
 
             print(include_path)
 
+            # Injector only needs kernel signatures.
+            # Strip quoted includes and C++ stdlib includes — any libstdc++ header +
+            # CUDA mode in clang 20 triggers a __noinline__ conflict via crt/host_defines.h.
+            # Keep <cuda.h> and <cuda_runtime.h>: injector searches for <cuda.h> to insert lli.h,
+            # and those don't pull in libstdc++ so there's no conflict.
+            import re as _re
+            source = (path / 'program.cu').read_text()
+            source = _re.sub(r'^\s*#include\s+"[^"]+"\s*$', '', source, flags=_re.MULTILINE)
+            source = _re.sub(r'^\s*#include\s+<(?!cuda)[^>]+>\s*$', '', source, flags=_re.MULTILINE)
+            source = source.replace('METRICS_KERNEL_START', '')
+            source = source.replace('METRICS_KERNEL_END', '')
+            source = source.replace('EXPORT_N', '// EXPORT_N')
+            injector_input = path / 'injector_input.cu'
+            injector_input.write_text(source)
+
+            cmd = f"cat {injector_input} | injector 2>/dev/null > {path / 'injected_kernel.cu'} && clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -Wno-unknown-cuda-version -I{str(include_path)} {path / 'injected_kernel.cu'} && lli {path / 'injected_kernel.ll'}"
             subprocess.run(
-                [f"cat {path / 'program.cu'} | injector > {path / 'injected_kernel.cu'} && clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {path / 'injected_kernel.cu'} --no-cuda-version-check && lli {path / 'injected_kernel.ll'}"],
+                cmd,
                 stdout=sys.stdout,
                 stderr=sys.stdout,
                 cwd=path,
@@ -62,6 +78,7 @@ def run_analyser(path: Path) -> AnalyserResult | None:
                 check=False,
                 text=True
             )
+            print(cmd)
         except Exception as e:
             print(f"[Warning] Failed to run injector: {e}", file=sys.stderr)
     else:
