@@ -1,4 +1,6 @@
 import subprocess
+import os
+import signal
 import time
 import sys
 from pathlib import Path
@@ -16,6 +18,28 @@ class ExecutionResult:
     returncode: int
     path: Path
     power_metric_result: PowerMetricsResult = None
+
+
+def _terminate_process_group(process: subprocess.Popen | None) -> None:
+    if process is None:
+        return
+
+    if process.poll() is not None:
+        return
+
+    try:
+        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+    except ProcessLookupError:
+        return
+
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            return
+        process.wait()
     
 def executeProgram(
     program_str: str,
@@ -88,6 +112,7 @@ def executeProgram(
                         stdout=monitor_file,
                         stderr=subprocess.PIPE,
                         text=True,
+                        start_new_session=True,
                     )
             except Exception as e:
                 print(f"Warning: Failed to start nvidia-smi monitoring: {e}", file=sys.stderr)
@@ -109,6 +134,7 @@ def executeProgram(
                         stdout=pmd2_file,
                         stderr=subprocess.PIPE,
                         text=True,
+                        start_new_session=True,
                     )
             except Exception as e:
                 print(f"Warning: Failed to start pmd2-cli monitoring: {e}", file=sys.stderr)
@@ -120,43 +146,37 @@ def executeProgram(
     bin_cmd = [str(path / "a.out")]
     bin_cmd.extend(binary_args)
 
-    start_time = time.time()
-
-    # Run the compiled program and capture its output
-    execution_process = subprocess.run(
-        bin_cmd,
-        cwd=path, # Set the current working directory to the temporary directory
-        text=True,
-        check=False,
-        stderr=subprocess.STDOUT,
-    )
-
-    # Read the output.json file to get the exported variables
+    execution_process = None
     exports = {}
-    output_json = path / "output.json"
-    if output_json.exists():
-        with output_json.open("r") as f:
-            exports = json.load(f)
 
-    # Clean up if metrics were enabled
-    if enable_metrics:
-        time.sleep(metrics_sleep_time)  # Ensure we have some data collected before terminating processes
+    try:
+        # Run the compiled program and capture its output
+        execution_process = subprocess.run(
+            bin_cmd,
+            cwd=path, # Set the current working directory to the temporary directory
+            text=True,
+            check=False,
+            stderr=subprocess.STDOUT,
+        )
 
-        monitor_process.terminate()
-        pmd2_process.terminate()
-
-        monitor_process.wait()
-        pmd2_process.wait()
-
-        power_metric_result = extract_power_metrics(path, exports)
+        # Read the output.json file to get the exported variables
+        output_json = path / "output.json"
+        if output_json.exists():
+            with output_json.open("r") as f:
+                exports = json.load(f)
+    finally:
+        if enable_metrics:
+            _terminate_process_group(monitor_process)
+            _terminate_process_group(pmd2_process)
+            power_metric_result = extract_power_metrics(path, exports)
 
 
     # Return the execution result
     return ExecutionResult(
-        output=execution_process.stdout,
-        error=execution_process.stderr,
+        output=(execution_process.stdout if execution_process is not None else ""),
+        error=(execution_process.stderr if execution_process is not None else ""),
         exports=exports,
-        returncode=execution_process.returncode,
+        returncode=(execution_process.returncode if execution_process is not None else -1),
         power_metric_result=power_metric_result,
         path=path
     )

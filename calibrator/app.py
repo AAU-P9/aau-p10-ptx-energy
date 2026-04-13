@@ -1,6 +1,6 @@
 from cubindings import executeProgram
 
-gridDim = 8
+gridDim = 16
 blockDim = 1024
 
 result = executeProgram("""
