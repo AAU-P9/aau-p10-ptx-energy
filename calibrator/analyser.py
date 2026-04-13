@@ -61,17 +61,47 @@ def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:
         try:
             include_path = Path(__file__).parents[1] / "include"
 
+<<<<<<< HEAD
             subprocess.run(
                 [f"cat {output_path / 'program.cu'} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 cwd=output_path,
+=======
+            print(include_path)
+
+            # Injector only needs kernel signatures.
+            # Strip quoted includes and C++ stdlib includes — any libstdc++ header +
+            # CUDA mode in clang 20 triggers a __noinline__ conflict via crt/host_defines.h.
+            # Keep <cuda.h> and <cuda_runtime.h>: injector searches for <cuda.h> to insert lli.h,
+            # and those don't pull in libstdc++ so there's no conflict.
+            import re as _re
+            source = (path / 'program.cu').read_text()
+            source = _re.sub(r'^\s*#include\s+"[^"]+"\s*$', '', source, flags=_re.MULTILINE)
+            source = _re.sub(r'^\s*#include\s+<(?!cuda)[^>]+>\s*$', '', source, flags=_re.MULTILINE)
+            source = source.replace('METRICS_KERNEL_START', '')
+            source = source.replace('METRICS_KERNEL_END', '')
+            source = source.replace('EXPORT_N', '// EXPORT_N')
+            injector_input = path / 'injector_input.cu'
+            injector_input.write_text(source)
+
+            cmd = f"cat {injector_input} | injector 2>/dev/null > {path / 'injected_kernel.cu'} && clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -Wno-unknown-cuda-version -I{str(include_path)} {path / 'injected_kernel.cu'} && lli {path / 'injected_kernel.ll'}"
+            subprocess.run(
+                cmd,
+                stdout=sys.stdout,
+                stderr=sys.stdout,
+                cwd=path,
+>>>>>>> 5eb8137f0fcd65ff3f288e8239194b35cb0d18c3
                 shell=True,
                 check=False,
                 text=True
             )
+<<<<<<< HEAD
 
 
+=======
+            print(cmd)
+>>>>>>> 5eb8137f0fcd65ff3f288e8239194b35cb0d18c3
         except Exception as e:
             print(f"[Warning] Failed to run injector: {e}", file=sys.stderr)
     else:
