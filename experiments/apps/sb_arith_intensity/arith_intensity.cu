@@ -60,7 +60,8 @@ bench_arith_intensity(const float * __restrict__ data, float *out, int dataLen) 
 }
 
 int main() {
-    initializeCUPTI();
+
+    METRICS_KERNEL_START
 
     int dataLen = DATA_LEN;
     size_t dataBytes = dataLen * sizeof(float);
@@ -78,7 +79,6 @@ int main() {
 
     printf("[LOG] bench_arith_intensity: %d iterations, %d FLOP/load, AI=%.1f FLOP/byte\n",
            ITERATIONS, FLOPS_PER_LOAD, (float)FLOPS_PER_LOAD / (float)sizeof(float));
-    collectTimestampOffsets();
 
     int block_size = 256;
     int grid_size = (dataLen + block_size - 1) / block_size;
@@ -86,8 +86,7 @@ int main() {
 
     cudaMemcpy(h_out, d_out, dataBytes, cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     cudaFree(d_data);
     cudaFree(d_out);

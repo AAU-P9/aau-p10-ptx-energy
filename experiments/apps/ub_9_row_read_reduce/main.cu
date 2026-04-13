@@ -93,7 +93,7 @@ void benchmark()
 
 int main(int argc, char *argv[])
 {
-  initializeCUPTI();
+  METRICS_KERNEL_START
 
   /* Matrix creation */
   int *A = (int *)malloc(sizeof(int) * (N * M));
@@ -122,11 +122,8 @@ int main(int argc, char *argv[])
 
   /* Copying the matrix elements to device memory*/
   cudaMemcpy(dA, A, sizeof(int) * (N * M), cudaMemcpyHostToDevice);
-
-  collectTimestampOffsets();
   benchmark();
-  flushCUPTIBuffers();
-  printKernelTiming();
+  METRICS_KERNEL_END
 
   free(A);
   cudaFree(dA);

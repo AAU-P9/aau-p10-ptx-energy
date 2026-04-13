@@ -58,7 +58,7 @@ bench_smem_pressure(float *out, int N) {
 }
 
 int main() {
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     int N = 1024;
     size_t bytes = N * sizeof(float);
@@ -68,7 +68,6 @@ int main() {
     cudaMalloc(&d_out, bytes);
 
     printf("[LOG] bench_smem_pressure: %d iterations, 12KB smem/block, bank conflict pattern\n", ITERATIONS);
-    collectTimestampOffsets();
 
     int block_size = 256;
     int grid_size = (N + block_size - 1) / block_size;
@@ -76,8 +75,7 @@ int main() {
 
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     cudaFree(d_out);
     free(h_out);

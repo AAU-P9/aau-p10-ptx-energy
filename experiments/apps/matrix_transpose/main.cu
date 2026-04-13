@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
 
     int N = atoi(argv[1]);
 
-    initializeCUPTI();
+    METRICS_KERNEL_START
     
     size_t bytes = N * N * sizeof(float);
 
@@ -60,8 +60,6 @@ int main(int argc, char *argv[]) {
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
-    collectTimestampOffsets();
-
     // Launch kernel with 2D grid and block size
     matrix_transpose<<<grid_size, block_size>>>(d_a, d_b);
 
@@ -71,8 +69,7 @@ int main(int argc, char *argv[]) {
     // Copy results back to host
     cudaMemcpy(h_b, d_b, bytes, cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     // Clean up
     cudaFree(d_a);

@@ -28,7 +28,7 @@ __global__ void vector_add(float *a, float   *b, float *out, int _N)
 
 int main(int argc, char *argv[])
 {
-    initializeCUPTI();
+    METRICS_KERNEL_START
     
     size_t bytes = SIZE_N * sizeof(float);
     
@@ -55,8 +55,6 @@ int main(int argc, char *argv[])
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
-
-    collectTimestampOffsets();
     
     // Launch kernel: 1 block with 1024 threads
     int block_size = 1024;
@@ -78,8 +76,7 @@ int main(int argc, char *argv[])
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
     
     // Clean up
     cudaFree(d_a);

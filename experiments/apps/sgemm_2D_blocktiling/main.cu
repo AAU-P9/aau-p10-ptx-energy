@@ -219,11 +219,9 @@ int main(int argc, char *argv[])
 
   // Launch CUDA workload with profiling replay loop
   // The profiler needs multiple passes to collect all metrics
-  initializeCUPTI();
-  collectTimestampOffsets();
+  METRICS_KERNEL_START
   benchmark();
-  flushCUPTIBuffers();
-  printKernelTiming();
+  METRICS_KERNEL_END
 
   // Copy result back to host
   cudaCheck(cudaMemcpy(h_C.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));

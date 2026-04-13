@@ -48,7 +48,7 @@ bench_fp64_pure(double *out, int N) {
 }
 
 int main() {
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     int N = 1024;
     size_t bytes = N * sizeof(double);
@@ -58,7 +58,6 @@ int main() {
     cudaMalloc(&d_out, bytes);
 
     printf("[LOG] bench_fp64_pure: %d iterations, pure FP64 DMAD/DADD/DMUL chain\n", ITERATIONS);
-    collectTimestampOffsets();
 
     int block_size = 256;
     int grid_size = (N + block_size - 1) / block_size;
@@ -66,8 +65,7 @@ int main() {
 
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     cudaFree(d_out);
     free(h_out);

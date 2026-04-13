@@ -27,7 +27,7 @@ int main()
     float *d_out;
 
     // Initialize CUPTI profiling
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     cudaMalloc(&d_out, 4*sizeof(float));
     cudaMemcpy(d_out, h_out, 4*sizeof(float), cudaMemcpyHostToDevice);
@@ -35,7 +35,6 @@ int main()
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     // Get CPU/GPU offsets
-    collectTimestampOffsets();
 
     // Run kernel
     printf("[LOG] Launching kernel with gridDim=%d and blockDim=%d...\n", _gridDim, _blockDim);
@@ -45,9 +44,7 @@ int main()
     cudaDeviceSynchronize();
 
     // Flush all activity buffers
-    flushCUPTIBuffers();
-
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     // Clean up
     cudaFree(d_out);

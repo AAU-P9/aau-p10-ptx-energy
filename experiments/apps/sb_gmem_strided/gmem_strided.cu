@@ -47,7 +47,7 @@ bench_gmem_strided(const float * __restrict__ data, float *out, int dataLen) {
 }
 
 int main() {
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     int dataLen = DATA_LEN;
     size_t dataBytes = dataLen * sizeof(float);
@@ -64,7 +64,6 @@ int main() {
     cudaMemcpy(d_data, h_data, dataBytes, cudaMemcpyHostToDevice);
 
     printf("[LOG] bench_gmem_strided: %d iterations, stride=%d, worst-case coalescing\n", ITERATIONS, STRIDE);
-    collectTimestampOffsets();
 
     int block_size = 256;
     int grid_size = (dataLen + block_size - 1) / block_size;
@@ -72,8 +71,7 @@ int main() {
 
     cudaMemcpy(h_out, d_out, dataBytes, cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     cudaFree(d_data);
     cudaFree(d_out);

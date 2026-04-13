@@ -60,7 +60,7 @@ bench_fp32_int32_mix(float *fout, int *iout, int N) {
 }
 
 int main() {
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     int N = 1024;
 
@@ -72,7 +72,6 @@ int main() {
     cudaMalloc(&d_iout, N * sizeof(int));
 
     printf("[LOG] bench_fp32_int32_mix: %d iterations, 50/50 FP32+INT32 co-issue\n", ITERATIONS);
-    collectTimestampOffsets();
 
     int block_size = 256;
     int grid_size = (N + block_size - 1) / block_size;
@@ -81,8 +80,7 @@ int main() {
     cudaMemcpy(h_fout, d_fout, N * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(h_iout, d_iout, N * sizeof(int), cudaMemcpyDeviceToHost);
 
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     cudaFree(d_fout);
     cudaFree(d_iout);

@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     int N = atoi(argv[2]);
     int K = atoi(argv[3]);
 
-    initializeCUPTI();
+    METRICS_KERNEL_START
     
     size_t bytes_a = M * N * sizeof(float);
     size_t bytes_b = N * K * sizeof(float);
@@ -77,8 +77,6 @@ int main(int argc, char *argv[]) {
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
-    collectTimestampOffsets();
-
     printf("[LOG] Launching kernel with grid size (%d, %d) and block size (%d, %d)...\n", 
            grid_size.x, grid_size.y, block_size.x, block_size.y);
 
@@ -114,8 +112,7 @@ int main(int argc, char *argv[]) {
         printf("Test failed with %d errors\n", errors);
     }
     
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     // Clean up
     cudaFree(d_a);
