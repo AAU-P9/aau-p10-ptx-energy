@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     printf("Running vector multiplication with %d iterations...\n", ITERATIONS);
 
     // Initialize CUPTI profiling
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     size_t bytes = N * sizeof(float);
 
@@ -59,7 +59,6 @@ int main(int argc, char *argv[])
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
     
     // Get CPU/GPU offsets
-    collectTimestampOffsets();
 
     // Launch kernel: 1 block with 256 threads
     int block_size = 1024;
@@ -82,9 +81,7 @@ int main(int argc, char *argv[])
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
 
     // Flush all activity buffers
-    flushCUPTIBuffers();
-
-    printKernelTiming();
+    METRICS_KERNEL_END
     
     // Clean up
     cudaFree(d_a);

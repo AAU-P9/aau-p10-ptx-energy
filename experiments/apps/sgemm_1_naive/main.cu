@@ -100,8 +100,7 @@ int main(int argc, char *argv[]) {
   cudaMemcpy(dC, C, sizeof(float) * SIZE_M * SIZE_N,
                        cudaMemcpyHostToDevice);
 
-  initializeCUPTI();
-  collectTimestampOffsets();
+  METRICS_KERNEL_START
   
   dim3 gridDim(CEIL_DIV(SIZE_M, BLOCK_SIZE), CEIL_DIV(SIZE_N, BLOCK_SIZE));
   dim3 blockDim(BLOCK_SIZE, BLOCK_SIZE); 
@@ -118,8 +117,7 @@ int main(int argc, char *argv[]) {
 
   cudaDeviceSynchronize();
 
-  flushCUPTIBuffers();
-  printKernelTiming();
+  METRICS_KERNEL_END
   
   // Free up CPU and GPU space
   free(A);

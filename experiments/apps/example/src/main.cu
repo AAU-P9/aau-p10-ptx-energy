@@ -22,7 +22,7 @@ int main()
     int iterations = 100000000; // 100 million iterations
 
     // Initialize CUPTI profiling
-    initializeCUPTI();
+    METRICS_KERNEL_START
 
     cudaMalloc(&d, 4*sizeof(int));
     cudaMemcpy(d, h, 4*sizeof(int), cudaMemcpyHostToDevice);
@@ -30,7 +30,6 @@ int main()
     printf("[LOG] Running kernel with %d iterations...\n", iterations);
 
     // Get CPU/GPU offsets
-    collectTimestampOffsets();
 
     // Run kernel
     ptx_kernel<<<1,4>>>(d, iterations);
@@ -40,9 +39,7 @@ int main()
     // cudaMemcpy(h, d, 4*sizeof(int), cudaMemcpyDeviceToHost);
 
     // Flush all activity buffers
-    flushCUPTIBuffers();
-
-    printKernelTiming();
+    METRICS_KERNEL_END
 
     // Clean up
     cudaFree(d);

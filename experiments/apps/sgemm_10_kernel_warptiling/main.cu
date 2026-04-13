@@ -148,11 +148,9 @@ int main(int argc, char *argv[]) {
   cudaCheck(cudaMemcpy(dC, C, sizeof(float) * max_size * max_size,
                        cudaMemcpyHostToDevice));
 
-  initializeCUPTI();
-  collectTimestampOffsets();
+  METRICS_KERNEL_START
   benchmark();
-  flushCUPTIBuffers();
-  printKernelTiming();
+  METRICS_KERNEL_END
 
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
 

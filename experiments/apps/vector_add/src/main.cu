@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     int BLOCKSIZE = atoi(argv[2]); // Block size for kernel launch
     int GRIDSIZE = (N + BLOCKSIZE - 1) / BLOCKSIZE; // Grid size for kernel launch
 
-    initializeCUPTI();
+    METRICS_KERNEL_START
     
     size_t bytes = N * sizeof(float);
     
@@ -62,8 +62,6 @@ int main(int argc, char *argv[])
     cudaMemcpy(d_b, h_b, bytes, cudaMemcpyHostToDevice);
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
-
-    collectTimestampOffsets();
     
     // Launch kernel: 1 block with 1024 threads
     int block_size = BLOCKSIZE;
@@ -85,8 +83,7 @@ int main(int argc, char *argv[])
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
     
-    flushCUPTIBuffers();
-    printKernelTiming();
+    METRICS_KERNEL_END
     
     // Clean up
     cudaFree(d_a);

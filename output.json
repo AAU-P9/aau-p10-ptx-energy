@@ -1,510 +1,507 @@
 {
     "timestamp_offsets": [
         {
-            "cupti_timestamp": 1775822394835626752,
-            "cpu_initial_timestamp": 2712975507978,
-            "cpu_final_timestamp": 2712975508075
+            "cupti_timestamp": 1776074914938061173,
+            "cpu_initial_timestamp": 9932077011922,
+            "cpu_final_timestamp": 9932077012046
         },
         {
-            "cupti_timestamp": 1775822394845684155,
-            "cpu_initial_timestamp": 2712985565254,
-            "cpu_final_timestamp": 2712985565478
+            "cupti_timestamp": 1776074914948208754,
+            "cpu_initial_timestamp": 9932087159294,
+            "cpu_final_timestamp": 9932087159629
         },
         {
-            "cupti_timestamp": 1775822394856259294,
-            "cpu_initial_timestamp": 2712996139260,
-            "cpu_final_timestamp": 2712996140652
+            "cupti_timestamp": 1776074914958429599,
+            "cpu_initial_timestamp": 9932097380008,
+            "cpu_final_timestamp": 9932097380488
         },
         {
-            "cupti_timestamp": 1775822394866320562,
-            "cpu_initial_timestamp": 2713006201854,
-            "cpu_final_timestamp": 2713006201876
+            "cupti_timestamp": 1776074914968636505,
+            "cpu_initial_timestamp": 9932107586852,
+            "cpu_final_timestamp": 9932107587405
         },
         {
-            "cupti_timestamp": 1775822394876379840,
-            "cpu_initial_timestamp": 2713016261116,
-            "cpu_final_timestamp": 2713016261167
+            "cupti_timestamp": 1776074914978929146,
+            "cpu_initial_timestamp": 9932117879495,
+            "cpu_final_timestamp": 9932117880046
         },
         {
-            "cupti_timestamp": 1775822394886440095,
-            "cpu_initial_timestamp": 2713026321351,
-            "cpu_final_timestamp": 2713026321431
+            "cupti_timestamp": 1776074914989116582,
+            "cpu_initial_timestamp": 9932128066943,
+            "cpu_final_timestamp": 9932128067482
         },
         {
-            "cupti_timestamp": 1775822394896514264,
-            "cpu_initial_timestamp": 2713036394247,
-            "cpu_final_timestamp": 2713036395621
+            "cupti_timestamp": 1776074914999279706,
+            "cpu_initial_timestamp": 9932138230046,
+            "cpu_final_timestamp": 9932138230605
         },
         {
-            "cupti_timestamp": 1775822394906581015,
-            "cpu_initial_timestamp": 2713046461709,
-            "cpu_final_timestamp": 2713046462415
+            "cupti_timestamp": 1776074915009408151,
+            "cpu_initial_timestamp": 9932148358661,
+            "cpu_final_timestamp": 9932148359038
         },
         {
-            "cupti_timestamp": 1775822394916653682,
-            "cpu_initial_timestamp": 2713056534448,
-            "cpu_final_timestamp": 2713056535050
+            "cupti_timestamp": 1776074915019653145,
+            "cpu_initial_timestamp": 9932158603489,
+            "cpu_final_timestamp": 9932158604047
         },
         {
-            "cupti_timestamp": 1775822394926730855,
-            "cpu_initial_timestamp": 2713066610617,
-            "cpu_final_timestamp": 2713066612227
+            "cupti_timestamp": 1776074915029890404,
+            "cpu_initial_timestamp": 9932168840750,
+            "cpu_final_timestamp": 9932168841301
         },
         {
-            "cupti_timestamp": 1775822394936869773,
-            "cpu_initial_timestamp": 2713076749667,
-            "cpu_final_timestamp": 2713076751140
+            "cupti_timestamp": 1776074915040071445,
+            "cpu_initial_timestamp": 9932179021846,
+            "cpu_final_timestamp": 9932179022334
         },
         {
-            "cupti_timestamp": 1775822394947010845,
-            "cpu_initial_timestamp": 2713086891649,
-            "cpu_final_timestamp": 2713086892211
+            "cupti_timestamp": 1776074915050234672,
+            "cpu_initial_timestamp": 9932189185182,
+            "cpu_final_timestamp": 9932189185559
         },
         {
-            "cupti_timestamp": 1775822394957171438,
-            "cpu_initial_timestamp": 2713097052274,
-            "cpu_final_timestamp": 2713097052795
+            "cupti_timestamp": 1776074915060363461,
+            "cpu_initial_timestamp": 9932199313864,
+            "cpu_final_timestamp": 9932199314350
         },
         {
-            "cupti_timestamp": 1775822394967215386,
-            "cpu_initial_timestamp": 2713107096261,
-            "cpu_final_timestamp": 2713107096758
+            "cupti_timestamp": 1776074915070492243,
+            "cpu_initial_timestamp": 9932209442694,
+            "cpu_final_timestamp": 9932209443140
         },
         {
-            "cupti_timestamp": 1775822394977451276,
-            "cpu_initial_timestamp": 2713117331293,
-            "cpu_final_timestamp": 2713117332629
+            "cupti_timestamp": 1776074915080725970,
+            "cpu_initial_timestamp": 9932219676318,
+            "cpu_final_timestamp": 9932219676874
         },
         {
-            "cupti_timestamp": 1775822394988040846,
-            "cpu_initial_timestamp": 2713127920660,
-            "cpu_final_timestamp": 2713127922220
+            "cupti_timestamp": 1776074915090863431,
+            "cpu_initial_timestamp": 9932229813879,
+            "cpu_final_timestamp": 9932229814332
         },
         {
-            "cupti_timestamp": 1775822394998171295,
-            "cpu_initial_timestamp": 2713138052223,
-            "cpu_final_timestamp": 2713138052656
+            "cupti_timestamp": 1776074915101059713,
+            "cpu_initial_timestamp": 9932240010116,
+            "cpu_final_timestamp": 9932240010606
         },
         {
-            "cupti_timestamp": 1775822395008206582,
-            "cpu_initial_timestamp": 2713148087424,
-            "cpu_final_timestamp": 2713148087937
+            "cupti_timestamp": 1776074915111208448,
+            "cpu_initial_timestamp": 9932250158900,
+            "cpu_final_timestamp": 9932250159352
         },
         {
-            "cupti_timestamp": 1775822395018382704,
-            "cpu_initial_timestamp": 2713158263576,
-            "cpu_final_timestamp": 2713158264062
+            "cupti_timestamp": 1776074915121362785,
+            "cpu_initial_timestamp": 9932260313128,
+            "cpu_final_timestamp": 9932260313687
         },
         {
-            "cupti_timestamp": 1775822395028450242,
-            "cpu_initial_timestamp": 2713168330210,
-            "cpu_final_timestamp": 2713168331599
+            "cupti_timestamp": 1776074915131442756,
+            "cpu_initial_timestamp": 9932270392907,
+            "cpu_final_timestamp": 9932270393719
         },
         {
-            "cupti_timestamp": 1775822395038513902,
-            "cpu_initial_timestamp": 2713178395166,
-            "cpu_final_timestamp": 2713178395242
+            "cupti_timestamp": 1776074915141717815,
+            "cpu_initial_timestamp": 9932280668162,
+            "cpu_final_timestamp": 9932280668712
         },
         {
-            "cupti_timestamp": 1775822395048630121,
-            "cpu_initial_timestamp": 2713188510473,
-            "cpu_final_timestamp": 2713188511478
+            "cupti_timestamp": 1776074915151957735,
+            "cpu_initial_timestamp": 9932290908187,
+            "cpu_final_timestamp": 9932290908641
         },
         {
-            "cupti_timestamp": 1775822395058782968,
-            "cpu_initial_timestamp": 2713198663919,
-            "cpu_final_timestamp": 2713198664316
+            "cupti_timestamp": 1776074915162155993,
+            "cpu_initial_timestamp": 9932301106337,
+            "cpu_final_timestamp": 9932301106895
         },
         {
-            "cupti_timestamp": 1775822395068950267,
-            "cpu_initial_timestamp": 2713208830185,
-            "cpu_final_timestamp": 2713208831611
+            "cupti_timestamp": 1776074915172286155,
+            "cpu_initial_timestamp": 9932311236614,
+            "cpu_final_timestamp": 9932311237062
         },
         {
-            "cupti_timestamp": 1775822395079096762,
-            "cpu_initial_timestamp": 2713218976744,
-            "cpu_final_timestamp": 2713218978115
+            "cupti_timestamp": 1776074915182511419,
+            "cpu_initial_timestamp": 9932321461822,
+            "cpu_final_timestamp": 9932321462313
         },
         {
-            "cupti_timestamp": 1775822395089680063,
-            "cpu_initial_timestamp": 2713229560046,
-            "cpu_final_timestamp": 2713229561424
+            "cupti_timestamp": 1776074915192587213,
+            "cpu_initial_timestamp": 9932331537304,
+            "cpu_final_timestamp": 9932331538189
         },
         {
-            "cupti_timestamp": 1775822395099854949,
-            "cpu_initial_timestamp": 2713239735008,
-            "cpu_final_timestamp": 2713239736293
+            "cupti_timestamp": 1776074915202825829,
+            "cpu_initial_timestamp": 9932341776238,
+            "cpu_final_timestamp": 9932341776719
         },
         {
-            "cupti_timestamp": 1775822395110023471,
-            "cpu_initial_timestamp": 2713249904269,
-            "cpu_final_timestamp": 2713249904838
+            "cupti_timestamp": 1776074915212940326,
+            "cpu_initial_timestamp": 9932351890833,
+            "cpu_final_timestamp": 9932351891217
         },
         {
-            "cupti_timestamp": 1775822395120085150,
-            "cpu_initial_timestamp": 2713259966093,
-            "cpu_final_timestamp": 2713259966496
+            "cupti_timestamp": 1776074915223161227,
+            "cpu_initial_timestamp": 9932362111576,
+            "cpu_final_timestamp": 9932362112126
         },
         {
-            "cupti_timestamp": 1775822395130661960,
-            "cpu_initial_timestamp": 2713270541654,
-            "cpu_final_timestamp": 2713270543317
+            "cupti_timestamp": 1776074915233313055,
+            "cpu_initial_timestamp": 9932372263514,
+            "cpu_final_timestamp": 9932372263951
         },
         {
-            "cupti_timestamp": 1775822395140840474,
-            "cpu_initial_timestamp": 2713280720656,
-            "cpu_final_timestamp": 2713280721809
+            "cupti_timestamp": 1776074915243576532,
+            "cpu_initial_timestamp": 9932382526935,
+            "cpu_final_timestamp": 9932382527419
         },
         {
-            "cupti_timestamp": 1775822395150999083,
-            "cpu_initial_timestamp": 2713290879280,
-            "cpu_final_timestamp": 2713290880416
+            "cupti_timestamp": 1776074915253872919,
+            "cpu_initial_timestamp": 9932392823266,
+            "cpu_final_timestamp": 9932392823819
         },
         {
-            "cupti_timestamp": 1775822395161069409,
-            "cpu_initial_timestamp": 2713300949447,
-            "cpu_final_timestamp": 2713300950745
+            "cupti_timestamp": 1776074915264129848,
+            "cpu_initial_timestamp": 9932403080194,
+            "cpu_final_timestamp": 9932403080750
         },
         {
-            "cupti_timestamp": 1775822395171242689,
-            "cpu_initial_timestamp": 2713311122513,
-            "cpu_final_timestamp": 2713311124045
+            "cupti_timestamp": 1776074915274281862,
+            "cpu_initial_timestamp": 9932413232215,
+            "cpu_final_timestamp": 9932413232765
         },
         {
-            "cupti_timestamp": 1775822395181311252,
-            "cpu_initial_timestamp": 2713321191421,
-            "cpu_final_timestamp": 2713321192587
+            "cupti_timestamp": 1776074915284356263,
+            "cpu_initial_timestamp": 9932423306127,
+            "cpu_final_timestamp": 9932423307233
         },
         {
-            "cupti_timestamp": 1775822395191496511,
-            "cpu_initial_timestamp": 2713331376376,
-            "cpu_final_timestamp": 2713331377868
+            "cupti_timestamp": 1776074915294593909,
+            "cpu_initial_timestamp": 9932433544252,
+            "cpu_final_timestamp": 9932433544806
         },
         {
-            "cupti_timestamp": 1775822395201566339,
-            "cpu_initial_timestamp": 2713341446489,
-            "cpu_final_timestamp": 2713341447676
+            "cupti_timestamp": 1776074915304870385,
+            "cpu_initial_timestamp": 9932443820732,
+            "cpu_final_timestamp": 9932443821284
         },
         {
-            "cupti_timestamp": 1775822395211699324,
-            "cpu_initial_timestamp": 2713351579241,
-            "cpu_final_timestamp": 2713351580683
+            "cupti_timestamp": 1776074915315000763,
+            "cpu_initial_timestamp": 9932453951216,
+            "cpu_final_timestamp": 9932453951668
         },
         {
-            "cupti_timestamp": 1775822395221934653,
-            "cpu_initial_timestamp": 2713361814771,
-            "cpu_final_timestamp": 2713361815999
+            "cupti_timestamp": 1776074915325200872,
+            "cpu_initial_timestamp": 9932464151249,
+            "cpu_final_timestamp": 9932464151770
         },
         {
-            "cupti_timestamp": 1775822395232154182,
-            "cpu_initial_timestamp": 2713372033995,
-            "cpu_final_timestamp": 2713372035549
+            "cupti_timestamp": 1776074915335466080,
+            "cpu_initial_timestamp": 9932474415941,
+            "cpu_final_timestamp": 9932474417057
         },
         {
-            "cupti_timestamp": 1775822395242225600,
-            "cpu_initial_timestamp": 2713382105300,
-            "cpu_final_timestamp": 2713382106957
+            "cupti_timestamp": 1776074915345532741,
+            "cpu_initial_timestamp": 9932484483385,
+            "cpu_final_timestamp": 9932484483595
         },
         {
-            "cupti_timestamp": 1775822395252289980,
-            "cpu_initial_timestamp": 2713392170004,
-            "cpu_final_timestamp": 2713392171334
+            "cupti_timestamp": 1776074915355763452,
+            "cpu_initial_timestamp": 9932494713858,
+            "cpu_final_timestamp": 9932494714345
         },
         {
-            "cupti_timestamp": 1775822395262358340,
-            "cpu_initial_timestamp": 2713402238304,
-            "cpu_final_timestamp": 2713402239691
+            "cupti_timestamp": 1776074915365929970,
+            "cpu_initial_timestamp": 9932504880345,
+            "cpu_final_timestamp": 9932504880873
         },
         {
-            "cupti_timestamp": 1775822395272428733,
-            "cpu_initial_timestamp": 2713412308637,
-            "cpu_final_timestamp": 2713412310083
+            "cupti_timestamp": 1776074915376263552,
+            "cpu_initial_timestamp": 9932515213894,
+            "cpu_final_timestamp": 9932515214449
         },
         {
-            "cupti_timestamp": 1775822395282690634,
-            "cpu_initial_timestamp": 2713422570435,
-            "cpu_final_timestamp": 2713422571996
+            "cupti_timestamp": 1776074915386396233,
+            "cpu_initial_timestamp": 9932525346688,
+            "cpu_final_timestamp": 9932525347130
         },
         {
-            "cupti_timestamp": 1775822395292859570,
-            "cpu_initial_timestamp": 2713432739387,
-            "cpu_final_timestamp": 2713432740932
+            "cupti_timestamp": 1776074915396661825,
+            "cpu_initial_timestamp": 9932535612173,
+            "cpu_final_timestamp": 9932535612729
         },
         {
-            "cupti_timestamp": 1775822395302931536,
-            "cpu_initial_timestamp": 2713442811334,
-            "cpu_final_timestamp": 2713442812898
+            "cupti_timestamp": 1776074915406790111,
+            "cpu_initial_timestamp": 9932545740566,
+            "cpu_final_timestamp": 9932545741009
         },
         {
-            "cupti_timestamp": 1775822395313010384,
-            "cpu_initial_timestamp": 2713452891605,
-            "cpu_final_timestamp": 2713452891724
+            "cupti_timestamp": 1776074915417025965,
+            "cpu_initial_timestamp": 9932555976367,
+            "cpu_final_timestamp": 9932555976854
         },
         {
-            "cupti_timestamp": 1775822395323071680,
-            "cpu_initial_timestamp": 2713462952955,
-            "cpu_final_timestamp": 2713462953007
+            "cupti_timestamp": 1776074915427181086,
+            "cpu_initial_timestamp": 9932566131540,
+            "cpu_final_timestamp": 9932566131985
         },
         {
-            "cupti_timestamp": 1775822395333214779,
-            "cpu_initial_timestamp": 2713473095669,
-            "cpu_final_timestamp": 2713473096136
+            "cupti_timestamp": 1776074915437359288,
+            "cpu_initial_timestamp": 9932576309634,
+            "cpu_final_timestamp": 9932576310189
         },
         {
-            "cupti_timestamp": 1775822395343248939,
-            "cpu_initial_timestamp": 2713483128718,
-            "cpu_final_timestamp": 2713483130303
+            "cupti_timestamp": 1776074915447488825,
+            "cpu_initial_timestamp": 9932586439280,
+            "cpu_final_timestamp": 9932586439725
         },
         {
-            "cupti_timestamp": 1775822395353542304,
-            "cpu_initial_timestamp": 2713493421909,
-            "cpu_final_timestamp": 2713493423695
+            "cupti_timestamp": 1776074915457765528,
+            "cpu_initial_timestamp": 9932596715877,
+            "cpu_final_timestamp": 9932596716429
         },
         {
-            "cupti_timestamp": 1775822395363687932,
-            "cpu_initial_timestamp": 2713503568781,
-            "cpu_final_timestamp": 2713503569302
+            "cupti_timestamp": 1776074915467901380,
+            "cpu_initial_timestamp": 9932606851838,
+            "cpu_final_timestamp": 9932606852278
         },
         {
-            "cupti_timestamp": 1775822395373849317,
-            "cpu_initial_timestamp": 2713513730190,
-            "cpu_final_timestamp": 2713513730683
+            "cupti_timestamp": 1776074915478296572,
+            "cpu_initial_timestamp": 9932617246487,
+            "cpu_final_timestamp": 9932617247535
         },
         {
-            "cupti_timestamp": 1775822395384012633,
-            "cpu_initial_timestamp": 2713523893504,
-            "cpu_final_timestamp": 2713523893994
+            "cupti_timestamp": 1776074915488419639,
+            "cpu_initial_timestamp": 9932627370145,
+            "cpu_final_timestamp": 9932627370524
         },
         {
-            "cupti_timestamp": 1775822395394079983,
-            "cpu_initial_timestamp": 2713533959726,
-            "cpu_final_timestamp": 2713533961356
+            "cupti_timestamp": 1776074915498667735,
+            "cpu_initial_timestamp": 9932637618087,
+            "cpu_final_timestamp": 9932637618638
         },
         {
-            "cupti_timestamp": 1775822395404143593,
-            "cpu_initial_timestamp": 2713544024854,
-            "cpu_final_timestamp": 2713544024930
+            "cupti_timestamp": 1776074915508804873,
+            "cpu_initial_timestamp": 9932647755330,
+            "cpu_final_timestamp": 9932647755772
         },
         {
-            "cupti_timestamp": 1775822395414205129,
-            "cpu_initial_timestamp": 2713554086385,
-            "cpu_final_timestamp": 2713554086468
+            "cupti_timestamp": 1776074915519060126,
+            "cpu_initial_timestamp": 9932658010491,
+            "cpu_final_timestamp": 9932658011028
         },
         {
-            "cupti_timestamp": 1775822395424267454,
-            "cpu_initial_timestamp": 2713564148704,
-            "cpu_final_timestamp": 2713564148805
+            "cupti_timestamp": 1776074915529193239,
+            "cpu_initial_timestamp": 9932668143637,
+            "cpu_final_timestamp": 9932668144129
         },
         {
-            "cupti_timestamp": 1775822395434371511,
-            "cpu_initial_timestamp": 2713574251218,
-            "cpu_final_timestamp": 2713574252950
+            "cupti_timestamp": 1776074915539375777,
+            "cpu_initial_timestamp": 9932678326121,
+            "cpu_final_timestamp": 9932678326680
         },
         {
-            "cupti_timestamp": 1775822395444453661,
-            "cpu_initial_timestamp": 2713584333310,
-            "cpu_final_timestamp": 2713584335045
+            "cupti_timestamp": 1776074915549546153,
+            "cpu_initial_timestamp": 9932688496497,
+            "cpu_final_timestamp": 9932688497053
         },
         {
-            "cupti_timestamp": 1775822395454536886,
-            "cpu_initial_timestamp": 2713594416510,
-            "cpu_final_timestamp": 2713594418287
+            "cupti_timestamp": 1776074915559792620,
+            "cpu_initial_timestamp": 9932698742970,
+            "cpu_final_timestamp": 9932698743517
         },
         {
-            "cupti_timestamp": 1775822395464624266,
-            "cpu_initial_timestamp": 2713604504992,
-            "cpu_final_timestamp": 2713604505646
+            "cupti_timestamp": 1776074915570028091,
+            "cpu_initial_timestamp": 9932708978428,
+            "cpu_final_timestamp": 9932708978995
         },
         {
-            "cupti_timestamp": 1775822395474847425,
-            "cpu_initial_timestamp": 2713614728265,
-            "cpu_final_timestamp": 2713614728791
+            "cupti_timestamp": 1776074915580185899,
+            "cpu_initial_timestamp": 9932719136307,
+            "cpu_final_timestamp": 9932719136809
         },
         {
-            "cupti_timestamp": 1775822395484960076,
-            "cpu_initial_timestamp": 2713624839914,
-            "cpu_final_timestamp": 2713624841448
+            "cupti_timestamp": 1776074915590425818,
+            "cpu_initial_timestamp": 9932729376163,
+            "cpu_final_timestamp": 9932729376716
         },
         {
-            "cupti_timestamp": 1775822395495114439,
-            "cpu_initial_timestamp": 2713634995337,
-            "cpu_final_timestamp": 2713634995794
+            "cupti_timestamp": 1776074915600606263,
+            "cpu_initial_timestamp": 9932739556609,
+            "cpu_final_timestamp": 9932739557162
         },
         {
-            "cupti_timestamp": 1775822395505275054,
-            "cpu_initial_timestamp": 2713645155305,
-            "cpu_final_timestamp": 2713645156544
+            "cupti_timestamp": 1776074915610875613,
+            "cpu_initial_timestamp": 9932749825962,
+            "cpu_final_timestamp": 9932749826518
         },
         {
-            "cupti_timestamp": 1775822395515366984,
-            "cpu_initial_timestamp": 2713655247469,
-            "cpu_final_timestamp": 2713655248416
+            "cupti_timestamp": 1776074915621094939,
+            "cpu_initial_timestamp": 9932760045396,
+            "cpu_final_timestamp": 9932760045837
         },
         {
-            "cupti_timestamp": 1775822395525458079,
-            "cpu_initial_timestamp": 2713665338387,
-            "cpu_final_timestamp": 2713665339510
+            "cupti_timestamp": 1776074915631270663,
+            "cpu_initial_timestamp": 9932770221068,
+            "cpu_final_timestamp": 9932770221553
         },
         {
-            "cupti_timestamp": 1775822395535550835,
-            "cpu_initial_timestamp": 2713675430437,
-            "cpu_final_timestamp": 2713675432268
+            "cupti_timestamp": 1776074915641421910,
+            "cpu_initial_timestamp": 9932780372362,
+            "cpu_final_timestamp": 9932780372812
         },
         {
-            "cupti_timestamp": 1775822395545640156,
-            "cpu_initial_timestamp": 2713685520623,
-            "cpu_final_timestamp": 2713685521592
+            "cupti_timestamp": 1776074915651657888,
+            "cpu_initial_timestamp": 9932790608232,
+            "cpu_final_timestamp": 9932790608787
         },
         {
-            "cupti_timestamp": 1775822395555944392,
-            "cpu_initial_timestamp": 2713695823730,
-            "cpu_final_timestamp": 2713695825824
+            "cupti_timestamp": 1776074915661824230,
+            "cpu_initial_timestamp": 9932800774578,
+            "cpu_final_timestamp": 9932800775130
         },
         {
-            "cupti_timestamp": 1775822395566172913,
-            "cpu_initial_timestamp": 2713706053069,
-            "cpu_final_timestamp": 2713706054393
+            "cupti_timestamp": 1776074915672104704,
+            "cpu_initial_timestamp": 9932811055074,
+            "cpu_final_timestamp": 9932811055607
         },
         {
-            "cupti_timestamp": 1775822395576260763,
-            "cpu_initial_timestamp": 2713716140113,
-            "cpu_final_timestamp": 2713716142196
+            "cupti_timestamp": 1776074915682244899,
+            "cpu_initial_timestamp": 9932821195349,
+            "cpu_final_timestamp": 9932821195798
         },
         {
-            "cupti_timestamp": 1775822395586459698,
-            "cpu_initial_timestamp": 2713726339360,
-            "cpu_final_timestamp": 2713726341152
+            "cupti_timestamp": 1776074915692474091,
+            "cpu_initial_timestamp": 9932831424494,
+            "cpu_final_timestamp": 9932831424982
         },
         {
-            "cupti_timestamp": 1775822395596557426,
-            "cpu_initial_timestamp": 2713736436619,
-            "cpu_final_timestamp": 2713736438867
+            "cupti_timestamp": 1776074915702645556,
+            "cpu_initial_timestamp": 9932841595902,
+            "cpu_final_timestamp": 9932841596458
         },
         {
-            "cupti_timestamp": 1775822395606654102,
-            "cpu_initial_timestamp": 2713746533454,
-            "cpu_final_timestamp": 2713746535540
+            "cupti_timestamp": 1776074915712948779,
+            "cpu_initial_timestamp": 9932851899124,
+            "cpu_final_timestamp": 9932851899678
         },
         {
-            "cupti_timestamp": 1775822395616842284,
-            "cpu_initial_timestamp": 2713756721861,
-            "cpu_final_timestamp": 2713756723718
+            "cupti_timestamp": 1776074915723067904,
+            "cpu_initial_timestamp": 9932862018357,
+            "cpu_final_timestamp": 9932862018806
         },
         {
-            "cupti_timestamp": 1775822395627486910,
-            "cpu_initial_timestamp": 2713767366424,
-            "cpu_final_timestamp": 2713767368361
+            "cupti_timestamp": 1776074915733283659,
+            "cpu_initial_timestamp": 9932872234074,
+            "cpu_final_timestamp": 9932872234566
         },
         {
-            "cupti_timestamp": 1775822395637565461,
-            "cpu_initial_timestamp": 2713777446501,
-            "cpu_final_timestamp": 2713777446859
+            "cupti_timestamp": 1776074915743409917,
+            "cpu_initial_timestamp": 9932882360423,
+            "cpu_final_timestamp": 9932882360807
         },
         {
-            "cupti_timestamp": 1775822395647633573,
-            "cpu_initial_timestamp": 2713787514806,
-            "cpu_final_timestamp": 2713787514948
+            "cupti_timestamp": 1776074915753642850,
+            "cpu_initial_timestamp": 9932892593198,
+            "cpu_final_timestamp": 9932892593755
         },
         {
-            "cupti_timestamp": 1775822395657701597,
-            "cpu_initial_timestamp": 2713797582826,
-            "cpu_final_timestamp": 2713797582969
+            "cupti_timestamp": 1776074915763791543,
+            "cpu_initial_timestamp": 9932902742001,
+            "cpu_final_timestamp": 9932902742442
         },
         {
-            "cupti_timestamp": 1775822395667793935,
-            "cpu_initial_timestamp": 2713807673108,
-            "cpu_final_timestamp": 2713807675376
+            "cupti_timestamp": 1776074915774104305,
+            "cpu_initial_timestamp": 9932913054669,
+            "cpu_final_timestamp": 9932913055203
         },
         {
-            "cupti_timestamp": 1775822395677871799,
-            "cpu_initial_timestamp": 2713817753026,
-            "cpu_final_timestamp": 2713817753175
+            "cupti_timestamp": 1776074915784233145,
+            "cpu_initial_timestamp": 9932923183598,
+            "cpu_final_timestamp": 9932923184043
         },
         {
-            "cupti_timestamp": 1775822395687940040,
-            "cpu_initial_timestamp": 2713827821265,
-            "cpu_final_timestamp": 2713827821413
+            "cupti_timestamp": 1776074915794407125,
+            "cpu_initial_timestamp": 9932933357475,
+            "cpu_final_timestamp": 9932933358027
         },
         {
-            "cupti_timestamp": 1775822395698147964,
-            "cpu_initial_timestamp": 2713838028419,
-            "cpu_final_timestamp": 2713838029412
+            "cupti_timestamp": 1776074915804735484,
+            "cpu_initial_timestamp": 9932943685837,
+            "cpu_final_timestamp": 9932943686383
         },
         {
-            "cupti_timestamp": 1775822395708248443,
-            "cpu_initial_timestamp": 2713848127774,
-            "cpu_final_timestamp": 2713848129953
+            "cupti_timestamp": 1776074915814927703,
+            "cpu_initial_timestamp": 9932953877560,
+            "cpu_final_timestamp": 9932953878677
         },
         {
-            "cupti_timestamp": 1775822395718325514,
-            "cpu_initial_timestamp": 2713858206751,
-            "cpu_final_timestamp": 2713858206881
+            "cupti_timestamp": 1776074915825010553,
+            "cpu_initial_timestamp": 9932963960491,
+            "cpu_final_timestamp": 9932963961549
         },
         {
-            "cupti_timestamp": 1775822395728391870,
-            "cpu_initial_timestamp": 2713868273100,
-            "cpu_final_timestamp": 2713868273244
+            "cupti_timestamp": 1776074915835190665,
+            "cpu_initial_timestamp": 9932974141096,
+            "cpu_final_timestamp": 9932974141557
         },
         {
-            "cupti_timestamp": 1775822395738480072,
-            "cpu_initial_timestamp": 2713878359718,
-            "cpu_final_timestamp": 2713878361510
+            "cupti_timestamp": 1776074915845427574,
+            "cpu_initial_timestamp": 9932984377982,
+            "cpu_final_timestamp": 9932984378465
         },
         {
-            "cupti_timestamp": 1775822395748556212,
-            "cpu_initial_timestamp": 2713888437431,
-            "cpu_final_timestamp": 2713888437593
+            "cupti_timestamp": 1776074915855623538,
+            "cpu_initial_timestamp": 9932994573886,
+            "cpu_final_timestamp": 9932994574437
         },
         {
-            "cupti_timestamp": 1775822395758624268,
-            "cpu_initial_timestamp": 2713898505509,
-            "cpu_final_timestamp": 2713898505633
+            "cupti_timestamp": 1776074915865759354,
+            "cpu_initial_timestamp": 9933004709704,
+            "cpu_final_timestamp": 9933004710254
         },
         {
-            "cupti_timestamp": 1775822395768692745,
-            "cpu_initial_timestamp": 2713908573975,
-            "cpu_final_timestamp": 2713908574118
+            "cupti_timestamp": 1776074915875896668,
+            "cpu_initial_timestamp": 9933014847093,
+            "cpu_final_timestamp": 9933014847559
         },
         {
-            "cupti_timestamp": 1775822395778839045,
-            "cpu_initial_timestamp": 2713918718611,
-            "cpu_final_timestamp": 2713918720502
+            "cupti_timestamp": 1776074915886131668,
+            "cpu_initial_timestamp": 9933025082102,
+            "cpu_final_timestamp": 9933025082565
         },
         {
-            "cupti_timestamp": 1775822395789025567,
-            "cpu_initial_timestamp": 2713928905849,
-            "cpu_final_timestamp": 2713928907015
+            "cupti_timestamp": 1776074915896187134,
+            "cpu_initial_timestamp": 9933035137568,
+            "cpu_final_timestamp": 9933035138025
         },
         {
-            "cupti_timestamp": 1775822395799272074,
-            "cpu_initial_timestamp": 2713939152498,
-            "cpu_final_timestamp": 2713939153525
+            "cupti_timestamp": 1776074915906350935,
+            "cpu_initial_timestamp": 9933045301280,
+            "cpu_final_timestamp": 9933045301835
         },
         {
-            "cupti_timestamp": 1775822395809358707,
-            "cpu_initial_timestamp": 2713949238136,
-            "cpu_final_timestamp": 2713949240171
+            "cupti_timestamp": 1776074915916541216,
+            "cpu_initial_timestamp": 9933055491564,
+            "cpu_final_timestamp": 9933055492112
         },
         {
-            "cupti_timestamp": 1775822395819432468,
-            "cpu_initial_timestamp": 2713959313707,
-            "cpu_final_timestamp": 2713959313835
+            "cupti_timestamp": 1776074915926775765,
+            "cpu_initial_timestamp": 9933065726109,
+            "cpu_final_timestamp": 9933065726661
         },
         {
-            "cupti_timestamp": 1775822395829499260,
-            "cpu_initial_timestamp": 2713969380406,
-            "cpu_final_timestamp": 2713969380628
+            "cupti_timestamp": 1776074915936972207,
+            "cpu_initial_timestamp": 9933075922612,
+            "cpu_final_timestamp": 9933075923096
         },
         {
-            "cupti_timestamp": 1775822395839567525,
-            "cpu_initial_timestamp": 2713979448728,
-            "cpu_final_timestamp": 2713979448897
+            "cupti_timestamp": 1776074915947226385,
+            "cpu_initial_timestamp": 9933086176893,
+            "cpu_final_timestamp": 9933086177272
         }
     ],
-    "start_timestamp": 1775822395850086769,
-    "end_timestamp": 1775822400876857849,
-    "duration": 5026771080,
-    "_blockDim": 256,
-    "gridDim": 256,
-    "ITERATIONS": 40000000
+    "start_timestamp": 1776074916144480883,
+    "end_timestamp": 1776074929086964249,
+    "duration": 12942483366
 }
