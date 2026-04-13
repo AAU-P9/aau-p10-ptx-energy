@@ -141,13 +141,7 @@ def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
     Returns:
         PowerMetrics object containing calculated metrics
     """
-    # nv_path = path / "nvidia-smi.csv"
     pmd2_path = path / "pmd2.csv"
-    
-    # nv = load_nvidia_smi(nv_path)
-
-    print(pmd2_path)
-
     pmd2 = load_pmd2(pmd2_path)
     
     # Parse timing information from output.json exports
