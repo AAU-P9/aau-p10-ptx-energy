@@ -1,13 +1,13 @@
 from cubindings import executeProgram
 
-gridDim = 16
+gridDim = 1
 blockDim = 1024
 
 result = executeProgram("""
     #include <iostream>
     #include <cuda_runtime.h>
                         
-    #define ITERATIONS 40000000
+    #define ITERATIONS 1
 
     __global__ void ptx_kernel()
     {
@@ -37,10 +37,13 @@ result = executeProgram("""
     """,
     nvcc_args=[],
     binary_args=[],
-    enable_metrics=True
+    enable_metrics=True,
+    enable_analyser=True,
+    analyser_kernel_params=f'{{"gridDim":{{"x":{gridDim},"y":1,"z":1}},"blockDim":{{"x":{blockDim},"y":1,"z":1}},"parameters":[]}}',
 )
 
 print("Path", result.path)
 print("Output", result.power_metric_result.total_energy_j)
 print("GPU Duration", result.power_metric_result.kernel_duration_gpu_ns)
 print("Exported X", result.exports["x"])
+print("Analyser Result", result.analyser_result)

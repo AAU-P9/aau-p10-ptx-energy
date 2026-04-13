@@ -8,6 +8,7 @@ import shutil
 import re
 from dataclasses import dataclass
 from power import extract_power_metrics, PowerMetricsResult
+from analyser import AnalyserResult
 import json
 
 @dataclass
@@ -18,7 +19,7 @@ class ExecutionResult:
     returncode: int
     path: Path
     power_metric_result: PowerMetricsResult = None
-
+    analyser_result: "AnalyserResult | None" = None
 
 def _terminate_process_group(process: subprocess.Popen | None) -> None:
     if process is None:
@@ -46,10 +47,13 @@ def executeProgram(
     path: Path = None,
     nvcc_args: list[str] = [], binary_args: list[str] = [],
     enable_metrics: bool = False,
-    metrics_sleep_time: int = 5
+    metrics_sleep_time: int = 5,
+    enable_analyser: bool = False,
+    analyser_kernel_params: str = '{"gridDim":{"x":1,"y":1,"z":1},"blockDim":{"x":1,"y":1,"z":1},"parameters":[]}',
 ) -> ExecutionResult:   
     # Initialize power_metric_result to None by default
     power_metric_result = None
+    analyser_result = None
 
     # Fallback temporary directory if the specified path cannot be created
     if path is None:
@@ -79,6 +83,7 @@ def executeProgram(
     nvcc_cmd.append(f"-I{str(include_path)}")
     nvcc_cmd.extend(list(nvcc_args))
     nvcc_cmd.append(str(program_file))
+    nvcc_cmd.append("--keep")
 
     nvcc_process = subprocess.run(
         nvcc_cmd,
@@ -117,6 +122,8 @@ def executeProgram(
             except Exception as e:
                 print(f"Warning: Failed to start nvidia-smi monitoring: {e}", file=sys.stderr)
                 monitor_process = None
+        else:
+            print("Warning: nvidia-smi not found in PATH, skipping nvidia-smi monitoring", file=sys.stderr)
         
         if shutil.which("pmd2-cli") is not None:
             try:
@@ -142,6 +149,8 @@ def executeProgram(
 
             # Sleep for the specified duration to ensure subprocesses have time to collect data
             time.sleep(metrics_sleep_time)
+        else:
+            print("Warning: pmd2-cli not found in PATH, skipping PMD2 monitoring", file=sys.stderr)
     
     bin_cmd = [str(path / "a.out")]
     bin_cmd.extend(binary_args)
@@ -170,6 +179,40 @@ def executeProgram(
             _terminate_process_group(pmd2_process)
             power_metric_result = extract_power_metrics(path, exports)
 
+    if enable_analyser:
+        if shutil.which("ptx-analyser") is not None:
+            try:
+                # Run analyser and print full output so failures are visible.
+                analyser_process_result = subprocess.run(
+                    [
+                        "ptx-analyser",
+                        "analyze-cfg",
+                        "--kernel-params",
+                        analyser_kernel_params,
+                        "--output-json-path",
+                        str(path / "analyser_output.json"),
+                        str(path / "program.ptx")
+                    ],
+                    stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    text=True,
+                    check=False,
+                    cwd=path,
+                )  
+
+                time.sleep(1) # Sleep briefly to ensure the output file is written before we try to read it
+
+                # Load the analyser result from the output JSON file
+                analyser_output_json = path / "analyser_output.json"
+                if analyser_output_json.exists():
+                    print("Reading")
+                    with analyser_output_json.open("r") as f:
+                        analyser_result = AnalyserResult.from_dict(json.loads(f.read()))
+
+            except Exception as e:
+                print(f"[Warning] Failed to start ptx-analyser: {e}", file=sys.stderr)
+        else:
+            print("[Warning] ptx-analyser not found in PATH", file=sys.stderr)
 
     # Return the execution result
     return ExecutionResult(
@@ -178,5 +221,6 @@ def executeProgram(
         exports=exports,
         returncode=(execution_process.returncode if execution_process is not None else -1),
         power_metric_result=power_metric_result,
+        analyser_result=analyser_result,
         path=path
     )
