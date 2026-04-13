@@ -1,17 +1,16 @@
 from cubindings import execute_program
 from analyser import run_analyser
 
-gridDim = 1
+gridDim = 64
 blockDim = 1024
-
-
 
 result = execute_program("""
     #include <iostream>
     #include <cuda_runtime.h>
     #include <cuda.h>
+    #include "ptx_meta.h"
                         
-    #define ITERATIONS 1
+    #define ITERATIONS 40000000
 
     __global__ void ptx_kernel()
     {
@@ -19,6 +18,7 @@ result = execute_program("""
         int tmp = tid;
 
         // Repeat the instruction in a C loop
+        META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
         for(int i = 0; i < ITERATIONS; ++i)
         {
             asm volatile (     
@@ -44,9 +44,15 @@ result = execute_program("""
     enable_metrics=True,
 )
 
-run_analyser(result.path)
+used_energy = result.power_metric_result.total_energy_j
 
-print("Path", result.path)
-print("Output", result.power_metric_result.total_energy_j)
-print("GPU Duration", result.power_metric_result.kernel_duration_gpu_ns)
-print("Exported X", result.exports["x"])
+analyser_result = run_analyser(result.path, "/home/rasmus/aau-p10-ptx-energy/linear-model/weights.csv")
+predicted_energy = analyser_result.predicted_energy_joules
+
+print(f"Used energy: {used_energy:.6f} J"
+      f"\nPredicted energy: {predicted_energy:.6f} J"
+)
+
+print(f"Difference: {abs(used_energy - predicted_energy):.6f} J"
+      f"\nRelative error: {abs(used_energy - predicted_energy) / used_energy * 100:.2f}%"
+)

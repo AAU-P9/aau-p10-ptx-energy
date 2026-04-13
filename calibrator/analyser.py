@@ -4,6 +4,8 @@ import sys
 from pathlib import Path
 import shutil
 from dataclasses import dataclass
+import time
+import re
 
 @dataclass
 class Dim3:
@@ -46,34 +48,35 @@ class AnalyserResult:
             },
         )
 
-def run_analyser(path: Path) -> AnalyserResult | None:    
+@dataclass
+class LinearModelResult:
+    analyser_result: AnalyserResult
+    predicted_energy_joules: float
+
+def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:    
+    analyser_result = None
+    total_energy_j = -1
+    
     if shutil.which("injector") is not None:
         try:
             include_path = Path(__file__).parents[1] / "include"
 
-            print(include_path)
-
             subprocess.run(
-                [f"cat {path / 'program.cu'} | injector > {path / 'injected_kernel.cu'} && clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {path / 'injected_kernel.cu'} --no-cuda-version-check && lli {path / 'injected_kernel.ll'}"],
-                stdout=sys.stdout,
-                stderr=sys.stdout,
-                cwd=path,
+                [f"cat {output_path / 'program.cu'} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=output_path,
                 shell=True,
                 check=False,
                 text=True
             )
+
+
         except Exception as e:
             print(f"[Warning] Failed to run injector: {e}", file=sys.stderr)
     else:
         print("[Warning] injector not found in PATH, skipping kernel injection", file=sys.stderr)
     
-    try:
-        with (path / "analyser_output.json").open("r") as f:
-            return AnalyserResult.from_dict(json.load(f))
-    except Exception as e:
-        print(f"[Warning] Failed to read analyser output: {e}", file=sys.stderr)
-        return None
-
     if shutil.which("ptx-analyser") is not None:
         try:
             # Run analyser and print full output so failures are visible.
@@ -81,23 +84,23 @@ def run_analyser(path: Path) -> AnalyserResult | None:
                 [
                     "ptx-analyser",
                     "analyze-cfg",
-                    "--kernel-params",
-                    analyser_kernel_params,
+                    "--kernel-params-file",
+                    str(output_path / "kernel_params.json"),
                     "--output-json-path",
-                    str(path / "analyser_output.json"),
-                    str(path / "program.ptx")
+                    str(output_path / "analyser_output.json"),
+                    str(output_path / "program.ptx")
                 ],
                 stderr=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 text=True,
                 check=False,
-                cwd=path,
+                cwd=output_path,
             )
 
             time.sleep(1) # Sleep briefly to ensure the output file is written before we try to read it
 
             # Load the analyser result from the output JSON file
-            analyser_output_json = path / "analyser_output.json"
+            analyser_output_json = output_path / "analyser_output.json"
             if analyser_output_json.exists():
                 with analyser_output_json.open("r") as f:
                     analyser_result = AnalyserResult.from_dict(json.loads(f.read()))
@@ -106,3 +109,26 @@ def run_analyser(path: Path) -> AnalyserResult | None:
             print(f"[Warning] Failed to start ptx-analyser: {e}", file=sys.stderr)
     else:
         print("[Warning] ptx-analyser not found in PATH", file=sys.stderr)
+
+    parent_dir = Path(__file__).parents[1]
+    try:
+        linear_model_result = subprocess.run(
+            [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=parent_dir,
+            shell=True,
+            check=False,
+            text=True
+        )
+    
+        total_energy_match = re.search(r"\[TOTAL\]\s+([\d\.eE+-]+)", linear_model_result.stdout)
+        if total_energy_match:
+            total_energy_j = float(total_energy_match.group(1))
+        else:
+            print("Warning: Could not find total energy in linear model output", file=sys.stderr)
+
+    except Exception as e:
+        print(f"[Warning] Failed to run linear model: {e}", file=sys.stderr)
+
+    return LinearModelResult(analyser_result=analyser_result, predicted_energy_joules=total_energy_j)
