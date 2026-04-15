@@ -6,6 +6,7 @@ import shutil
 from dataclasses import dataclass
 import time
 import re
+import shlex
 
 @dataclass
 class Dim3:
@@ -53,7 +54,15 @@ class LinearModelResult:
     analyser_result: AnalyserResult
     predicted_energy_joules: float
 
-def run_analyser(output_path: Path, weights_path: Path, prediction: bool = True, program_name="program.cu", debug: bool = False) -> LinearModelResult:    
+def run_analyser(
+    output_path: Path,
+    weights_path: Path,
+    nvcc_args: list[str] = [],
+    prediction: bool = True,
+    program_name="program.cu",
+    binary_args: list[str] = [],
+    debug: bool = False
+) -> LinearModelResult:    
     pipe = sys.stdout if debug else subprocess.PIPE
 
     analyser_result = None
@@ -62,9 +71,12 @@ def run_analyser(output_path: Path, weights_path: Path, prediction: bool = True,
     if shutil.which("injector") is not None:
         try:
             include_path = Path(__file__).parents[1] / "include"
+            lli_args = " ".join(shlex.quote(str(arg)) for arg in binary_args)
+            lli_suffix = f" {lli_args}" if lli_args else ""
 
+            cmd = [f"cat {output_path / program_name} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {" ".join(shlex.quote(str(arg)) for arg in nvcc_args)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}{lli_suffix}"]
             subprocess.run(
-                [f"cat {output_path / program_name} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}"],
+                cmd,
                 stdout=pipe,
                 stderr=pipe,
                 cwd=output_path,
@@ -114,9 +126,9 @@ def run_analyser(output_path: Path, weights_path: Path, prediction: bool = True,
 
     if prediction:
         parent_dir = Path(__file__).parents[1]
+        [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
         try:
             linear_model_result = subprocess.run(
-                [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
                 stdout=pipe,
                 stderr=pipe,
                 cwd=parent_dir,
