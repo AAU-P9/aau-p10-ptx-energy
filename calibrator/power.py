@@ -142,6 +142,8 @@ def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
         PowerMetrics object containing calculated metrics
     """
     pmd2_path = path / "pmd2.csv"
+    if not pmd2_path.exists() or pmd2_path.stat().st_size == 0:
+        raise FileNotFoundError(f"pmd2.csv missing or empty at {pmd2_path}")
     pmd2 = load_pmd2(pmd2_path)
     
     # Parse timing information from output.json exports

@@ -152,6 +152,11 @@ def execute_program(
             print("Warning: nvidia-smi not found in PATH, skipping nvidia-smi monitoring", file=sys.stderr)
         
         if shutil.which("pmd2-cli") is not None:
+            subprocess.run(
+                ["pkill", "-x", "-u", str(os.getuid()), "pmd2-cli"],
+                check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            )
+            time.sleep(0.5)
             try:
                 with open(pmd2_log, "w") as pmd2_file:
                     pmd2_process = subprocess.Popen(
@@ -173,11 +178,9 @@ def execute_program(
                 print(f"Warning: Failed to start pmd2-cli monitoring: {e}", file=sys.stderr)
                 pmd2_process = None
 
-            # Sleep for the specified duration to ensure subprocesses have time to collect data
-            time.sleep(metrics_sleep_time)
         else:
             print("Warning: pmd2-cli not found in PATH, skipping PMD2 monitoring", file=sys.stderr)
-    
+
     bin_cmd = [str(path / "a.out")]
     bin_cmd.extend(binary_args)
 
@@ -185,6 +188,16 @@ def execute_program(
     exports = {}
 
     try:
+        if enable_metrics:
+            # Sleep for the specified duration to ensure subprocesses have time to collect data
+            time.sleep(metrics_sleep_time)
+
+            if pmd2_process is not None and pmd2_process.poll() is not None:
+                stderr_out = pmd2_process.stderr.read()
+                print(f"Warning: pmd2-cli exited early (code {pmd2_process.returncode})", file=sys.stderr)
+                if stderr_out:
+                    print(f"pmd2-cli stderr: {stderr_out}", file=sys.stderr)
+
         # Run the compiled program and capture its output
         execution_process = subprocess.run(
             bin_cmd,
@@ -202,8 +215,16 @@ def execute_program(
                 exports = json.load(f)
     finally:
         if enable_metrics:
+            print("Terminating monitoring processes...")
             _terminate_process_group(monitor_process)
+            print("nvidia-smi monitoring process terminated.")
             _terminate_process_group(pmd2_process)
+            print("pmd2-cli monitoring process terminated.")
+            if pmd2_process is not None and pmd2_log.stat().st_size == 0:
+                stderr_out = pmd2_process.stderr.read()
+                print(f"Warning: pmd2-cli wrote nothing (exit code {pmd2_process.returncode})", file=sys.stderr)
+                if stderr_out:
+                    print(f"pmd2-cli stderr: {stderr_out}", file=sys.stderr)
             power_metric_result = extract_power_metrics(path, exports)
 
     # Return the execution result
