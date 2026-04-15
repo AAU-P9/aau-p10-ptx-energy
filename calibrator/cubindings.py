@@ -80,9 +80,11 @@ def execute_code(
     )
 
 def execute_program(
-    path: Path = None,
-    nvcc_args: list[str] = [], binary_args: list[str] = [],
-    enable_metrics: bool = False,
+    path: Path,
+    nvcc_args: list[str] = [],
+    binary_args: list[str] = [],
+    enable_compilation: bool = True,
+    enable_metrics: bool = True,
     metrics_sleep_time: int = 5,
     program_name: str = "program.cu",
     debug: bool = False,
@@ -92,7 +94,6 @@ def execute_program(
     tmp_dir = Path(f"/tmp/{time.time()}")
     shutil.copytree(path, tmp_dir)
     path = tmp_dir
-
 
     program_file = path / program_name
 
@@ -107,15 +108,16 @@ def execute_program(
     nvcc_cmd.append(str(program_file))
     nvcc_cmd.append("--keep")
 
-    nvcc_process = subprocess.run(
-        nvcc_cmd,
-        cwd=path, # Set the current working directory to the temporary directory
-        stdout=pipe,
-        stderr=pipe,
-        text=True,
-        check=False,
-    )
-    
+    if enable_compilation:
+        nvcc_process = subprocess.run(
+            nvcc_cmd,
+            cwd=path, # Set the current working directory to the temporary directory
+            stdout=pipe,
+            stderr=pipe,
+            text=True,
+            check=False,
+        )
+        
     # Start monitoring processes if metrics are enabled
     monitor_process = None
     pmd2_process = None
