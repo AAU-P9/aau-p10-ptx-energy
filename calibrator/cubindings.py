@@ -40,8 +40,33 @@ def _terminate_process_group(process: subprocess.Popen | None) -> None:
             return
         process.wait()
     
-def execute_program(
+def execute_code(
     program_str: str,
+    path: Path = None,
+    nvcc_args: list[str] = [], binary_args: list[str] = [],
+    enable_metrics: bool = False,
+    metrics_sleep_time: int = 5,
+) -> ExecutionResult:
+    # Fallback temporary directory if the specified path cannot be created
+    if path is None:
+        path = Path(f"/tmp/{time.time()}")
+        path.mkdir(parents=True, exist_ok=True)
+    
+
+    # Write the program string to a temporary file
+    program_file = path / "program.cu"
+    with program_file.open("w") as f:
+        f.write(program_str)
+
+    return execute_program(
+        path=path,
+        nvcc_args=nvcc_args,
+        binary_args=binary_args,
+        enable_metrics=enable_metrics,
+        metrics_sleep_time=metrics_sleep_time,
+    )
+
+def execute_program(
     path: Path = None,
     nvcc_args: list[str] = [], binary_args: list[str] = [],
     enable_metrics: bool = False,
@@ -49,11 +74,6 @@ def execute_program(
 ) -> ExecutionResult:   
     # Initialize power_metric_result to None by default
     power_metric_result = None
-
-    # Fallback temporary directory if the specified path cannot be created
-    if path is None:
-        path = Path(f"/tmp/{time.time()}")
-        path.mkdir(parents=True, exist_ok=True)
 
     # Append the metrics code to the program string if metrics are enabled
     if enable_metrics:
@@ -66,11 +86,6 @@ def execute_program(
         )
 
         program_str = "#include \"cupti_timing.h\"\n" + program_str
-
-    # Write the program string to a temporary file
-    program_file = path / "program.cu"
-    with program_file.open("w") as f:
-        f.write(program_str)
 
     # Absolute path to the include directory for cubindings.h
     nvcc_cmd = ["nvcc", "-Xptxas", "-g", "-G", "-O0", "-arch=sm_89", "-lcupti"]
