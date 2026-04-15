@@ -53,7 +53,9 @@ class LinearModelResult:
     analyser_result: AnalyserResult
     predicted_energy_joules: float
 
-def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:    
+def run_analyser(output_path: Path, weights_path: Path, prediction: bool = True, program_name="program.cu", debug: bool = False) -> LinearModelResult:    
+    pipe = sys.stdout if debug else subprocess.PIPE
+
     analyser_result = None
     total_energy_j = -1
     
@@ -62,9 +64,9 @@ def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:
             include_path = Path(__file__).parents[1] / "include"
 
             subprocess.run(
-                [f"cat {output_path / 'program.cu'} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                [f"cat {output_path / program_name} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}"],
+                stdout=pipe,
+                stderr=pipe,
                 cwd=output_path,
                 shell=True,
                 check=False,
@@ -88,10 +90,10 @@ def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:
                     str(output_path / "kernel_params.json"),
                     "--output-json-path",
                     str(output_path / "analyser_output.json"),
-                    str(output_path / "program.ptx")
+                    str(output_path / program_name.replace(".cu", ".ptx")),
                 ],
-                stderr=subprocess.PIPE,
-                stdout=subprocess.PIPE,
+                stderr=pipe,
+                stdout=pipe,
                 text=True,
                 check=False,
                 cwd=output_path,
@@ -110,25 +112,26 @@ def run_analyser(output_path: Path, weights_path: Path) -> LinearModelResult:
     else:
         print("[Warning] ptx-analyser not found in PATH", file=sys.stderr)
 
-    parent_dir = Path(__file__).parents[1]
-    try:
-        linear_model_result = subprocess.run(
-            [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=parent_dir,
-            shell=True,
-            check=False,
-            text=True
-        )
-    
-        total_energy_match = re.search(r"\[TOTAL\]\s+([\d\.eE+-]+)", linear_model_result.stdout)
-        if total_energy_match:
-            total_energy_j = float(total_energy_match.group(1))
-        else:
-            print("Warning: Could not find total energy in linear model output", file=sys.stderr)
+    if prediction:
+        parent_dir = Path(__file__).parents[1]
+        try:
+            linear_model_result = subprocess.run(
+                [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
+                stdout=pipe,
+                stderr=pipe,
+                cwd=parent_dir,
+                shell=True,
+                check=False,
+                text=True
+            )
+        
+            total_energy_match = re.search(r"\[TOTAL\]\s+([\d\.eE+-]+)", linear_model_result.stdout)
+            if total_energy_match:
+                total_energy_j = float(total_energy_match.group(1))
+            else:
+                print("Warning: Could not find total energy in linear model output", file=sys.stderr)
 
-    except Exception as e:
-        print(f"[Warning] Failed to run linear model: {e}", file=sys.stderr)
+        except Exception as e:
+            print(f"[Warning] Failed to run linear model: {e}", file=sys.stderr)
 
     return LinearModelResult(analyser_result=analyser_result, predicted_energy_joules=total_energy_j)

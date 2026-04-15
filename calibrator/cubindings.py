@@ -84,8 +84,17 @@ def execute_program(
     nvcc_args: list[str] = [], binary_args: list[str] = [],
     enable_metrics: bool = False,
     metrics_sleep_time: int = 5,
+    program_name: str = "program.cu",
+    debug: bool = False,
 ) -> ExecutionResult:   
-    program_file = path / "program.cu"
+    pipe = sys.stdout if debug else subprocess.PIPE
+
+    tmp_dir = Path(f"/tmp/{time.time()}")
+    shutil.copytree(path, tmp_dir)
+    path = tmp_dir
+
+
+    program_file = path / program_name
 
     # Initialize power_metric_result to None by default
     power_metric_result = None
@@ -101,6 +110,8 @@ def execute_program(
     nvcc_process = subprocess.run(
         nvcc_cmd,
         cwd=path, # Set the current working directory to the temporary directory
+        stdout=pipe,
+        stderr=pipe,
         text=True,
         check=False,
     )
@@ -176,9 +187,10 @@ def execute_program(
         execution_process = subprocess.run(
             bin_cmd,
             cwd=path, # Set the current working directory to the temporary directory
+            stdout=pipe,
+            stderr=pipe,
             text=True,
             check=False,
-            stderr=subprocess.STDOUT,
         )
 
         # Read the output.json file to get the exported variables

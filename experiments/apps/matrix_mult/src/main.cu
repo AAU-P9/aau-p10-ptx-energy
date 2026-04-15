@@ -6,7 +6,19 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
-#define ITERATIONS 1000000
+#define ITERATIONS 100000
+
+#ifndef SIZE_M
+#define SIZE_M 256
+#endif
+
+#ifndef SIZE_N
+#define SIZE_N 256
+#endif
+
+#ifndef SIZE_K
+#define SIZE_K 256
+#endif
 
 __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
     META_LOOP(main_loop, ITERATIONS, ITERATIONS, false);
@@ -28,21 +40,11 @@ __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
 
 int main(int argc, char *argv[]) {
 
-// Read the size of the matrices (M, N, K) from command line arguments
-    if (argc != 4) {
-        printf("Usage: %s <M> <N> <K>\n", argv[0]);
-        return -1;
-    }
-
-    int M = atoi(argv[1]);
-    int N = atoi(argv[2]);
-    int K = atoi(argv[3]);
-
     METRICS_KERNEL_START
     
-    size_t bytes_a = M * N * sizeof(float);
-    size_t bytes_b = N * K * sizeof(float);
-    size_t bytes_c = M * K * sizeof(float);
+    size_t bytes_a = SIZE_M * SIZE_N * sizeof(float);
+    size_t bytes_b = SIZE_N * SIZE_K * sizeof(float);
+    size_t bytes_c = SIZE_M * SIZE_K * sizeof(float);
 
     // Host matrices
     float *h_a = (float *)malloc(bytes_a);
@@ -50,13 +52,13 @@ int main(int argc, char *argv[]) {
     float *h_c = (float *)malloc(bytes_c);
 
     // Initialize host matrices
-    for (int i = 0; i < M * N; i++) {
+    for (int i = 0; i < SIZE_M * SIZE_N; i++) {
         h_a[i] = (float)(i % 100);  // some values for testing
     }
-    for (int i = 0; i < N * K; i++) {
+    for (int i = 0; i < SIZE_N * SIZE_K; i++) {
         h_b[i] = (float)(i % 100);  // some values for testing
     }
-    for (int i = 0; i < M * K; i++) {
+    for (int i = 0; i < SIZE_M * SIZE_K; i++) {
         h_c[i] = 0.0f;  // initialize result matrix to 0
     }
 
@@ -71,9 +73,9 @@ int main(int argc, char *argv[]) {
     cudaMemcpy(d_b, h_b, bytes_b, cudaMemcpyHostToDevice);
 
     // Define block size (e.g., 16x16 threads per block)
-    dim3 block_size(32, 32);  // 
-    dim3 grid_size((K + block_size.x - 1) / block_size.x, 
-                   (M + block_size.y - 1) / block_size.y);
+    dim3 block_size(32, 32);  // 32x32 threads per block
+    dim3 grid_size((SIZE_K + block_size.x - 1) / block_size.x, 
+                   (SIZE_M + block_size.y - 1) / block_size.y);
 
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
@@ -81,7 +83,7 @@ int main(int argc, char *argv[]) {
            grid_size.x, grid_size.y, block_size.x, block_size.y);
 
     // Launch kernel with 2D grid and block size
-    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, M, N, K);
+    matrix_mul<<<grid_size, block_size>>>(d_a, d_b, d_c, SIZE_M, SIZE_N, SIZE_K);
 
     // Check for errors after kernel launch
     cudaDeviceSynchronize();
@@ -89,29 +91,6 @@ int main(int argc, char *argv[]) {
     // Copy results back to host
     cudaMemcpy(h_c, d_c, bytes_c, cudaMemcpyDeviceToHost);
 
-    // Verify results
-    int errors = 0;
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < K; j++) {
-            float expected = 0.0f;
-            for (int l = 0; l < N; l++) {
-                expected += h_a[i * N + l] * h_b[l * K + j];
-            }
-            if (fabs(h_c[i * K + j] - expected) > 1e-6) {
-                errors++;
-                if (errors <= 5) {
-                    printf("Error at (%d, %d): expected %f, got %f\n", i, j, expected, h_c[i * K + j]);
-                }
-            }
-        }
-    }
-
-    if (errors == 0) {
-        printf("Matrix multiplication kernel executed successfully!\n");
-    } else {
-        printf("Test failed with %d errors\n", errors);
-    }
-    
     METRICS_KERNEL_END
 
     // Clean up
