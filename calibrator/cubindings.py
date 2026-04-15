@@ -69,6 +69,7 @@ def execute_code(
         )
 
     with program_file.open("w") as f:
+        f.flush() # Ensure the file is created and flushed before writing to it
         f.write(program_str)
     
     return execute_program(
@@ -132,6 +133,7 @@ def execute_program(
         if shutil.which("nvidia-smi") is not None:
             try:
                 with open(monitor_log, "w") as monitor_file:
+                    monitor_file.flush() # Ensure the file is created and flushed before nvidia-smi tries to write to it
                     monitor_process = subprocess.Popen(
                         [
                             "nvidia-smi",
@@ -159,6 +161,7 @@ def execute_program(
             time.sleep(0.5)
             try:
                 with open(pmd2_log, "w") as pmd2_file:
+                    pmd2_file.flush() # Ensure the file is created and flushed before pmd2-cli tries to write to it
                     pmd2_process = subprocess.Popen(
                         [
                             "pmd2-cli",

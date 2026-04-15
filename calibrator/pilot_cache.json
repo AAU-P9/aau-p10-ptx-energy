@@ -1,0 +1,11 @@
+{
+  "config": {
+    "pilot_iters": 100000,
+    "target_ns": 100000
+  },
+  "results": {
+    "add.f32": 100000,
+    "add.s32": 100000,
+    "add.s64": 100000
+  }
+}
