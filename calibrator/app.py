@@ -1,10 +1,10 @@
-from cubindings import execute_program
+from cubindings import execute_code
 from analyser import run_analyser
 
 gridDim = 64
 blockDim = 1024
 
-result = execute_program("""
+result = execute_code("""
     #include <iostream>
     #include <cuda_runtime.h>
     #include <cuda.h>
