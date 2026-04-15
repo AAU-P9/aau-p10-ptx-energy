@@ -51,13 +51,26 @@ def execute_code(
     if path is None:
         path = Path(f"/tmp/{time.time()}")
         path.mkdir(parents=True, exist_ok=True)
-    
+
+    # Prepend the cupti_timing include to the program string    
+    program_str = "#include \"cupti_timing.h\"\n" + program_str
 
     # Write the program string to a temporary file
     program_file = path / "program.cu"
+
+    # Append the metrics code to the program string if metrics are enabled
+    if enable_metrics:
+        pattern = r'(int\s+main\s*\([^)]*\)\s*\{)(.*?)(return\s+0\s*;\s*\})'
+        program_str = re.sub(
+            pattern,
+            r'\1\nMETRICS_KERNEL_START\n\2\nMETRICS_KERNEL_END\n\3',
+            program_str,
+            flags=re.DOTALL
+        )
+
     with program_file.open("w") as f:
         f.write(program_str)
-
+    
     return execute_program(
         path=path,
         nvcc_args=nvcc_args,
@@ -72,20 +85,10 @@ def execute_program(
     enable_metrics: bool = False,
     metrics_sleep_time: int = 5,
 ) -> ExecutionResult:   
+    program_file = path / "program.cu"
+
     # Initialize power_metric_result to None by default
     power_metric_result = None
-
-    # Append the metrics code to the program string if metrics are enabled
-    if enable_metrics:
-        pattern = r'(int\s+main\s*\([^)]*\)\s*\{)(.*?)(return\s+0\s*;\s*\})'
-        program_str = re.sub(
-            pattern,
-            r'\1\nMETRICS_KERNEL_START\n\2\nMETRICS_KERNEL_END\n\3',
-            program_str,
-            flags=re.DOTALL
-        )
-
-        program_str = "#include \"cupti_timing.h\"\n" + program_str
 
     # Absolute path to the include directory for cubindings.h
     nvcc_cmd = ["nvcc", "-Xptxas", "-g", "-G", "-O0", "-arch=sm_89", "-lcupti"]
