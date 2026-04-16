@@ -129,6 +129,12 @@ def parse_args() -> argparse.Namespace:
 		default=project_root / "ptx_analysis.json",
 		help="Path to PTX analysis JSON file (default: ptx_analysis.json)",
 	)
+	parser.add_argument(
+		"--output-path",
+		type=Path,
+		default=None,
+		help="Path to write JSON output (default: <input-path stem>.estimated.json next to input)",
+	)
 
 	return parser.parse_args()
 
@@ -137,6 +143,7 @@ def main() -> None:
 	args = parse_args()
 	weights_path = args.weights_path
 	input_path = args.input_path
+	output_path = args.output_path or input_path.with_name(f"{input_path.stem}.estimated.json")
 
 	if not weights_path.is_file():
 		raise FileNotFoundError(f"Weights CSV not found: {weights_path}")
@@ -159,9 +166,11 @@ def main() -> None:
 		fallback_power,
 	)
 	total_estimated = 0.0
+	output_estimates: list[dict[str, str | float | bool]] = []
 	for entry in estimates:
 		total_estimated += float(entry["estimated_power_joules"])
 		fallback_tag = " (fallback)" if entry.get("used_fallback") else ""
+		output_estimates.append(entry)
 		print(
 			"[ESTIMATE] "
 			f"{entry['kernel_name']},{entry['instruction']},"
@@ -170,6 +179,18 @@ def main() -> None:
 			f"estimated={entry['estimated_power_joules']:.12f}"
 			f"{fallback_tag}"
 		)
+
+	output_payload = {
+		"weights_path": str(weights_path),
+		"input_path": str(input_path),
+		"output_path": str(output_path),
+		"fallback_power_joules": fallback_power,
+		"total_estimated_power_joules": total_estimated,
+		"estimates": output_estimates,
+	}
+	output_path.parent.mkdir(parents=True, exist_ok=True)
+	output_path.write_text(json.dumps(output_payload, indent=2), encoding="utf-8")
+	print(f"[INFO] Wrote JSON output to {output_path}")
 
 	print(f"[TOTAL] {total_estimated:.12f} J")
 

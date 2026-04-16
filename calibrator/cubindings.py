@@ -246,13 +246,8 @@ def execute_program(
                 exports = json.load(f)
     finally:
         if enable_metrics:
-            print("Terminating monitoring processes...")
             _terminate_process_group(monitor_process)
-            print("nvidia-smi monitoring process terminated.")
-            # pmd2-cli has shown allocator crashes on forced shutdown;
-            # SIGINT is closer to interactive Ctrl+C and gives it a chance to flush CSV output.
-            _terminate_process_group(pmd2_process, terminate_signal=signal.SIGINT, wait_timeout_s=3.0)
-            print("pmd2-cli monitoring process terminated.")
+            _terminate_process_group(pmd2_process)
             if pmd2_process is not None and pmd2_log.stat().st_size == 0:
                 stderr_out = pmd2_process.stderr.read()
                 print(f"Warning: pmd2-cli wrote nothing (exit code {pmd2_process.returncode})", file=sys.stderr)

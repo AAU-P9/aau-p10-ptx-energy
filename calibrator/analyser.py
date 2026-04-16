@@ -3,7 +3,7 @@ import json
 import sys
 from pathlib import Path
 import shutil
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 import time
 import re
 import shlex
@@ -21,6 +21,13 @@ class Dim3:
             y=int(data.get("y", 1)),
             z=int(data.get("z", 1)),
         )
+
+    def to_dict(self) -> dict[str, int]:
+        return {
+            "x": self.x,
+            "y": self.y,
+            "z": self.z,
+        }
 
 
 @dataclass
@@ -49,10 +56,103 @@ class AnalyserResult:
             },
         )
 
+    def to_dict(self) -> dict:
+        return {
+            "kernelName": self.kernel_name,
+            "powerConsumptionJoules": self.power_consumption_joules,
+            "gridDim": self.grid_dim.to_dict(),
+            "blockDim": self.block_dim.to_dict(),
+            "parameters": self.parameters,
+            "totalInstructions": self.total_instructions,
+            "instructionOccurrences": self.instruction_occurrences,
+        }
+
+
 @dataclass
-class LinearModelResult:
-    analyser_result: AnalyserResult
+class LinearModelEstimate:
+    kernel_name: str
+    instruction: str
+    count: float
+    avg_power_per_occurrence_joules: float
+    estimated_power_joules: float
+    used_fallback: bool
+
+    @staticmethod
+    def from_dict(data: dict) -> "LinearModelEstimate":
+        return LinearModelEstimate(
+            kernel_name=str(data.get("kernel_name", "")),
+            instruction=str(data.get("instruction", "")),
+            count=float(data.get("count", 0.0)),
+            avg_power_per_occurrence_joules=float(data.get("avg_power_per_occurrence_joules", 0.0)),
+            estimated_power_joules=float(data.get("estimated_power_joules", 0.0)),
+            used_fallback=bool(data.get("used_fallback", False)),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return asdict(self)
+
+
+@dataclass
+class LinearModelOutput:
+    weights_path: str
+    input_path: str
+    output_path: str
+    fallback_power_joules: float
+    total_estimated_power_joules: float
+    estimates: list[LinearModelEstimate]
+
+    @staticmethod
+    def from_dict(data: dict) -> "LinearModelOutput":
+        return LinearModelOutput(
+            weights_path=str(data.get("weights_path", "")),
+            input_path=str(data.get("input_path", "")),
+            output_path=str(data.get("output_path", "")),
+            fallback_power_joules=float(data.get("fallback_power_joules", 0.0)),
+            total_estimated_power_joules=float(data.get("total_estimated_power_joules", 0.0)),
+            estimates=[LinearModelEstimate.from_dict(item) for item in data.get("estimates", []) if isinstance(item, dict)],
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "weights_path": self.weights_path,
+            "input_path": self.input_path,
+            "output_path": self.output_path,
+            "fallback_power_joules": self.fallback_power_joules,
+            "total_estimated_power_joules": self.total_estimated_power_joules,
+            "estimates": [estimate.to_dict() for estimate in self.estimates],
+        }
+
+@dataclass
+class RunAnalyserResult:
+    analyser_result: AnalyserResult | None
+    linear_model_output: LinearModelOutput | None
     predicted_energy_joules: float
+    output_path: Path
+
+    @staticmethod
+    def from_dict(data: dict) -> "RunAnalyserResult":
+        analyser_result_data = data.get("analyser_result")
+        linear_model_output_data = data.get("linear_model_output")
+        output_path = Path(data.get("output_path", ""))
+        return RunAnalyserResult(
+            analyser_result=AnalyserResult.from_dict(analyser_result_data) if isinstance(analyser_result_data, dict) else None,
+            linear_model_output=LinearModelOutput.from_dict(linear_model_output_data) if isinstance(linear_model_output_data, dict) else None,
+            predicted_energy_joules=float(data.get("predicted_energy_joules", -1)),
+            output_path=output_path,
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "analyser_result": self.analyser_result.to_dict() if self.analyser_result else None,
+            "linear_model_output": self.linear_model_output.to_dict() if self.linear_model_output else None,
+            "predicted_energy_joules": self.predicted_energy_joules,
+            "output_path": str(self.output_path),
+        }
+
+    @property
+    def linear_model_result(self) -> LinearModelOutput | None:
+        return self.linear_model_output
+
 
 def run_analyser(
     output_path: Path,
@@ -62,11 +162,13 @@ def run_analyser(
     program_name="program.cu",
     binary_args: list[str] = [],
     debug: bool = False
-) -> LinearModelResult:    
+) -> RunAnalyserResult:
     pipe = sys.stdout if debug else subprocess.PIPE
 
     analyser_result = None
     total_energy_j = -1
+    linear_model_output = None
+    run_output_path = output_path / "run_analyser_result.json"
     
     if shutil.which("injector") is not None:
         try:
@@ -74,7 +176,16 @@ def run_analyser(
             lli_args = " ".join(shlex.quote(str(arg)) for arg in binary_args)
             lli_suffix = f" {lli_args}" if lli_args else ""
 
-            cmd = [f"cat {output_path / program_name} | injector > {output_path / 'injected_kernel.cu'}; clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {" ".join(shlex.quote(str(arg)) for arg in nvcc_args)} {output_path / 'injected_kernel.cu'} --no-cuda-version-check; lli {output_path / 'injected_kernel.ll'}{lli_suffix}"]
+            nvcc_args_str = " ".join(shlex.quote(str(arg)) for arg in nvcc_args)
+            injected_kernel_cu = output_path / "injected_kernel.cu"
+            injected_kernel_ll = output_path / "injected_kernel.ll"
+            cmd = [
+                (
+                    f"cat {output_path / program_name} | injector > {injected_kernel_cu}; "
+                    f"clang++ -DUSE_LLI -S -emit-llvm --cuda-host-only -I{str(include_path)} {nvcc_args_str} {injected_kernel_cu} --no-cuda-version-check; "
+                    f"lli {injected_kernel_ll}{lli_suffix}"
+                )
+            ]
             subprocess.run(
                 cmd,
                 stdout=pipe,
@@ -126,9 +237,18 @@ def run_analyser(
 
     if prediction:
         parent_dir = Path(__file__).parents[1]
-        [f"uv run linear-model/linear-model.py --weights-path {weights_path} --input-path {output_path / 'analyser_output.json'}"],
+        linear_model_output_path = output_path / "linear_model_output.json"
+        cmd = [
+            (
+                f"uv run linear-model/linear-model.py "
+                f"--weights-path {weights_path} "
+                f"--input-path {output_path / 'analyser_output.json'} "
+                f"--output-path {linear_model_output_path}"
+            )
+        ]
         try:
             linear_model_result = subprocess.run(
+                cmd,
                 stdout=pipe,
                 stderr=pipe,
                 cwd=parent_dir,
@@ -143,7 +263,19 @@ def run_analyser(
             else:
                 print("Warning: Could not find total energy in linear model output", file=sys.stderr)
 
+            if linear_model_output_path.exists():
+                with linear_model_output_path.open("r", encoding="utf-8") as handle:
+                    linear_model_output = LinearModelOutput.from_dict(json.loads(handle.read()))
+
         except Exception as e:
             print(f"[Warning] Failed to run linear model: {e}", file=sys.stderr)
 
-    return LinearModelResult(analyser_result=analyser_result, predicted_energy_joules=total_energy_j)
+    result = RunAnalyserResult(
+        analyser_result=analyser_result,
+        linear_model_output=linear_model_output,
+        predicted_energy_joules=total_energy_j,
+        output_path=run_output_path,
+    )
+    run_output_path.parent.mkdir(parents=True, exist_ok=True)
+    run_output_path.write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
+    return result
