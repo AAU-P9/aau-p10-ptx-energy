@@ -14,7 +14,7 @@ from analyser import run_analyser
 # ============================================================================
 GRID = 152          # 2 blocks per SM on AD103 (76 SMs)
 BLOCK = 1024
-TARGET_NS = 100_000#5_000_000_000  # 10 seconds
+TARGET_NS = 5_000_000_000  # 5 seconds
 PILOT_ITERS = 100_000
 WEIGHTS_PATH = "/home/lasse/aau-p10-ptx-energy/linear-model/weights.csv"
 BUF_BYTES_PER_THREAD = 1024
@@ -150,6 +150,44 @@ INSTRUCTION_TEMPLATES = {
         "sink":      "",
         "needs_buf": True,
     },
+    "mul.f32": {
+        "setup": "float b = 1.0f, d = (float)(tid + 1);",
+        "asm":   '"mul.f32 %0, %0, %1;" : "+f"(d) : "f"(b)',
+        "sink":  "((float*)sink)[tid] = d;",
+    },
+    "mov.f32": {
+        "setup": "float d = (float)tid;",
+        "asm":   '"mov.f32 %0, %0;" : "+f"(d)',
+        "sink":  "((float*)sink)[tid] = d;",
+    },
+    "mov.pred": {
+        "setup": "int d = tid & 1;",
+        "asm":   ('".reg .pred %%p, %%q;\\n\\t"'
+                  '"setp.ne.s32 %%p, %0, 0;\\n\\t"'
+                  '"mov.pred %%q, %%p;\\n\\t"'
+                  '"selp.s32 %0, 1, 0, %%q;"'
+                  ' : "+r"(d)'),
+        "sink":  "((int*)sink)[tid] = d;",
+    },
+    # %=  expands to a unique integer per asm instance so repeat=2 gets distinct labels
+    "bra": {
+        "setup": "int d = tid;",
+        "asm":   ('"bra $L%=_skip;\\n\\t"'
+                  '"add.s32 %0, %0, -1;\\n\\t"'
+                  '"$L%=_skip:\\n\\t"'
+                  '"add.s32 %0, %0, 1;"'
+                  ' : "+r"(d)'),
+        "sink":  "((int*)sink)[tid] = d;",
+    },
+    "bra.uni": {
+        "setup": "int d = tid;",
+        "asm":   ('"bra.uni $L%=_skip;\\n\\t"'
+                  '"add.s32 %0, %0, -1;\\n\\t"'
+                  '"$L%=_skip:\\n\\t"'
+                  '"add.s32 %0, %0, 1;"'
+                  ' : "+r"(d)'),
+        "sink":  "((int*)sink)[tid] = d;",
+    },
 }
 
 
@@ -217,14 +255,9 @@ def _execute(insn, iters, repeat):
         r = execute_code(src, nvcc_args=[], binary_args=[], enable_metrics=True, metrics_sleep_time=METRICS_WARMUP_S)
     print(f" {time.time()-t0:.1f}s", flush=True)
     with _spinner_running("analysing"):
-        analyser_result = run_analyser(r.path, Path(WEIGHTS_PATH))
+        ar = run_analyser(r.path, Path(WEIGHTS_PATH))
     print(f" {time.time()-t0:.1f}s total", flush=True)
-    return {
-        "energy_j":    float(r.power_metric_result.total_energy_j),
-        "duration_ns": float(r.power_metric_result.kernel_duration_gpu_ns),
-        "predicted_j": float(analyser_result.predicted_energy_joules),
-        "path": r.path,
-    }
+    return r, ar
 
 
 def run_one(insn, pilot_cache: dict):
@@ -234,42 +267,45 @@ def run_one(insn, pilot_cache: dict):
         print(f"  pilot cached -> {iters} iters", flush=True)
     else:
         print(f"  pilot ({PILOT_ITERS} iters)...", flush=True)
-        pilot = _execute(insn, iters=PILOT_ITERS, repeat=1)
-        iters = max(PILOT_ITERS, int(PILOT_ITERS * TARGET_NS / max(pilot["duration_ns"], 1.0)))
-        print(f"  pilot done ({pilot['duration_ns']*1e-9:.2f}s) -> {iters} iters", flush=True)
+        pilot_r, _ = _execute(insn, iters=PILOT_ITERS, repeat=1)
+        dur_ns = pilot_r.power_metric_result.kernel_duration_gpu_ns
+        iters = max(PILOT_ITERS, int(PILOT_ITERS * TARGET_NS / max(dur_ns, 1.0)))
+        print(f"  pilot done ({dur_ns*1e-9:.2f}s) -> {iters} iters", flush=True)
         pilot_cache[cache_key] = iters
         _save_pilot_cache(pilot_cache)
 
     iters_for_subtract = max(PILOT_ITERS, iters // 2)
 
     print(f"  repeat=1 ({iters_for_subtract} iters)...", flush=True)
-    r1 = _execute(insn, iters=iters_for_subtract, repeat=1)
+    r1, ar1 = _execute(insn, iters=iters_for_subtract, repeat=1)
     print(f"  repeat=2 ({iters_for_subtract} iters)...", flush=True)
-    r2 = _execute(insn, iters=iters_for_subtract, repeat=2)
+    r2, ar2 = _execute(insn, iters=iters_for_subtract, repeat=2)
 
-    delta_energy_j = r2["energy_j"] - r1["energy_j"]
-    delta_dur_ns   = r2["duration_ns"] - r1["duration_ns"]
-    delta_pred_j   = r2["predicted_j"] - r1["predicted_j"]
-    print(f"  r1={r1['duration_ns']*1e-9:.2f}s  r2={r2['duration_ns']*1e-9:.2f}s  delta={delta_dur_ns*1e-9:.3f}s", flush=True)
+    delta_energy_j = r2.power_metric_result.total_energy_j - r1.power_metric_result.total_energy_j
+    delta_dur_ns   = r2.power_metric_result.kernel_duration_gpu_ns - r1.power_metric_result.kernel_duration_gpu_ns
+    delta_pred_j   = ar2.predicted_energy_joules - ar1.predicted_energy_joules
+    print(f"  r1={r1.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  r2={r2.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  delta={delta_dur_ns*1e-9:.3f}s", flush=True)
 
     isolated_ops = iters_for_subtract * GRID * BLOCK
 
     print(f"  raw run ({iters} iters)...", flush=True)
-    raw = _execute(insn, iters=iters, repeat=1)
+    raw_r, raw_ar = _execute(insn, iters=iters, repeat=1)
     raw_total_ops = iters * GRID * BLOCK
-    raw_dur_s = raw["duration_ns"] * 1e-9
+    raw_energy_j  = raw_r.power_metric_result.total_energy_j
+    raw_dur_s     = raw_r.power_metric_result.kernel_duration_gpu_ns * 1e-9
+    raw_pred_j    = raw_ar.predicted_energy_joules
 
     return {
         "iters":               iters,
         "iters_for_subtract":  iters_for_subtract,
         "raw_total_ops":       raw_total_ops,
 
-        "raw_energy_j":        raw["energy_j"],
-        "raw_predicted_j":     raw["predicted_j"],
+        "raw_energy_j":        raw_energy_j,
+        "raw_predicted_j":     raw_pred_j,
         "raw_duration_s":      raw_dur_s,
-        "raw_energy_per_op_j": raw["energy_j"] / raw_total_ops,
-        "raw_power_w":         raw["energy_j"] / raw_dur_s,
-        "raw_rel_error_pct":   abs(raw["energy_j"] - raw["predicted_j"]) / raw["energy_j"] * 100 if raw["energy_j"] else 0.0,
+        "raw_energy_per_op_j": raw_energy_j / raw_total_ops,
+        "raw_power_w":         raw_energy_j / raw_dur_s,
+        "raw_rel_error_pct":   abs(raw_energy_j - raw_pred_j) / raw_energy_j * 100 if raw_energy_j else 0.0,
 
         "sub_energy_j":        delta_energy_j,
         "sub_predicted_j":     delta_pred_j,
@@ -278,7 +314,7 @@ def run_one(insn, pilot_cache: dict):
         "sub_power_w":         delta_energy_j / (delta_dur_ns * 1e-9) if delta_dur_ns > 0 else 0.0,
         "sub_rel_error_pct":   abs(delta_energy_j - delta_pred_j) / delta_energy_j * 100 if delta_energy_j else 0.0,
 
-        "path": raw["path"],
+        "path": raw_r.path,
     }
 
 
@@ -320,7 +356,7 @@ def main():
                 "instruction":              insn,
                 "count":                    count,
                 "total_instructions":       count,
-                "power_consumption_joules": round(r["raw_energy_j"]),
+                "power_consumption_joules": r["raw_energy_j"],
             })
     print(f"\nwrote {len(results)} rows to {out_path}")
 

@@ -174,6 +174,8 @@ def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
     # Calculate energy consumed during kernel execution using trapezoidal integration
     kernel_mask = (pmd2["t_s"] >= kernel_start_cpu_s) & (pmd2["t_s"] <= kernel_end_cpu_s)
     pmd2_kernel = pmd2[kernel_mask].copy()
+    print(f"  [power] kernel window: {kernel_start_cpu_s:.3f}s – {kernel_end_cpu_s:.3f}s  ({kernel_duration_cpu_s*1000:.1f} ms)", flush=True)
+    print(f"  [power] pmd2 total={len(pmd2)} samples, in-window={len(pmd2_kernel)}", flush=True)
     
     total_energy_j = 0.0
     sensor4_energy_j = 0.0
