@@ -1,5 +1,6 @@
 import csv
 import json
+import math
 from contextlib import contextmanager
 from pathlib import Path
 import sys
@@ -123,18 +124,18 @@ INSTRUCTION_TEMPLATES = {
     },
     "setp.lt.s32": {
         "setup": "int b = 512, d = 0;",
-        "asm":   ('".reg .pred %%p;\\n\\t"'
-                  '"setp.lt.s32 %%p, %0, %1;\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%p;"'
+        "asm":   ('".reg .pred %%p%=;\\n\\t"'
+                  '"setp.lt.s32 %%p%=, %0, %1;\\n\\t"'
+                  '"selp.s32 %0, 1, 0, %%p%=;"'
                   ' : "+r"(d) : "r"(b)'),
         "sink":  "((int*)sink)[tid] = d;",
     },
     "not.pred": {
         "setup": "int a = tid & 1, d = 0;",
-        "asm":   ('".reg .pred %%p, %%q;\\n\\t"'
-                  '"setp.ne.s32 %%p, %1, 0;\\n\\t"'
-                  '"not.pred %%q, %%p;\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%q;"'
+        "asm":   ('".reg .pred %%p%=, %%q%=;\\n\\t"'
+                  '"setp.ne.s32 %%p%=, %1, 0;\\n\\t"'
+                  '"not.pred %%q%=, %%p%=;\\n\\t"'
+                  '"selp.s32 %0, 1, 0, %%q%=;"'
                   ' : "=r"(d) : "r"(a)'),
         "sink":  "((int*)sink)[tid] = d;",
     },
@@ -162,10 +163,10 @@ INSTRUCTION_TEMPLATES = {
     },
     "mov.pred": {
         "setup": "int d = tid & 1;",
-        "asm":   ('".reg .pred %%p, %%q;\\n\\t"'
-                  '"setp.ne.s32 %%p, %0, 0;\\n\\t"'
-                  '"mov.pred %%q, %%p;\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%q;"'
+        "asm":   ('".reg .pred %%p%=, %%q%=;\\n\\t"'
+                  '"setp.ne.s32 %%p%=, %0, 0;\\n\\t"'
+                  '"mov.pred %%q%=, %%p%=;\\n\\t"'
+                  '"selp.s32 %0, 1, 0, %%q%=;"'
                   ' : "+r"(d)'),
         "sink":  "((int*)sink)[tid] = d;",
     },
@@ -251,11 +252,8 @@ def build_program(insn, iters, repeat=1, grid=GRID, block=BLOCK):
 def _execute(insn, iters, repeat):
     src = build_program(insn, iters=iters, repeat=repeat)
     t0 = time.time()
-    with _spinner_running(f"compile+run (repeat={repeat})"):
-        r = execute_code(src, nvcc_args=[], binary_args=[], enable_metrics=True, metrics_sleep_time=METRICS_WARMUP_S)
-    print(f" {time.time()-t0:.1f}s", flush=True)
-    with _spinner_running("analysing"):
-        ar = run_analyser(r.path, Path(WEIGHTS_PATH))
+    r = execute_code(src, nvcc_args=[], binary_args=[], enable_metrics=True, metrics_sleep_time=METRICS_WARMUP_S)
+    ar = run_analyser(r.path, Path(WEIGHTS_PATH))
     print(f" {time.time()-t0:.1f}s total", flush=True)
     return r, ar
 
@@ -279,11 +277,14 @@ def run_one(insn, pilot_cache: dict):
     print(f"  repeat=1 ({iters_for_subtract} iters)...", flush=True)
     r1, ar1 = _execute(insn, iters=iters_for_subtract, repeat=1)
     print(f"  repeat=2 ({iters_for_subtract} iters)...", flush=True)
+    time.sleep(1)  # Short pause to ensure any lingering effects from the first run are minimized
     r2, ar2 = _execute(insn, iters=iters_for_subtract, repeat=2)
 
     delta_energy_j = r2.power_metric_result.total_energy_j - r1.power_metric_result.total_energy_j
     delta_dur_ns   = r2.power_metric_result.kernel_duration_gpu_ns - r1.power_metric_result.kernel_duration_gpu_ns
-    delta_pred_j   = ar2.predicted_energy_joules - ar1.predicted_energy_joules
+    pred1 = ar1.predicted_energy_joules
+    pred2 = ar2.predicted_energy_joules
+    delta_pred_j = (pred2 - pred1) if (pred1 is not None and pred2 is not None) else math.nan
     print(f"  r1={r1.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  r2={r2.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  delta={delta_dur_ns*1e-9:.3f}s", flush=True)
 
     isolated_ops = iters_for_subtract * GRID * BLOCK
@@ -293,7 +294,7 @@ def run_one(insn, pilot_cache: dict):
     raw_total_ops = iters * GRID * BLOCK
     raw_energy_j  = raw_r.power_metric_result.total_energy_j
     raw_dur_s     = raw_r.power_metric_result.kernel_duration_gpu_ns * 1e-9
-    raw_pred_j    = raw_ar.predicted_energy_joules
+    raw_pred_j    = raw_ar.predicted_energy_joules if raw_ar.predicted_energy_joules is not None else math.nan
 
     return {
         "iters":               iters,
@@ -305,14 +306,14 @@ def run_one(insn, pilot_cache: dict):
         "raw_duration_s":      raw_dur_s,
         "raw_energy_per_op_j": raw_energy_j / raw_total_ops,
         "raw_power_w":         raw_energy_j / raw_dur_s,
-        "raw_rel_error_pct":   abs(raw_energy_j - raw_pred_j) / raw_energy_j * 100 if raw_energy_j else 0.0,
+        "raw_rel_error_pct":   abs(raw_energy_j - raw_pred_j) / raw_energy_j * 100 if (raw_energy_j and not math.isnan(raw_pred_j)) else math.nan,
 
         "sub_energy_j":        delta_energy_j,
         "sub_predicted_j":     delta_pred_j,
         "sub_duration_s":      delta_dur_ns * 1e-9,
         "sub_energy_per_op_j": delta_energy_j / isolated_ops if isolated_ops else 0.0,
         "sub_power_w":         delta_energy_j / (delta_dur_ns * 1e-9) if delta_dur_ns > 0 else 0.0,
-        "sub_rel_error_pct":   abs(delta_energy_j - delta_pred_j) / delta_energy_j * 100 if delta_energy_j else 0.0,
+        "sub_rel_error_pct":   abs(delta_energy_j - delta_pred_j) / delta_energy_j * 100 if (delta_energy_j and not math.isnan(delta_pred_j)) else math.nan,
 
         "path": raw_r.path,
     }

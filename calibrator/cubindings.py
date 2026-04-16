@@ -10,6 +10,18 @@ from dataclasses import dataclass
 from power import extract_power_metrics, PowerMetricsResult
 import json
 
+    
+def _resolve_pmd2_cli_path() -> str | None:
+    env_path = os.environ.get("PMD2_CLI_PATH")
+    if env_path:
+        return env_path
+
+    workspace_cli = Path(__file__).parents[1] / "libEPMD" / "cli" / "pmd2-cli"
+    if workspace_cli.exists() and os.access(workspace_cli, os.X_OK):
+        return str(workspace_cli)
+
+    return shutil.which("pmd2-cli")
+
 @dataclass
 class ExecutionResult:
     output: str
@@ -19,7 +31,11 @@ class ExecutionResult:
     path: Path
     power_metric_result: PowerMetricsResult = None
 
-def _terminate_process_group(process: subprocess.Popen | None) -> None:
+def _terminate_process_group(
+    process: subprocess.Popen | None,
+    terminate_signal: int = signal.SIGTERM,
+    wait_timeout_s: float = 2.0,
+) -> None:
     if process is None:
         return
 
@@ -27,12 +43,12 @@ def _terminate_process_group(process: subprocess.Popen | None) -> None:
         return
 
     try:
-        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        os.killpg(os.getpgid(process.pid), terminate_signal)
     except ProcessLookupError:
         return
 
     try:
-        process.wait(timeout=2)
+        process.wait(timeout=wait_timeout_s)
     except subprocess.TimeoutExpired:
         try:
             os.killpg(os.getpgid(process.pid), signal.SIGKILL)
@@ -118,6 +134,12 @@ def execute_program(
             text=True,
             check=False,
         )
+        if nvcc_process.returncode != 0:
+            raise RuntimeError(
+                "NVCC compilation failed:\n"
+                f"{' '.join(nvcc_cmd)}\n"
+                f"{(nvcc_process.stderr or '').strip()}"
+            )
         
     # Start monitoring processes if metrics are enabled
     monitor_process = None
@@ -153,25 +175,31 @@ def execute_program(
         else:
             print("Warning: nvidia-smi not found in PATH, skipping nvidia-smi monitoring", file=sys.stderr)
         
-        if shutil.which("pmd2-cli") is not None:
+        pmd2_cli = _resolve_pmd2_cli_path()
+        if pmd2_cli is not None:
             subprocess.run(
                 ["pkill", "-x", "-u", str(os.getuid()), "pmd2-cli"],
                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             time.sleep(0.5)
             try:
+                pmd2_cmd = [
+                    pmd2_cli,
+                    "-p",
+                    "/dev/ttyACM0",
+                    "-c",
+                    "-i",
+                    "100",
+                    "monitor",
+                ]
+                # PMD2 may keep stdout block-buffered when redirected to a file.
+                # Line buffering avoids empty CSV files on short runs.
+                if shutil.which("stdbuf") is not None:
+                    pmd2_cmd = ["stdbuf", "-oL", *pmd2_cmd]
                 with open(pmd2_log, "w") as pmd2_file:
                     pmd2_file.flush() # Ensure the file is created and flushed before pmd2-cli tries to write to it
                     pmd2_process = subprocess.Popen(
-                        [
-                            "pmd2-cli",
-                            "-p",
-                            "/dev/ttyACM0",
-                            "-c",
-                            "-i",
-                            "100",
-                            "monitor"
-                        ],
+                        pmd2_cmd,
                         stdout=pmd2_file,
                         stderr=subprocess.PIPE,
                         text=True,
@@ -221,7 +249,9 @@ def execute_program(
             print("Terminating monitoring processes...")
             _terminate_process_group(monitor_process)
             print("nvidia-smi monitoring process terminated.")
-            _terminate_process_group(pmd2_process)
+            # pmd2-cli has shown allocator crashes on forced shutdown;
+            # SIGINT is closer to interactive Ctrl+C and gives it a chance to flush CSV output.
+            _terminate_process_group(pmd2_process, terminate_signal=signal.SIGINT, wait_timeout_s=3.0)
             print("pmd2-cli monitoring process terminated.")
             if pmd2_process is not None and pmd2_log.stat().st_size == 0:
                 stderr_out = pmd2_process.stderr.read()

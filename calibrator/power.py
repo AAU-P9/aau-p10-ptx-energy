@@ -95,14 +95,26 @@ def load_nvidia_smi(path: Path) -> pd.DataFrame:
 
 
 def load_pmd2(path: Path) -> pd.DataFrame:
-    df = pd.read_csv(path)
+    # pmd2-cli can terminate with a partially written final line.
+    # Skip malformed rows and keep valid samples.
+    df = pd.read_csv(path, engine="python", on_bad_lines="skip")
+    df = _normalize_columns(df)
+    required = ["timestamp_ns", "total_power_w", "sensor4_power_mw", "sensor7_power_mw"]
+    missing = [name for name in required if name not in df.columns]
+    if missing:
+        raise KeyError(f"PMD2 CSV missing required columns: {', '.join(missing)}")
     df["timestamp_ns"] = pd.to_numeric(df["timestamp_ns"], errors="coerce")
     df = df.dropna(subset=["timestamp_ns"]).copy()
+    if df.empty:
+        raise ValueError("PMD2 CSV has no valid timestamp rows")
     t0 = df["timestamp_ns"].iloc[0]
     df["t_s"] = (df["timestamp_ns"] - t0) / 1_000_000_000.0
     df["total_power_w"] = pd.to_numeric(df["total_power_w"], errors="coerce")
     df["sensor4_power_w"] = pd.to_numeric(df["sensor4_power_mw"], errors="coerce") / 1000.0
     df["sensor7_power_w"] = pd.to_numeric(df["sensor7_power_mw"], errors="coerce") / 1000.0
+    df = df.dropna(subset=["t_s", "total_power_w", "sensor4_power_w", "sensor7_power_w"]).copy()
+    if df.empty:
+        raise ValueError("PMD2 CSV has no valid power rows")
     return df
 
 def gpu_to_cpu_time(gpu_timestamp: float, slope: float, intercept: float) -> float:
@@ -115,14 +127,26 @@ def _parse_output_exports(exports: Any) -> dict[str, Any]:
     raw_offsets = exports.get("timestamp_offsets", [])
     offsets: list[tuple[float, float]] = []
     for sample in raw_offsets:
-        gpu_ts = float(sample["cupti_timestamp"])
-        cpu_initial = float(sample["cpu_initial_timestamp"])
-        cpu_final = float(sample["cpu_final_timestamp"])
-        offsets.append((gpu_ts, (cpu_initial + cpu_final) / 2.0))
+        try:
+            gpu_ts = float(sample["cupti_timestamp"])
+            cpu_initial = float(sample["cpu_initial_timestamp"])
+            cpu_final = float(sample["cpu_final_timestamp"])
+            offsets.append((gpu_ts, (cpu_initial + cpu_final) / 2.0))
+        except Exception:
+            continue
 
-    kernel_start = float(exports["start_timestamp"])
-    kernel_end = float(exports["end_timestamp"])
-    kernel_duration = float(exports.get("duration", kernel_end - kernel_start))
+    kernel_start = float(
+        exports.get("start_timestamp", exports.get("kernel_start", exports.get("kernel_start_timestamp", 0.0)))
+    )
+    kernel_end = float(
+        exports.get("end_timestamp", exports.get("kernel_end", exports.get("kernel_end_timestamp", 0.0)))
+    )
+    kernel_duration = float(
+        exports.get("duration", exports.get("kernel_duration", max(kernel_end - kernel_start, 0.0)))
+    )
+
+    if kernel_end <= kernel_start and kernel_duration > 0.0:
+        kernel_end = kernel_start + kernel_duration
 
     return {
         "offsets": offsets,
@@ -141,13 +165,20 @@ def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
     Returns:
         PowerMetrics object containing calculated metrics
     """
+    # Parse timing information from output.json exports
+    output_info = _parse_output_exports(exports)
+    if output_info["kernel_duration"] <= 0.0:
+        raise ValueError(f"missing/invalid kernel timing fields in exports: {sorted(exports.keys())}")
+    if len(output_info["offsets"]) < 2:
+        raise ValueError("insufficient timestamp_offsets samples for regression")
+
     pmd2_path = path / "pmd2.csv"
     if not pmd2_path.exists() or pmd2_path.stat().st_size == 0:
         raise FileNotFoundError(f"pmd2.csv missing or empty at {pmd2_path}")
-    pmd2 = load_pmd2(pmd2_path)
-    
-    # Parse timing information from output.json exports
-    output_info = _parse_output_exports(exports)
+    try:
+        pmd2 = load_pmd2(pmd2_path)
+    except Exception as exc:
+        raise RuntimeError(f"unable to parse PMD2 CSV: {exc}") from exc
 
     # Build incremental regression model
     regression = IncrementalRegression()
