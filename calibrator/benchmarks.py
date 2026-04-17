@@ -2,7 +2,7 @@ from pathlib import Path
 from cubindings import execute_program
 from analyser import run_analyser
 
-weights_path = Path("/home/rasmus/aau-p10-ptx-energy/linear-model/weights.csv")
+weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 debug = False
 
 # vector_add_old

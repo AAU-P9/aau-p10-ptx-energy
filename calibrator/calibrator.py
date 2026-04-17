@@ -17,7 +17,7 @@ GRID = 152          # 2 blocks per SM on AD103 (76 SMs)
 BLOCK = 1024
 TARGET_NS = 5_000_000_000  # 5 seconds
 PILOT_ITERS = 100_000
-WEIGHTS_PATH = "/home/lasse/aau-p10-ptx-energy/linear-model/weights.csv"
+WEIGHTS_PATH = "/home/p10/aau-p10-ptx-energy/linear-model/weights.csv" # Set to p10 since all users have access there
 BUF_BYTES_PER_THREAD = 1024
 PILOT_CACHE_PATH = Path(__file__).parent / "pilot_cache.json"
 METRICS_WARMUP_S = 1
@@ -272,50 +272,37 @@ def run_one(insn, pilot_cache: dict):
         pilot_cache[cache_key] = iters
         _save_pilot_cache(pilot_cache)
 
-    iters_for_subtract = max(PILOT_ITERS, iters // 2)
-
-    print(f"  repeat=1 ({iters_for_subtract} iters)...", flush=True)
-    r1, ar1 = _execute(insn, iters=iters_for_subtract, repeat=1)
-    print(f"  repeat=2 ({iters_for_subtract} iters)...", flush=True)
+    print(f"  repeat=1 ({iters} iters)...", flush=True)
+    r1, ar1 = _execute(insn, iters=iters, repeat=1)
+    print(f"  repeat=2 ({iters} iters)...", flush=True)
     time.sleep(1)  # Short pause to ensure any lingering effects from the first run are minimized
-    r2, ar2 = _execute(insn, iters=iters_for_subtract, repeat=2)
+    r2, ar2 = _execute(insn, iters=iters, repeat=2)
+
+    r1_energy_per_op_j = r1.power_metric_result.total_energy_j / (iters * GRID * BLOCK)
+    r2_energy_per_op_j = r2.power_metric_result.total_energy_j / (iters * GRID * BLOCK * 2) # 2x ops in repeat=2
+
+    print(f"r1 (s): {r1.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f} r1 (J/op): {r1_energy_per_op_j:.3e}", flush=True)
+    print(f"r2 (s): {r2.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f} r2 (J/op): {r2_energy_per_op_j:.3e}", flush=True)
 
     delta_energy_j = r2.power_metric_result.total_energy_j - r1.power_metric_result.total_energy_j
-    delta_dur_ns   = r2.power_metric_result.kernel_duration_gpu_ns - r1.power_metric_result.kernel_duration_gpu_ns
-    pred1 = ar1.predicted_energy_joules
-    pred2 = ar2.predicted_energy_joules
-    delta_pred_j = (pred2 - pred1) if (pred1 is not None and pred2 is not None) else math.nan
-    print(f"  r1={r1.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  r2={r2.power_metric_result.kernel_duration_gpu_ns*1e-9:.2f}s  delta={delta_dur_ns*1e-9:.3f}s", flush=True)
+    err_delta_energy_per_op_j =  abs(r2_energy_per_op_j - r1_energy_per_op_j) / ((r2_energy_per_op_j + r1_energy_per_op_j) / 2) * 100
 
-    isolated_ops = iters_for_subtract * GRID * BLOCK
+
+    print(f"delta energy (J): {delta_energy_j:.3e} delta energy/op (J): {delta_energy_j / (iters * GRID * BLOCK):.3e} err delta energy/op (%): {err_delta_energy_per_op_j:.2f}", flush=True)
 
     print(f"  raw run ({iters} iters)...", flush=True)
-    raw_r, raw_ar = _execute(insn, iters=iters, repeat=1)
-    raw_total_ops = iters * GRID * BLOCK
-    raw_energy_j  = raw_r.power_metric_result.total_energy_j
-    raw_dur_s     = raw_r.power_metric_result.kernel_duration_gpu_ns * 1e-9
-    raw_pred_j    = raw_ar.predicted_energy_joules if raw_ar.predicted_energy_joules is not None else math.nan
 
     return {
         "iters":               iters,
-        "iters_for_subtract":  iters_for_subtract,
-        "raw_total_ops":       raw_total_ops,
 
-        "raw_energy_j":        raw_energy_j,
-        "raw_predicted_j":     raw_pred_j,
-        "raw_duration_s":      raw_dur_s,
-        "raw_energy_per_op_j": raw_energy_j / raw_total_ops,
-        "raw_power_w":         raw_energy_j / raw_dur_s,
-        "raw_rel_error_pct":   abs(raw_energy_j - raw_pred_j) / raw_energy_j * 100 if (raw_energy_j and not math.isnan(raw_pred_j)) else math.nan,
+        "r1_energy_j":              r1.power_metric_result.total_energy_j,
+        "r2_energy_j":              r2.power_metric_result.total_energy_j,
 
-        "sub_energy_j":        delta_energy_j,
-        "sub_predicted_j":     delta_pred_j,
-        "sub_duration_s":      delta_dur_ns * 1e-9,
-        "sub_energy_per_op_j": delta_energy_j / isolated_ops if isolated_ops else 0.0,
-        "sub_power_w":         delta_energy_j / (delta_dur_ns * 1e-9) if delta_dur_ns > 0 else 0.0,
-        "sub_rel_error_pct":   abs(delta_energy_j - delta_pred_j) / delta_energy_j * 100 if (delta_energy_j and not math.isnan(delta_pred_j)) else math.nan,
-
-        "path": raw_r.path,
+        "delta_energy_j":        delta_energy_j,
+        "err_delta_energy_per_op_j": err_delta_energy_per_op_j,
+        
+        "r1_path": r1.path,
+        "r2_path": r2.path,
     }
 
 
@@ -331,19 +318,14 @@ def main():
             continue
 
         results[insn] = r
-        print(f"  raw: {r['raw_energy_per_op_j']:.3e} J/op  {r['raw_power_w']:6.2f} W  {r['raw_duration_s']:5.2f} s  pred err {r['raw_rel_error_pct']:5.1f}%")
-        print(f"  sub: {r['sub_energy_per_op_j']:.3e} J/op  {r['sub_power_w']:6.2f} W  {r['sub_duration_s']:5.2f} s  pred err {r['sub_rel_error_pct']:5.1f}%")
 
     print("\n\n" + "=" * 90)
-    print(f"{'instruction':<16} {'raw J/op':>14} {'sub J/op':>14} {'raw W':>8} {'raw s':>7} {'sub err%':>10}")
+    print(f"{'instruction':<16} {'delta J/op':>14} {'delta W':>8} {'delta s':>7} {'delta err%':>10}")
     print("=" * 90)
     for insn, r in results.items():
         print(f"{insn:<16} "
-              f"{r['raw_energy_per_op_j']:>14.3e} "
-              f"{r['sub_energy_per_op_j']:>14.3e} "
-              f"{r['raw_power_w']:>8.2f} "
-              f"{r['raw_duration_s']:>7.2f} "
-              f"{r['sub_rel_error_pct']:>10.1f}")
+              f"{r['err_delta_energy_per_op_j']:>8.2f} "
+        )
 
     out_path = Path(WEIGHTS_PATH)
     with out_path.open("w", newline="") as f:
@@ -351,13 +333,13 @@ def main():
         writer.writeheader()
         for insn, r in results.items():
             kernel_name = insn.replace(".", "_")
-            count = r["raw_total_ops"]
+            count = r["iters"] * GRID * BLOCK # Total instructions is iters * threads, and we have 1 instruction per thread per iteration
             writer.writerow({
                 "kernel_name":              kernel_name,
                 "instruction":              insn,
                 "count":                    count,
                 "total_instructions":       count,
-                "power_consumption_joules": r["raw_energy_j"],
+                "power_consumption_joules": r["delta_energy_j"],
             })
     print(f"\nwrote {len(results)} rows to {out_path}")
 
