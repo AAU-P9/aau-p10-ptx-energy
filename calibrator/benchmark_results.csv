@@ -1,0 +1,1 @@
+kernel_name,block_dim,grid_dim,actual_power_joules,predicted_power_joules,kernel_duration_cpu_s

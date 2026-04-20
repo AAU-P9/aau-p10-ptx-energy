@@ -4,6 +4,8 @@ from typing import Any
 import pandas as pd
 from scipy import integrate
 
+from cubindings_types import ExportJSONResponse
+
 
 @dataclass
 class PowerMetricsResult:
@@ -156,7 +158,7 @@ def _parse_output_exports(exports: Any) -> dict[str, Any]:
     }
 
 
-def extract_power_metrics(path: Path, exports: Any) -> PowerMetricsResult:
+def extract_power_metrics(path: Path, exports: ExportJSONResponse) -> PowerMetricsResult:
     """Extract power metrics from GPU data.
 
     Args:

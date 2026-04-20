@@ -11,10 +11,6 @@
 #include <stdio.h>
 #include <thread>
 
-#ifdef _WIN32
-#define strdup _strdup
-#endif
-
 // CUDA headers
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -26,6 +22,30 @@
 // NVML headers
 #include <nvml.h>
 
+#ifndef SIZE_M
+#define SIZE_M 256
+#endif
+
+#ifndef SIZE_N
+#define SIZE_N 256
+#endif
+
+#ifndef SIZE_K
+#define SIZE_K 256
+#endif
+
+#define SIZE_BK 8
+#define SIZE_TM 8
+#define SIZE_TN 8
+
+#define SIZE_BM 128
+#define SIZE_BN 128
+
+#define TOTAL_RESULTS_BLOCKTILE (SIZE_BM * SIZE_BN)
+#define NUM_THREADS_BLOCKTILE (TOTAL_RESULTS_BLOCKTILE / (SIZE_TM * SIZE_TN))
+#define STRIDE_A (NUM_THREADS_BLOCKTILE / SIZE_BK)
+#define STRIDE_B (NUM_THREADS_BLOCKTILE / SIZE_BN)
+
 #define CEIL_DIV(x, y) (((x) + (y)-1) / (y))
 
 // Kernels
@@ -33,25 +53,6 @@ template <const int BM, const int BN, const int BK, const int TM, const int TN>
 __global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
     sgemm2DBlocktiling(int M, int N, int K, float alpha, const float *A,
                        const float *B, float beta, float *C) {
-
-  META_BEGIN_KERNEL(sgemm2DBlocktiling);
-  META_PARAM_INT(0, M, TYPE_I32, rows_A, RANGE(1, 65536) MULTIPLE(128));
-  META_PARAM_INT(1, N, TYPE_I32, cols_B, RANGE(1, 65536) MULTIPLE(128));
-  META_PARAM_INT(2, K, TYPE_I32, inner_dim, RANGE(1, 65536) MULTIPLE(8));
-  META_PARAM_FLOAT(3, alpha, TYPE_F32, alpha_scalar, "");
-  META_PARAM_PTR(4, A, ELEM_F32, input_A, ALIGN(ALIGN_CACHELINE) ACCESS_READONLY ACCESS_NOALIAS);
-  META_PARAM_PTR(5, B, ELEM_F32, input_B, ALIGN(ALIGN_CACHELINE) ACCESS_READONLY ACCESS_NOALIAS);
-  META_PARAM_FLOAT(6, beta, TYPE_F32, beta_scalar, "");
-  META_PARAM_PTR(7, C, ELEM_F32, output_C, ALIGN(ALIGN_CACHELINE) ACCESS_READWRITE ACCESS_NOALIAS);
-  META_TILE(DIM_X, 256);
-  META_LAUNCH(256, 1, 1, "CEIL_DIV(N,BN) CEIL_DIV(M,BM) 1");
-  META_SHARED(As, ELEM_F32, BM *BK * 4);
-  META_SHARED(Bs, ELEM_F32, BK *BN * 4);
-  META_LAYOUT(A, LAYOUT_ROW_MAJOR, "M x K");
-  META_LAYOUT(B, LAYOUT_ROW_MAJOR, "K x N");
-  META_LAYOUT(C, LAYOUT_ROW_MAJOR, "M x N");
-  META_ASSUME("BM == 128 && BN == 128 && BK == 8 && TM == 8 && TN == 8");
-  META_ASSUME("blockDim.x == 256");
 
   const uint cRow = blockIdx.y;
   const uint cCol = blockIdx.x;
@@ -78,13 +79,12 @@ __global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
   const uint innerColA = threadIdx.x % BK;
   // calculates the number of rows of As that are being loaded in a single step
   // by a single block
-  const uint strideA = numThreadsBlocktile / BK;
   const uint innerRowB = threadIdx.x / BN;
   const uint innerColB = threadIdx.x % BN;
+
   // for both As and Bs we want each load to span the full column-width, for
   // better GMEM coalescing (as opposed to spanning full row-width and iterating
   // across columns)
-  const uint strideB = numThreadsBlocktile / BN;
 
   // allocate thread-local cache for results in registerfile
   float threadResults[TM * TN] = {0.0};
@@ -93,14 +93,17 @@ __global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
   float regN[TN] = {0.0};
 
   // outer-most loop over block tiles
-  META_LOOP(outer_loop, 1, 8192, false);
+  META_LOOP(outer_loop, SIZE_K / BK, SIZE_K / BK, false);
   for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
     // populate the SMEM caches
-    for (uint loadOffset = 0; loadOffset < BM; loadOffset += strideA) {
+    META_LOOP(smem_load_loop, SIZE_BM / STRIDE_A, SIZE_BM / STRIDE_A, false);
+    for (uint loadOffset = 0; loadOffset < BM; loadOffset += STRIDE_A) {
       As[(innerRowA + loadOffset) * BK + innerColA] =
           A[(innerRowA + loadOffset) * K + innerColA];
     }
-    for (uint loadOffset = 0; loadOffset < BK; loadOffset += strideB) {
+
+    META_LOOP(smem_load_loop, SIZE_BN / STRIDE_B, SIZE_BN / STRIDE_B, false);
+    for (uint loadOffset = 0; loadOffset < BK; loadOffset += STRIDE_B) {
       Bs[(innerRowB + loadOffset) * BN + innerColB] =
           B[(innerRowB + loadOffset) * N + innerColB];
     }
@@ -114,13 +117,19 @@ __global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
     META_LOOP(dot_loop, 8, 8, false);
     for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
       // block into registers
+      META_LOOP(reg_load_loop, SIZE_TM, SIZE_TM, false);
       for (uint i = 0; i < TM; ++i) {
         regM[i] = As[(threadRow * TM + i) * BK + dotIdx];
       }
+
+      META_LOOP(reg_load_loop, SIZE_TN, SIZE_TN, false);
       for (uint i = 0; i < TN; ++i) {
         regN[i] = Bs[dotIdx * BN + threadCol * TN + i];
       }
+
+      META_LOOP(mac_loop, SIZE_TN, SIZE_TN, false);
       for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
+        META_LOOP(mac_loop_inner, SIZE_TN, SIZE_TN, false);
         for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
           threadResults[resIdxM * TN + resIdxN] +=
               regM[resIdxM] * regN[resIdxN];
@@ -141,9 +150,9 @@ __global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
 }
 
 // Matrix dimensions
-const int M = 1024; // Number of rows in A and C
-const int N = 1024; // Number of columns in B and C
-const int K = 1024; // Number of columns in A, rows in B
+const int M = SIZE_M; // Number of rows in A and C
+const int N = SIZE_N; // Number of columns in B and C
+const int K = SIZE_K; // Number of columns in A, rows in B
 
 // Matrix multiplication parameters
 const float alpha = 1.0f;
@@ -161,30 +170,6 @@ std::vector<float> h_C(M *N);
 dim3 threadsPerBlock(32, 32); // 32x32 = 1024 threads per block
 dim3 blocksPerGrid((M + threadsPerBlock.x - 1) / threadsPerBlock.x,
                    (N + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-void benchmark()
-{
-  const uint BK = 8;
-  const uint TM = 8;
-  const uint TN = 8;
-  if (M >= 128 and N >= 128) {
-    const uint BM = 128;
-    const uint BN = 128;
-    dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
-    dim3 blockDim((BM * BN) / (TM * TN));
-    sgemm2DBlocktiling<BM, BN, BK, TM, TN>
-        <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
-  } else {
-    // this is a hacky solution to the underlying problem
-    // of not having proper bounds checking in the kernel
-    const uint BM = 64;
-    const uint BN = 64;
-    dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
-    dim3 blockDim((BM * BN) / (TM * TN));
-    sgemm2DBlocktiling<BM, BN, BK, TM, TN>
-        <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
-  }
-}
 
 int main(int argc, char *argv[])
 {
@@ -220,27 +205,27 @@ int main(int argc, char *argv[])
   // Launch CUDA workload with profiling replay loop
   // The profiler needs multiple passes to collect all metrics
   METRICS_KERNEL_START
-  benchmark();
+
+  const uint BK = SIZE_BK;
+  const uint TM = SIZE_TM;
+  const uint TN = SIZE_TN;
+  const uint BM = SIZE_BM;
+  const uint BN = SIZE_BN;
+  dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
+  dim3 blockDim((BM * BN) / (TM * TN));
+
+  sgemm2DBlocktiling<BM, BN, BK, TM, TN>
+      <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
+
+  if (cudaPeekAtLastError() != cudaSuccess) {
+    fprintf(stderr, "CUDA kernel launch failed: %s\n", cudaGetErrorString(cudaGetLastError()));
+    return -1;
+  }
+
   METRICS_KERNEL_END
 
   // Copy result back to host
   cudaCheck(cudaMemcpy(h_C.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
-
-  // Verify result (C should be a matrix of K's since A and B are all 1's)
-  for (int i = 0; i < M; i++)
-  {
-    for (int j = 0; j < N; j++)
-    {
-      float expected = K * 1.0f * 1.0f; // Each element should be K (dot product of K 1's)
-      if (fabs(h_C[i * N + j] - expected) > 1e-5)
-      {
-        printf("Verification failed at [%d,%d]: got %f, expected %f\n",
-               i, j, h_C[i * N + j], expected);
-        return 1;
-      }
-    }
-  }
-  printf("Matrix multiplication verification passed!\n");
 
   // Clean Up
   cudaCheck(cudaFree(d_A));

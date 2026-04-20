@@ -8,9 +8,16 @@ import shutil
 import re
 from dataclasses import dataclass
 from power import extract_power_metrics, PowerMetricsResult
+from cubindings_types import ExportJSONResponse
 import json
 
-    
+def extract_exports_from_path(path: Path) -> ExportJSONResponse:
+    output_json = path / "output.json"
+    if output_json.exists():
+        with output_json.open("r") as f:
+            exports = json.load(f)
+    return exports
+
 def _resolve_pmd2_cli_path() -> str | None:
     env_path = os.environ.get("PMD2_CLI_PATH")
     if env_path:
@@ -102,15 +109,17 @@ def execute_program(
     binary_args: list[str] = [],
     enable_compilation: bool = True,
     enable_metrics: bool = True,
+    enable_temp: bool =True,
     metrics_sleep_time: int = 5,
     program_name: str = "program.cu",
     debug: bool = False,
 ) -> ExecutionResult:   
     pipe = sys.stdout if debug else subprocess.PIPE
 
-    tmp_dir = Path(f"/tmp/{time.time()}")
-    shutil.copytree(path, tmp_dir)
-    path = tmp_dir
+    if enable_temp:
+        tmp_dir = Path(f"/tmp/{time.time()}")
+        shutil.copytree(path, tmp_dir)
+        path = tmp_dir
 
     program_file = path / program_name
 
@@ -239,11 +248,13 @@ def execute_program(
             check=False,
         )
 
+        print("Reading exports from output.json...")
+        
         # Read the output.json file to get the exported variables
-        output_json = path / "output.json"
-        if output_json.exists():
-            with output_json.open("r") as f:
-                exports = json.load(f)
+        exports = extract_exports_from_path(path)
+
+        print(f"Program output:\n{execution_process.stdout}")
+        
     finally:
         if enable_metrics:
             _terminate_process_group(monitor_process)
