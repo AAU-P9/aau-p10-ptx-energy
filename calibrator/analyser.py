@@ -229,6 +229,8 @@ def run_analyser(
             if analyser_output_json.exists():
                 with analyser_output_json.open("r") as f:
                     analyser_result = AnalyserResult.from_dict(json.loads(f.read()))
+            else:
+                print(f"[Warning]: Analyser output file not found at {analyser_output_json}", file=sys.stderr)
 
         except Exception as e:
             print(f"[Warning] Failed to start ptx-analyser: {e}", file=sys.stderr)
@@ -238,6 +240,10 @@ def run_analyser(
     if prediction:
         parent_dir = Path(__file__).parents[1]
         linear_model_output_path = output_path / "linear_model_output.json"
+
+        if not linear_model_output_path.exists():
+            print(f"[Warning] Linear model output file not found at {linear_model_output_path}, linear model will not be run", file=sys.stderr)
+
         cmd = [
             (
                 f"uv run linear-model/linear-model.py "

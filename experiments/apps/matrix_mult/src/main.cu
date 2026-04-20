@@ -6,7 +6,7 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
-#define ITERATIONS 100000
+#define ITERATIONS 1000000
 
 #ifndef SIZE_M
 #define SIZE_M 256
@@ -29,7 +29,7 @@ __global__ void matrix_mul(float *A, float *B, float *C, int M, int N, int K) {
         float sum = 0.0f;
 
         if (row < M && col < K) {
-            META_LOOP(inner_loop, N, N, false);
+            META_LOOP(inner_loop, SIZE_N, SIZE_N, false);
             for (int i = 0; i < N; i++) {
                 sum += A[row * N + i] * B[i * K + col];
             }

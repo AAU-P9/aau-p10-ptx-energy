@@ -73,6 +73,22 @@ def execute_program_cached(path: Path, program_name: str, nvcc_args: list[str] =
         exports = extract_exports_from_path(program_artifact)
         power_metric_result = extract_power_metrics(path=program_artifact, exports=exports)
     else:
+        # Clear the artifact folder if it exists to ensure a clean state
+        if program_artifact.exists():
+            for item in program_artifact.iterdir():
+                if item.is_file():
+                    item.unlink()
+                elif item.is_dir():
+                    # Recursively delete directories if needed
+                    for sub_item in item.iterdir():
+                        if sub_item.is_file():
+                            sub_item.unlink()
+                        elif sub_item.is_dir():
+                            # Handle nested directories if necessary
+                            pass
+                    item.rmdir()
+            program_artifact.rmdir()
+
         # Copy the benchmark to artifacts
         program_artifact.mkdir(parents=True, exist_ok=True)
         for item in path.iterdir():
@@ -117,11 +133,11 @@ def execute_program_cached(path: Path, program_name: str, nvcc_args: list[str] =
 size = 32
 nvcc_args = [f"-DSIZE_M={size}", f"-DSIZE_N=32", f"-DSIZE_K=32"] # NOTE: Do not increase SIZE_N and SIZE_K as this will increase the runtime significantly
 program_name = "main.cu"
-program_path = Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src") 
+program_path = Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling") 
 cached_program_result = execute_program_cached(path=program_path, program_name=program_name, nvcc_args=nvcc_args)
-# analysis_result = run_analyser(cached_program_result.path, weights_path, debug=debug_enabled, nvcc_args=nvcc_args, program_name=program_name)
+analysis_result = run_analyser(cached_program_result.path, weights_path, debug=debug_enabled, nvcc_args=nvcc_args, program_name=program_name)
 
-# concat_results("matrix_mult", cached_program_result.power_metric_result, analysis_result)
+concat_results("matrix_mult", cached_program_result.power_metric_result, analysis_result)
 
 
 # Write the CSV

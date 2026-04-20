@@ -248,6 +248,14 @@ def execute_program(
             check=False,
         )
 
+        if execution_process.returncode != 0:
+            print(
+                "[WARNING]: Program execution failed:\n"
+                f"{' '.join(bin_cmd)}\n"
+                f"{(execution_process.stderr or '').strip()}",
+                file=sys.stderr,
+            )
+
         print("Reading exports from output.json...")
         
         # Read the output.json file to get the exported variables

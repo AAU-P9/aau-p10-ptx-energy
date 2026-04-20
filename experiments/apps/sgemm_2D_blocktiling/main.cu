@@ -16,11 +16,12 @@
 #include <cuda_runtime.h>
 #include "ptx_meta.h"
 #include <vector>
-#include "../../include/simple_cuda_utils.h"
 #include "cupti_timing.h"
 
 // NVML headers
 #include <nvml.h>
+
+#define ITERATIONS 1
 
 #ifndef SIZE_M
 #define SIZE_M 256
@@ -50,101 +51,102 @@
 
 // Kernels
 template <const int BM, const int BN, const int BK, const int TM, const int TN>
-__global__ void __launch_bounds__((BM * BN) / (TM * TN), 1)
-    sgemm2DBlocktiling(int M, int N, int K, float alpha, const float *A,
+__global__ void sgemm2DBlocktiling(int M, int N, int K, float alpha, const float *A,
                        const float *B, float beta, float *C) {
+  META_LOOP(spam_loop, ITERATIONS, ITERATIONS, false);
+  for (uint iter = 0; iter < ITERATIONS; ++iter) {
+    const uint cRow = blockIdx.y;
+    const uint cCol = blockIdx.x;
 
-  const uint cRow = blockIdx.y;
-  const uint cCol = blockIdx.x;
+    const uint totalResultsBlocktile = BM * BN;
+    // A thread is responsible for calculating TM*TN elements in the blocktile
+    const uint numThreadsBlocktile = totalResultsBlocktile / (TM * TN);
 
-  const uint totalResultsBlocktile = BM * BN;
-  // A thread is responsible for calculating TM*TN elements in the blocktile
-  const uint numThreadsBlocktile = totalResultsBlocktile / (TM * TN);
+    // BN/TN are the number of threads to span a column
+    const int threadCol = threadIdx.x % (BN / TN);
+    const int threadRow = threadIdx.x / (BN / TN);
 
-  // BN/TN are the number of threads to span a column
-  const int threadCol = threadIdx.x % (BN / TN);
-  const int threadRow = threadIdx.x / (BN / TN);
+    // allocate space for the current blocktile in smem
+    __shared__ float As[BM * BK];
+    __shared__ float Bs[BK * BN];
 
-  // allocate space for the current blocktile in smem
-  __shared__ float As[BM * BK];
-  __shared__ float Bs[BK * BN];
+    // Move blocktile to beginning of A's row and B's column
+    A += cRow * BM * K;
+    B += cCol * BN;
+    C += cRow * BM * N + cCol * BN;
 
-  // Move blocktile to beginning of A's row and B's column
-  A += cRow * BM * K;
-  B += cCol * BN;
-  C += cRow * BM * N + cCol * BN;
+    // calculating the indices that this thread will load into SMEM
+    const uint innerRowA = threadIdx.x / BK;
+    const uint innerColA = threadIdx.x % BK;
+    // calculates the number of rows of As that are being loaded in a single step
+    // by a single block
+    const uint innerRowB = threadIdx.x / BN;
+    const uint innerColB = threadIdx.x % BN;
 
-  // calculating the indices that this thread will load into SMEM
-  const uint innerRowA = threadIdx.x / BK;
-  const uint innerColA = threadIdx.x % BK;
-  // calculates the number of rows of As that are being loaded in a single step
-  // by a single block
-  const uint innerRowB = threadIdx.x / BN;
-  const uint innerColB = threadIdx.x % BN;
+    // for both As and Bs we want each load to span the full column-width, for
+    // better GMEM coalescing (as opposed to spanning full row-width and iterating
+    // across columns)
 
-  // for both As and Bs we want each load to span the full column-width, for
-  // better GMEM coalescing (as opposed to spanning full row-width and iterating
-  // across columns)
+    // allocate thread-local cache for results in registerfile
+    float threadResults[TM * TN] = {0.0};
+    // register caches for As and Bs
+    float regM[TM] = {0.0};
+    float regN[TN] = {0.0};
 
-  // allocate thread-local cache for results in registerfile
-  float threadResults[TM * TN] = {0.0};
-  // register caches for As and Bs
-  float regM[TM] = {0.0};
-  float regN[TN] = {0.0};
-
-  // outer-most loop over block tiles
-  META_LOOP(outer_loop, SIZE_K / BK, SIZE_K / BK, false);
-  for (uint bkIdx = 0; bkIdx < K; bkIdx += BK) {
-    // populate the SMEM caches
-    META_LOOP(smem_load_loop, SIZE_BM / STRIDE_A, SIZE_BM / STRIDE_A, false);
-    for (uint loadOffset = 0; loadOffset < BM; loadOffset += STRIDE_A) {
-      As[(innerRowA + loadOffset) * BK + innerColA] =
-          A[(innerRowA + loadOffset) * K + innerColA];
-    }
-
-    META_LOOP(smem_load_loop, SIZE_BN / STRIDE_B, SIZE_BN / STRIDE_B, false);
-    for (uint loadOffset = 0; loadOffset < BK; loadOffset += STRIDE_B) {
-      Bs[(innerRowB + loadOffset) * BN + innerColB] =
-          B[(innerRowB + loadOffset) * N + innerColB];
-    }
-    __syncthreads();
-
-    // advance blocktile
-    A += BK;     // move BK columns to right
-    B += BK * N; // move BK rows down
-
-    // calculate per-thread results
-    META_LOOP(dot_loop, 8, 8, false);
-    for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
-      // block into registers
-      META_LOOP(reg_load_loop, SIZE_TM, SIZE_TM, false);
-      for (uint i = 0; i < TM; ++i) {
-        regM[i] = As[(threadRow * TM + i) * BK + dotIdx];
+    // outer-most loop over block tiles
+    META_LOOP(outer_loop, SIZE_K / SIZE_BK, SIZE_K / SIZE_BK, false);
+    for (uint bkIdx = 0; bkIdx < K; bkIdx += SIZE_BK) {
+      // populate the SMEM caches
+      META_LOOP(smem_load_loop, SIZE_BM / STRIDE_A, SIZE_BM / STRIDE_A, false);
+      for (uint loadOffset = 0; loadOffset < SIZE_BM; loadOffset += STRIDE_A) {
+        As[(innerRowA + loadOffset) * SIZE_BK + innerColA] =
+            A[(innerRowA + loadOffset) * K + innerColA];
       }
 
-      META_LOOP(reg_load_loop, SIZE_TN, SIZE_TN, false);
-      for (uint i = 0; i < TN; ++i) {
-        regN[i] = Bs[dotIdx * BN + threadCol * TN + i];
+      META_LOOP(smem_load_loop, SIZE_BN / STRIDE_B, SIZE_BN / STRIDE_B, false);
+      for (uint loadOffset = 0; loadOffset < SIZE_BK; loadOffset += STRIDE_B) {
+        Bs[(innerRowB + loadOffset) * SIZE_BN + innerColB] =
+            B[(innerRowB + loadOffset) * N + innerColB];
       }
+      __syncthreads();
 
-      META_LOOP(mac_loop, SIZE_TN, SIZE_TN, false);
-      for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
-        META_LOOP(mac_loop_inner, SIZE_TN, SIZE_TN, false);
-        for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
-          threadResults[resIdxM * TN + resIdxN] +=
-              regM[resIdxM] * regN[resIdxN];
+      // advance blocktile
+      A += BK;     // move BK columns to right
+      B += BK * N; // move BK rows down
+
+      // calculate per-thread results
+      META_LOOP(dot_loop, 8, 8, false);
+      for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
+        // block into registers
+        META_LOOP(reg_load_loop, SIZE_TM, SIZE_TM, false);
+        for (uint i = 0; i < TM; ++i) {
+          regM[i] = As[(threadRow * TM + i) * BK + dotIdx];
+        }
+
+        META_LOOP(reg_load_loop, SIZE_TN, SIZE_TN, false);
+        for (uint i = 0; i < TN; ++i) {
+          regN[i] = Bs[dotIdx * BN + threadCol * TN + i];
+        }
+
+        META_LOOP(mac_loop, SIZE_TN, SIZE_TN, false);
+        for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
+          META_LOOP(mac_loop_inner, SIZE_TN, SIZE_TN, false);
+          for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
+            threadResults[resIdxM * TN + resIdxN] +=
+                regM[resIdxM] * regN[resIdxN];
+          }
         }
       }
+      __syncthreads();
     }
-    __syncthreads();
-  }
 
-  // write out the results
-  for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
-    for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
-      C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN] =
-          alpha * threadResults[resIdxM * TN + resIdxN] +
-          beta * C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN];
+    // write out the results
+    for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
+      for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
+        C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN] =
+            alpha * threadResults[resIdxM * TN + resIdxN] +
+            beta * C[(threadRow * TM + resIdxM) * N + threadCol * TN + resIdxN];
+      }
     }
   }
 }
@@ -193,14 +195,14 @@ int main(int argc, char *argv[])
   std::fill(h_C.begin(), h_C.end(), 0.0f); // Initialize C with zeros
 
   // Allocate device memory
-  cudaCheck(cudaMalloc((void **)&d_A, M * K * sizeof(float)));
-  cudaCheck(cudaMalloc((void **)&d_B, K * N * sizeof(float)));
-  cudaCheck(cudaMalloc((void **)&d_C, M * N * sizeof(float)));
+  cudaMalloc((void **)&d_A, M * K * sizeof(float));
+  cudaMalloc((void **)&d_B, K * N * sizeof(float));
+  cudaMalloc((void **)&d_C, M * N * sizeof(float));
 
   // Copy matrices from host to device
-  cudaCheck(cudaMemcpy(d_A, h_A.data(), M * K * sizeof(float), cudaMemcpyHostToDevice));
-  cudaCheck(cudaMemcpy(d_B, h_B.data(), K * N * sizeof(float), cudaMemcpyHostToDevice));
-  cudaCheck(cudaMemcpy(d_C, h_C.data(), M * N * sizeof(float), cudaMemcpyHostToDevice));
+  cudaMemcpy(d_A, h_A.data(), M * K * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_B, h_B.data(), K * N * sizeof(float), cudaMemcpyHostToDevice);
+  cudaMemcpy(d_C, h_C.data(), M * N * sizeof(float), cudaMemcpyHostToDevice);
 
   // Launch CUDA workload with profiling replay loop
   // The profiler needs multiple passes to collect all metrics
@@ -214,23 +216,33 @@ int main(int argc, char *argv[])
   dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
   dim3 blockDim((BM * BN) / (TM * TN));
 
-  sgemm2DBlocktiling<BM, BN, BK, TM, TN>
-      <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
+  printf("Launching kernel with gridDim (%d, %d) and blockDim (%d, %d)\n", gridDim.x, gridDim.y, blockDim.x, blockDim.y);
 
-  if (cudaPeekAtLastError() != cudaSuccess) {
-    fprintf(stderr, "CUDA kernel launch failed: %s\n", cudaGetErrorString(cudaGetLastError()));
-    return -1;
+  sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
+
+  cudaError_t launchErr = cudaGetLastError();
+  if (launchErr != cudaSuccess) {
+      printf("[ERROR] Failed to launch sgemm2DBlocktiling kernel (error code %s)!\n", cudaGetErrorString(launchErr));
+      return -1;
   }
+
+  cudaError_t syncErr = cudaDeviceSynchronize();
+  if (syncErr != cudaSuccess) {
+      printf("[ERROR] sgemm2DBlocktiling kernel failed at runtime (error code %s)!\n", cudaGetErrorString(syncErr));
+      return -1;
+  }
+
+  printf("Kernel completed\n");
 
   METRICS_KERNEL_END
 
   // Copy result back to host
-  cudaCheck(cudaMemcpy(h_C.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost));
+  cudaMemcpy(h_C.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);
 
   // Clean Up
-  cudaCheck(cudaFree(d_A));
-  cudaCheck(cudaFree(d_B));
-  cudaCheck(cudaFree(d_C));
+  cudaFree(d_A);
+  cudaFree(d_B);
+  cudaFree(d_C);
 
   return 0;
 }
