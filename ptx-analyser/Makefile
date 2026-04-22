@@ -9,7 +9,7 @@ build:
 	$(CARGO) build
 
 release:
-	$(CARGO) build --release
+	$(CARGO) build
 
 install: release
 	sudo install -m 755 target/release/$(BIN_NAME) $(BINDIR)/$(BIN_NAME)
