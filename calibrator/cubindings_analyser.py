@@ -31,7 +31,6 @@ class Dim3:
 @dataclass
 class AnalyserResult:
     kernel_name: str | None
-    power_consumption_joules: float | None
     grid_dim: Dim3
     block_dim: Dim3
     parameters: list
@@ -43,7 +42,6 @@ class AnalyserResult:
         power = data.get("powerConsumptionJoules")
         return AnalyserResult(
             kernel_name=data.get("kernelName"),
-            power_consumption_joules=(float(power) if power is not None else None),
             grid_dim=Dim3.from_dict(data.get("gridDim", {})),
             block_dim=Dim3.from_dict(data.get("blockDim", {})),
             parameters=data.get("parameters", []),
@@ -57,7 +55,6 @@ class AnalyserResult:
     def to_dict(self) -> dict:
         return {
             "kernelName": self.kernel_name,
-            "powerConsumptionJoules": self.power_consumption_joules,
             "gridDim": self.grid_dim.to_dict(),
             "blockDim": self.block_dim.to_dict(),
             "parameters": self.parameters,
@@ -69,9 +66,9 @@ def run_ptx_analyser(
     output_path: Path,
     kernel_params: str,
     program_name="program.cu",
-    debug: bool = False
+    debug_enabled: bool = False
 ) -> AnalyserResult:
-    pipe = sys.stdout if debug else subprocess.PIPE
+    pipe = sys.stdout if debug_enabled else subprocess.PIPE
 
     analyser_result = None
     
@@ -87,7 +84,6 @@ def run_ptx_analyser(
                     str(output_path / program_name.replace(".cu", ".ptx")),
                 ]
             
-            print("cmd", " ".join(cmd))
             # Run analyser and print full output so failures are visible.
             subprocess.run(
                 cmd,

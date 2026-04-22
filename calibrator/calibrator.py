@@ -7,7 +7,7 @@ import threading
 import time
 
 from cubindings import execute_code
-from analyser import run_analyser
+from calibrator.cubindings_analyser import run_analyser
 
 # ============================================================================
 # Configuration

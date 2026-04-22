@@ -18,7 +18,8 @@ def execute_program_cached(
     program_artifact = artifacts_path / folder_name
     
     if (program_artifact / "output.json").exists():
-        print("[INFO] Found cached artifact for program, skipping execution.")
+        if debug_enabled:
+            print("[INFO] Found cached artifact for program, skipping execution.")
 
         exports = extract_exports_from_path(program_artifact)
         power_metric_result = extract_power_metrics(path=program_artifact, exports=exports)

@@ -220,6 +220,13 @@ int main(int argc, char *argv[])
 
   sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
 
+  EXPORT_N("gridDim_x", gridDim.x);
+  EXPORT_N("gridDim_y", gridDim.y);
+  EXPORT_N("gridDim_z", gridDim.z);
+  EXPORT_N("blockDim_x", blockDim.x);
+  EXPORT_N("blockDim_y", blockDim.y);
+  EXPORT_N("blockDim_z", blockDim.z);
+  
   cudaError_t launchErr = cudaGetLastError();
   if (launchErr != cudaSuccess) {
       printf("[ERROR] Failed to launch sgemm2DBlocktiling kernel (error code %s)!\n", cudaGetErrorString(launchErr));

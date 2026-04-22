@@ -7,7 +7,7 @@ from pathlib import Path
 import shutil
 import re
 from dataclasses import dataclass
-from power import extract_power_metrics, PowerMetricsResult
+from cubindings_power import extract_power_metrics, PowerMetricsResult
 from cubindings_types import ExportJSONResponse
 import json
 
@@ -33,7 +33,7 @@ def _resolve_pmd2_cli_path() -> str | None:
 class ExecutionResult:
     output: str
     error: str
-    exports: dict[str, str]
+    exports: ExportJSONResponse
     returncode: int
     path: Path
     power_metric_result: PowerMetricsResult = None
@@ -256,12 +256,8 @@ def execute_program(
                 file=sys.stderr,
             )
 
-        print("Reading exports from output.json...")
-        
         # Read the output.json file to get the exported variables
         exports = extract_exports_from_path(path)
-
-        print(f"Program output:\n{execution_process.stdout}")
         
     finally:
         if enable_metrics:

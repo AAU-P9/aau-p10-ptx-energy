@@ -61,7 +61,7 @@ class LinearModelOutput:
             "estimates": [estimate.to_dict() for estimate in self.estimates],
         }
 
-def run_predictor(output_path: Path, weights_path: Path, debug_enabled: bool = False) -> None:
+def run_predictor(output_path: Path, weights_path: Path, debug_enabled: bool = False) -> LinearModelOutput:
         pipe = sys.stdout if debug_enabled else subprocess.PIPE
         
         parent_dir = Path(__file__).parents[1]
@@ -89,16 +89,10 @@ def run_predictor(output_path: Path, weights_path: Path, debug_enabled: bool = F
                 text=True
             )
         
-            total_energy_match = re.search(r"\[TOTAL\]\s+([\d\.eE+-]+)", linear_model_result.stdout)
-            if total_energy_match:
-                total_energy_j = float(total_energy_match.group(1))
-            else:
-                print("Warning: Could not find total energy in linear model output", file=sys.stderr)
-
             if linear_model_output_path.exists():
                 with linear_model_output_path.open("r", encoding="utf-8") as handle:
                     linear_model_output = LinearModelOutput.from_dict(json.loads(handle.read()))
+                    return linear_model_output
 
         except Exception as e:
             print(f"[Warning] Failed to run linear model: {e}", file=sys.stderr)
-
