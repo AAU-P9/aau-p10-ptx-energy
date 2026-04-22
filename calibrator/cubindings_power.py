@@ -167,6 +167,7 @@ def extract_power_metrics(path: Path, exports: ExportJSONResponse) -> PowerMetri
     Returns:
         PowerMetrics object containing calculated metrics
     """
+
     # Parse timing information from output.json exports
     output_info = _parse_output_exports(exports)
     if output_info["kernel_duration"] <= 0.0:

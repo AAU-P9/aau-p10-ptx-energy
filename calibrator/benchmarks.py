@@ -1,18 +1,25 @@
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from cubindings_analyser import AnalyserResult, run_ptx_analyser
-from cubindings_power import PowerMetricsResult 
-from cubindings_cache import execute_program_cached
-from cubindings_predictor import run_predictor
+from dataclasses import dataclass
 import csv
+import json
+from pathlib import Path
+from typing import Callable
 
-benchmark_prefix = "benchmark_" # Only change this if you want to invalidate the cache 
+from cubindings import ExecutionResult
+from cubindings_analyser import AnalyserResult, run_ptx_analyser
+from cubindings_cache import execute_program_cached
+from cubindings_predictor import LinearModelOutput, run_predictor
+from cubindings_power import PowerMetricsResult
+
+benchmark_prefix = "benchmark_"  # Only change this if you want to invalidate the cache
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
 
-csv_results = []
+csv_results: list["CSVResult"] = []
+
 
 @dataclass
 class CSVResult:
@@ -22,67 +29,10 @@ class CSVResult:
     actual_power_joules: float
     predicted_power_joules: float
     kernel_duration_cpu_s: float = 0.0
-    
-def concat_results(kernel_name: str, power_metric_result: PowerMetricsResult , analysis_result: AnalyserResult) -> CSVResult:
-    actual_power_joules = power_metric_result.total_energy_j
-    predicted_power_joules = analysis_result.predicted_energy_joules
-    kernel_duration_cpu_s = power_metric_result.kernel_duration_cpu_s
-    # instruction_occurrences = analysis_result.linear_model_output.estimates TODO: Maybe add this to CSV output
-    grid_dim = analysis_result.analyser_result.grid_dim
-    block_dim = analysis_result.analyser_result.block_dim
 
-    print (f"Kernel: {kernel_name}, Grid Dim: {grid_dim}, Block Dim: {block_dim}")
-    print(f"Predicted Power (Joules): {predicted_power_joules}")
-    print(f"Actual Power (Joules): {actual_power_joules}")
-    print(f"Error (%): {((1 - (predicted_power_joules/actual_power_joules)) * 100):.2f}")
 
-    total_instructions = sum(estimate.count for estimate in analysis_result.linear_model_output.estimates)
-    print(f"Total Instructions: {total_instructions}")
-
-    for estimate in analysis_result.linear_model_output.estimates:
-        print(f"  {estimate.instruction}: {estimate.count} occurrences, {(estimate.count / total_instructions * 100):.2f}%, {estimate.estimated_power_joules} Joules")
-    
-    csv_results.append(CSVResult(
-        kernel_name=kernel_name,
-        block_dim=block_dim,   
-        grid_dim=grid_dim,
-        actual_power_joules=actual_power_joules,
-        predicted_power_joules=predicted_power_joules,
-        kernel_duration_cpu_s=kernel_duration_cpu_s
-    ))
-
-# vector_add_old
-# problem_sizes = [1024, 2048, 4096, 8192, 16384, 32768, 65536]
-# for size in problem_sizes:
-
-#     nvcc_args = [f"-DSIZE_N={size}"]
-#     program_name="main.cu"
-#     program_path = Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src") 
-#     cached_program_result = execute_program_cached(path=program_path, program_name=program_name, nvcc_args=nvcc_args)
-#     analysis_result = run_analyser(cached_program_result.path, weights_path, debug=debug_enabled, nvcc_args=nvcc_args, program_name=program_name)
-
-#     concat_results("vector_add_old", cached_program_result.power_metric_result, analysis_result)
-
-# matrix_mult
-# problem_sizes = [1024, 2048, 4096, 8192, 16384, 32768, 65536]
-# for size in problem_sizes:
-#     nvcc_args = [f"-DSIZE_M={size}", f"-DSIZE_N=32", f"-DSIZE_K=32"] # NOTE: Do not increase SIZE_N and SIZE_K as this will increase the runtime significantly
-#     program_name = "main.cu"
-#     program_path = Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src") 
-#     cached_program_result = execute_program_cached(path=program_path, program_name=program_name, nvcc_args=nvcc_args)
-#     analysis_result = run_analyser(cached_program_result.path, weights_path, debug=debug_enabled, nvcc_args=nvcc_args, program_name=program_name)
-
-#     concat_results("matrix_mult", cached_program_result.power_metric_result, analysis_result)
-
-size = 32
-nvcc_args = [f"-DSIZE_M={size}", f"-DSIZE_N=32", f"-DSIZE_K=32"] # NOTE: Do not increase SIZE_N and SIZE_K as this will increase the runtime significantly
-program_name = "main.cu"
-program_path = Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling") 
-execution_result = execute_program_cached(path=program_path, program_name=program_name, nvcc_args=nvcc_args, debug_enabled=debug_enabled)
-
-analysis_result = run_ptx_analyser(
-    execution_result.path,
-    json.dumps(
+def build_kernel_params(execution_result: ExecutionResult, parameters: list[dict[str, object]]) -> str:
+    return json.dumps(
         {
             "gridDim": {
                 "x": execution_result.exports["gridDim_x"],
@@ -94,32 +44,146 @@ analysis_result = run_ptx_analyser(
                 "y": execution_result.exports["blockDim_y"],
                 "z": execution_result.exports["blockDim_z"],
             },
-            "parameters": [
-                {"name": "matrix_a", "type": "Int64", "size": 8, "value": 12345},
-                {"name": "matrix_b", "type": "Int32", "size": 4, "value": 100},
-            ],
+            "parameters": parameters,
         }
-    ),
-    program_name=program_name, debug_enabled=debug_enabled
-)
-
-predictor_result = run_predictor(execution_result.path, weights_path, debug_enabled=True)
-
-# concat_results("sgemm_2D_blocktiling", cached_program_result.power_metric_result, analysis_result)
+    )
 
 
-# # Write the CSV
-# with open('benchmark_results.csv', mode='w', newline='') as csv_file:
-#     fieldnames = ['kernel_name', 'block_dim', 'grid_dim', 'actual_power_joules', 'predicted_power_joules', 'kernel_duration_cpu_s']
-#     writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+def concat_results(
+    kernel_name: str,
+    power_metric_result: PowerMetricsResult,
+    predictor_result: LinearModelOutput,
+    analysis_result: AnalyserResult,
+) -> CSVResult:
+    actual_power_joules = power_metric_result.total_energy_j
+    predicted_power_joules = predictor_result.total_estimated_power_joules
+    kernel_duration_cpu_s = power_metric_result.kernel_duration_cpu_s
+    grid_dim = analysis_result.grid_dim
+    block_dim = analysis_result.block_dim
 
-#     writer.writeheader()
-#     for result in csv_results:
-#         writer.writerow({
-#             'kernel_name': result.kernel_name,
-#             'block_dim': result.block_dim,
-#             'grid_dim': result.grid_dim,
-#             'actual_power_joules': result.actual_power_joules,
-#             'predicted_power_joules': result.predicted_power_joules,
-#             'kernel_duration_cpu_s': result.kernel_duration_cpu_s
-#         })
+    print(f"Kernel: {kernel_name}, Grid Dim: {grid_dim}, Block Dim: {block_dim}")
+    print(f"Predicted Power (Joules): {predicted_power_joules}")
+    print(f"Actual Power (Joules): {actual_power_joules}")
+
+    if actual_power_joules != 0:
+        print(f"Error (%): {((1 - (predicted_power_joules / actual_power_joules)) * 100):.2f}")
+    else:
+        print("Error (%): n/a")
+
+    total_instructions = sum(estimate.count for estimate in predictor_result.estimates)
+    print(f"Total Instructions: {total_instructions}")
+
+    for estimate in predictor_result.estimates:
+        percentage = (estimate.count / total_instructions * 100) if total_instructions else 0.0
+        print(
+            f"  {estimate.instruction}: {estimate.count} occurrences, "
+            f"{percentage:.2f}%, {estimate.estimated_power_joules} Joules"
+        )
+
+    csv_result = CSVResult(
+        kernel_name=kernel_name,
+        block_dim=block_dim.x,
+        grid_dim=grid_dim.x,
+        actual_power_joules=actual_power_joules,
+        predicted_power_joules=predicted_power_joules,
+        kernel_duration_cpu_s=kernel_duration_cpu_s,
+    )
+    csv_results.append(csv_result)
+    return csv_result
+
+
+def run_benchmarks(
+    kernel_name: str,
+    sizes: list[int],
+    program_path: Path,
+    nvcc_args_builder: Callable[[int], list[str]],
+    parameters_builder: Callable[[ExecutionResult, int], list[dict[str, object]]] | None = None,
+    program_name: str = "main.cu",
+) -> None:
+    for size in sizes:
+        nvcc_args = nvcc_args_builder(size)
+        execution_result = execute_program_cached(
+            path=program_path,
+            program_name=program_name,
+            nvcc_args=nvcc_args,
+            cache_key=f"{benchmark_prefix}{kernel_name}",
+            artifacts_path=artifacts_path,
+            debug_enabled=debug_enabled,
+            force_rebuild=False
+        )
+
+        parameters = parameters_builder(execution_result, size) if parameters_builder else []
+        kernel_params = build_kernel_params(execution_result, parameters)
+
+        analysis_result = run_ptx_analyser(
+            execution_result.path,
+            kernel_params,
+            program_name=program_name,
+            debug_enabled=debug_enabled,
+        )
+        predictor_result = run_predictor(execution_result.path, weights_path, debug_enabled=debug_enabled)
+
+        concat_results(
+            kernel_name,
+            execution_result.power_metric_result,
+            predictor_result,
+            analysis_result,
+        )
+
+
+def write_csv_results(output_path: Path) -> None:
+    with output_path.open(mode="w", newline="", encoding="utf-8") as csv_file:
+        fieldnames = [
+            "kernel_name",
+            "block_dim",
+            "grid_dim",
+            "actual_power_joules",
+            "predicted_power_joules",
+            "kernel_duration_cpu_s",
+        ]
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+
+        writer.writeheader()
+        for result in csv_results:
+            writer.writerow(
+                {
+                    "kernel_name": result.kernel_name,
+                    "block_dim": result.block_dim,
+                    "grid_dim": result.grid_dim,
+                    "actual_power_joules": result.actual_power_joules,
+                    "predicted_power_joules": result.predicted_power_joules,
+                    "kernel_duration_cpu_s": result.kernel_duration_cpu_s,
+                }
+            )
+
+
+def main() -> None:
+    run_benchmarks(
+        kernel_name="vector_add_old",
+        sizes=[1024, 2048, 4096, 8192, 16384],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
+        parameters_builder=lambda execution_result, size: [],
+    )
+
+    run_benchmarks(
+        kernel_name="matrix_mult",
+        sizes=[1024, 2048, 4096, 8192, 16384],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
+        parameters_builder=lambda execution_result, size: [],
+    )
+
+    run_benchmarks(
+        kernel_name="sgemm_2D_blocktiling",
+        sizes=[1024, 2048, 4096, 8192, 16384],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
+        parameters_builder=lambda execution_result, size: [],
+    )
+
+    write_csv_results(Path("benchmark_results.csv"))
+
+
+if __name__ == "__main__":
+    main()

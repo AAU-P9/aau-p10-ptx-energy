@@ -213,19 +213,12 @@ int main(int argc, char *argv[])
   const uint TN = SIZE_TN;
   const uint BM = SIZE_BM;
   const uint BN = SIZE_BN;
-  dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
-  dim3 blockDim((BM * BN) / (TM * TN));
+  dim3 grid_size(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
+  dim3 block_size((BM * BN) / (TM * TN));
 
-  printf("Launching kernel with gridDim (%d, %d) and blockDim (%d, %d)\n", gridDim.x, gridDim.y, blockDim.x, blockDim.y);
+  printf("Launching kernel with gridDim (%d, %d) and blockDim (%d, %d)\n", grid_size.x, grid_size.y, block_size.x, block_size.y);
 
-  sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
-
-  EXPORT_N("gridDim_x", gridDim.x);
-  EXPORT_N("gridDim_y", gridDim.y);
-  EXPORT_N("gridDim_z", gridDim.z);
-  EXPORT_N("blockDim_x", blockDim.x);
-  EXPORT_N("blockDim_y", blockDim.y);
-  EXPORT_N("blockDim_z", blockDim.z);
+  sgemm2DBlocktiling<BM, BN, BK, TM, TN><<<grid_size, block_size>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
   
   cudaError_t launchErr = cudaGetLastError();
   if (launchErr != cudaSuccess) {
@@ -241,7 +234,16 @@ int main(int argc, char *argv[])
 
   printf("Kernel completed\n");
 
+  // Export launch configuration
+  EXPORT_N("gridDim_x", grid_size.x);
+  EXPORT_N("gridDim_y", grid_size.y);
+  EXPORT_N("gridDim_z", grid_size.z);
+  EXPORT_N("blockDim_x", block_size.x);
+  EXPORT_N("blockDim_y", block_size.y);
+  EXPORT_N("blockDim_z", block_size.z);
+
   METRICS_KERNEL_END
+
 
   // Copy result back to host
   cudaMemcpy(h_C.data(), d_C, M * N * sizeof(float), cudaMemcpyDeviceToHost);

@@ -9,6 +9,7 @@ def execute_program_cached(
     cache_key: str = "madsen",
     artifacts_path: Path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts"),
     debug_enabled: bool = False,
+    force_rebuild: bool = False
 ) -> ExecutionResult:
     # Hash the nvcc arguments to create a unique identifier
     file_name = md5(f"{path}{''.join(nvcc_args)}".encode()).hexdigest()
@@ -17,7 +18,7 @@ def execute_program_cached(
     folder_name = f"{cache_key}{file_name}"
     program_artifact = artifacts_path / folder_name
     
-    if (program_artifact / "output.json").exists():
+    if not force_rebuild and (program_artifact / "output.json").exists():
         if debug_enabled:
             print("[INFO] Found cached artifact for program, skipping execution.")
 
@@ -48,6 +49,8 @@ def execute_program_cached(
                             pass
                     item.rmdir()
             program_artifact.rmdir()
+        
+        print(program_artifact)
 
         # Copy the benchmark to artifacts
         program_artifact.mkdir(parents=True, exist_ok=True)

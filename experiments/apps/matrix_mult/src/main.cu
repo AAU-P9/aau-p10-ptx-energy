@@ -90,6 +90,14 @@ int main(int argc, char *argv[]) {
 
     // Copy results back to host
     cudaMemcpy(h_c, d_c, bytes_c, cudaMemcpyDeviceToHost);
+ 
+    // Export launch configuration
+    EXPORT_N("gridDim_x", grid_size.x);
+    EXPORT_N("gridDim_y", grid_size.y);
+    EXPORT_N("gridDim_z", grid_size.z);
+    EXPORT_N("blockDim_x", block_size.x);
+    EXPORT_N("blockDim_y", block_size.y);
+    EXPORT_N("blockDim_z", block_size.z);
 
     METRICS_KERNEL_END
 

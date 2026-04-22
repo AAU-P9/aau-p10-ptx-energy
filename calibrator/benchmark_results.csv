@@ -1,2 +1,0 @@
-kernel_name,block_dim,grid_dim,actual_power_joules,predicted_power_joules,kernel_duration_cpu_s
-matrix_mult,"Dim3(x=32, y=32, z=1)","Dim3(x=1, y=1, z=1)",74.009985391,4.695822667794,1.2804293119999999

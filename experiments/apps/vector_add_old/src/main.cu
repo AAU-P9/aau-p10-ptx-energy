@@ -64,6 +64,8 @@ int main(int argc, char *argv[])
 
     vector_add<<<grid_size, block_size>>>(d_a, d_b, d_out, SIZE_N);
 
+    cudaDeviceSynchronize();
+
     printf("[LOG] Kernel launched. Waiting for completion...\n");
 
     // Verify that the kernel didn't have any errors
@@ -72,11 +74,19 @@ int main(int argc, char *argv[])
         printf("[ERROR] Failed to launch vector_add kernel (error code %s)!\n", cudaGetErrorString(err));
         return -1;
     }
-    
+
+    // Export launch configuration
+    EXPORT_N("gridDim_x", grid_size);
+    EXPORT_N("gridDim_y", 1);
+    EXPORT_N("gridDim_z", 1);
+    EXPORT_N("blockDim_x", block_size);
+    EXPORT_N("blockDim_y", 1);
+    EXPORT_N("blockDim_z", 1);
+        
+    METRICS_KERNEL_END
+
     // Copy results back to host
     cudaMemcpy(h_out, d_out, bytes, cudaMemcpyDeviceToHost);
-    
-    METRICS_KERNEL_END
     
     // Clean up
     cudaFree(d_a);
