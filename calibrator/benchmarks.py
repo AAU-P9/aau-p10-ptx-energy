@@ -112,6 +112,8 @@ def run_benchmarks(
             force_rebuild=True
         )
 
+        print(execution_result.path)
+
         parameters = parameters_builder(execution_result, size) if parameters_builder else []
         kernel_params = build_kernel_params(execution_result, parameters)
 
@@ -179,7 +181,7 @@ def main() -> None:
 
     run_benchmarks(
         kernel_name="sgemm_2D_blocktiling",
-        sizes=[1024],
+        sizes=[64],
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
         nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
         parameters_builder=lambda execution_result, size: [],

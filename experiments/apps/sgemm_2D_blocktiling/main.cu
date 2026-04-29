@@ -63,7 +63,7 @@ __global__ void sgemm2DBlocktiling(int M, int N, int K, float alpha, const float
     const uint numThreadsBlocktile = totalResultsBlocktile / (TM * TN);
 
     // BN/TN are the number of threads to span a column
-    const int threadCol = threadIdx.x % (BN / TN);
+    const int threadCol = threadIdx.x % (BN / TN); 
     const int threadRow = threadIdx.x / (BN / TN);
 
     // allocate space for the current blocktile in smem
@@ -103,7 +103,7 @@ __global__ void sgemm2DBlocktiling(int M, int N, int K, float alpha, const float
             A[(innerRowA + loadOffset) * K + innerColA];
       }
 
-      META_LOOP(smem_load_loop, SIZE_BN / STRIDE_B, SIZE_BN / STRIDE_B, false);
+      META_LOOP(smem_load_loop, SIZE_BK / STRIDE_B, SIZE_BK / STRIDE_B, false);
       for (uint loadOffset = 0; loadOffset < SIZE_BK; loadOffset += STRIDE_B) {
         Bs[(innerRowB + loadOffset) * SIZE_BN + innerColB] =
             B[(innerRowB + loadOffset) * N + innerColB];
