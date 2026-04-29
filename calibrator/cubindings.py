@@ -13,10 +13,10 @@ import json
 
 def extract_exports_from_path(path: Path) -> ExportJSONResponse:
     output_json = path / "output.json"
-    if output_json.exists():
-        with output_json.open("r") as f:
-            exports = json.load(f)
-    return exports
+    if not output_json.exists():
+        return {}
+    with output_json.open("r") as f:
+        return json.load(f)
 
 def _resolve_pmd2_cli_path() -> str | None:
     env_path = os.environ.get("PMD2_CLI_PATH")

@@ -13,7 +13,7 @@ from cubindings_cache import execute_program_cached
 from cubindings_predictor import LinearModelOutput, run_predictor
 from cubindings_power import PowerMetricsResult
 
-benchmark_prefix = "benchmark_"  # Only change this if you want to invalidate the cache
+benchmark_prefix = "benchmark_ffff"  # Only change this if you want to invalidate the cache
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
@@ -182,7 +182,7 @@ def main() -> None:
     run_benchmarks(
         kernel_name="sgemm_2D_blocktiling",
         sizes=[64],
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
+        program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
         nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
         parameters_builder=lambda execution_result, size: [],
     )
