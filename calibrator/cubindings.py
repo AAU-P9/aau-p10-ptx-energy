@@ -127,7 +127,13 @@ def execute_program(
     power_metric_result = None
 
     # Absolute path to the include directory for cubindings.h
-    nvcc_cmd = ["nvcc", "-Xptxas", "-g", "-G", "-O0", "-arch=sm_89", "-lcupti"]
+    nvcc_cmd = [
+        "nvcc",
+        "-Xptxas", "-g",
+        "-G", "-O0",
+        "-arch=sm_89",
+        "-lcupti"
+    ]   
     include_path = Path(__file__).parents[1] / "include"
     nvcc_cmd.append(f"-I{str(include_path)}")
     nvcc_cmd.extend(list(nvcc_args))

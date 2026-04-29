@@ -1,0 +1,2 @@
+kernel_name,block_dim,grid_dim,actual_power_joules,predicted_power_joules,kernel_duration_cpu_s
+sgemm_2D_blocktiling,256,1,0.0,0.009587054592239429,0.0015631359999996874

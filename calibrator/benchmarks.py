@@ -108,8 +108,8 @@ def run_benchmarks(
             nvcc_args=nvcc_args,
             cache_key=f"{benchmark_prefix}{kernel_name}",
             artifacts_path=artifacts_path,
-            debug_enabled=debug_enabled,
-            force_rebuild=False
+            debug_enabled=True,
+            force_rebuild=True
         )
 
         parameters = parameters_builder(execution_result, size) if parameters_builder else []
@@ -121,7 +121,10 @@ def run_benchmarks(
             program_name=program_name,
             debug_enabled=debug_enabled,
         )
-        predictor_result = run_predictor(execution_result.path, weights_path, debug_enabled=debug_enabled)
+        predictor_result = run_predictor(
+            execution_result.path, weights_path,
+            debug_enabled=debug_enabled
+        )
 
         concat_results(
             kernel_name,
@@ -158,27 +161,27 @@ def write_csv_results(output_path: Path) -> None:
 
 
 def main() -> None:
-    run_benchmarks(
-        kernel_name="vector_add_old",
-        sizes=[1024, 2048, 4096, 8192, 16384],
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
-        parameters_builder=lambda execution_result, size: [],
-    )
+    # run_benchmarks(
+    #     kernel_name="vector_add_old",
+    #     sizes=[1024, 2048, 4096, 8192, 16384],
+    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
+    #     parameters_builder=lambda execution_result, size: [],
+    # )
 
-    run_benchmarks(
-        kernel_name="matrix_mult",
-        sizes=[1024, 2048, 4096, 8192, 16384],
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
-        parameters_builder=lambda execution_result, size: [],
-    )
+    # run_benchmarks(
+    #     kernel_name="matrix_mult",
+    #     sizes=[1024, 2048, 4096, 8192, 16384],
+    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
+    #     parameters_builder=lambda execution_result, size: [],
+    # )
 
     run_benchmarks(
         kernel_name="sgemm_2D_blocktiling",
-        sizes=[1024, 2048, 4096, 8192, 16384],
+        sizes=[1024],
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
         parameters_builder=lambda execution_result, size: [],
     )
 

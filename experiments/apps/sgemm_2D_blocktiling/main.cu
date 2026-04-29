@@ -21,7 +21,7 @@
 // NVML headers
 #include <nvml.h>
 
-#define ITERATIONS 1
+#define ITERATIONS 1000000
 
 #ifndef SIZE_M
 #define SIZE_M 256
@@ -39,8 +39,8 @@
 #define SIZE_TM 8
 #define SIZE_TN 8
 
-#define SIZE_BM 128
-#define SIZE_BN 128
+#define SIZE_BM 64
+#define SIZE_BN 64
 
 #define TOTAL_RESULTS_BLOCKTILE (SIZE_BM * SIZE_BN)
 #define NUM_THREADS_BLOCKTILE (TOTAL_RESULTS_BLOCKTILE / (SIZE_TM * SIZE_TN))
@@ -232,7 +232,7 @@ int main(int argc, char *argv[])
       return -1;
   }
 
-  printf("Kernel completed\n");
+  printf("Kernel completeds\n");
 
   // Export launch configuration
   EXPORT_N("gridDim_x", grid_size.x);

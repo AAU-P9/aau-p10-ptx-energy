@@ -7,7 +7,7 @@ import threading
 import time
 
 from cubindings import execute_code
-from calibrator.cubindings_analyser import run_analyser
+from cubindings_analyser import run_analyser
 
 # ============================================================================
 # Configuration
@@ -292,16 +292,16 @@ def run_one(insn, pilot_cache: dict):
     print(f"  raw run ({iters} iters)...", flush=True)
 
     return {
-        "iters":               iters,
+        "iters":                     iters,
 
-        "r1_energy_j":              r1.power_metric_result.total_energy_j,
-        "r2_energy_j":              r2.power_metric_result.total_energy_j,
+        "r1_energy_j":               r1.power_metric_result.total_energy_j,
+        "r2_energy_j":               r2.power_metric_result.total_energy_j,
 
-        "delta_energy_j":        delta_energy_j,
+        "delta_energy_j":            delta_energy_j,
         "err_delta_energy_per_op_j": err_delta_energy_per_op_j,
         
-        "r1_path": r1.path,
-        "r2_path": r2.path,
+        "r1_path":                   r1.path,
+        "r2_path":                   r2.path,
     }
 
 
