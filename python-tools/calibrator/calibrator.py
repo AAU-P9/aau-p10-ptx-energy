@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 
-from cubindings import execute_code
+from cubindings.cubindings import execute_code
 
 # ============================================================================
 # Configuration

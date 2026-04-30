@@ -1,5 +1,5 @@
 from pathlib import Path
-from cubindings import extract_exports_from_path, extract_power_metrics, execute_program, ExecutionResult
+from .cubindings import extract_exports_from_path, extract_power_metrics, execute_program, ExecutionResult
 from hashlib import md5
 
 def execute_program_cached(

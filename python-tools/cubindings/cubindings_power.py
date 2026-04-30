@@ -4,7 +4,7 @@ from typing import Any
 import pandas as pd
 from scipy import integrate
 
-from cubindings_types import ExportJSONResponse
+from .cubindings_types import ExportJSONResponse
 
 
 @dataclass

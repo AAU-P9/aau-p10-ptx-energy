@@ -7,8 +7,8 @@ from pathlib import Path
 import shutil
 import re
 from dataclasses import dataclass
-from cubindings_power import extract_power_metrics, PowerMetricsResult
-from cubindings_types import ExportJSONResponse
+from .cubindings_power import extract_power_metrics, PowerMetricsResult
+from .cubindings_types import ExportJSONResponse
 import json
 
 def extract_exports_from_path(path: Path) -> ExportJSONResponse:
@@ -134,7 +134,11 @@ def execute_program(
         "-arch=sm_89",
         "-lcupti"
     ]   
-    include_path = Path(__file__).parents[1] / "include"
+    include_candidates = [
+        Path(__file__).parents[2] / "include",
+        Path(__file__).parents[1] / "include",
+    ]
+    include_path = next((p for p in include_candidates if p.exists()), include_candidates[0])
     nvcc_cmd.append(f"-I{str(include_path)}")
     nvcc_cmd.extend(list(nvcc_args))
     nvcc_cmd.append(str(program_file))

@@ -6,7 +6,7 @@ import shutil
 from dataclasses import dataclass
 import time
 
-from calibrator.cubindings_types import ExportJSONResponse
+from .cubindings_types import ExportJSONResponse
 
 @dataclass
 class Dim3:
