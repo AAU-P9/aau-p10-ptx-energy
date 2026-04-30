@@ -61,18 +61,15 @@ class LinearModelOutput:
             "estimates": [estimate.to_dict() for estimate in self.estimates],
         }
 
-def run_predictor(output_path: Path, weights_path: Path, debug_enabled: bool = False) -> LinearModelOutput:
+def run_predictor(model_path: Path, output_path: Path, weights_path: Path, debug_enabled: bool = False) -> LinearModelOutput:
         pipe = sys.stdout if debug_enabled else subprocess.PIPE
         
         parent_dir = Path(__file__).parents[1]
         linear_model_output_path = output_path / "linear_model_output.json"
 
-        if not linear_model_output_path.exists():
-            print(f"[Warning] Linear model output file not found at {linear_model_output_path}, linear model will not be run", file=sys.stderr)
-
         cmd = [
             (
-                f"uv run linear-model/linear-model.py "
+                f"uv run {model_path} "
                 f"--weights-path {weights_path} "
                 f"--input-path {output_path / 'analyser_output.json'} "
                 f"--output-path {linear_model_output_path}"
