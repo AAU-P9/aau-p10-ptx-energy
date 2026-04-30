@@ -37,4 +37,8 @@ for insn in INSTRUCTION_TEMPLATES:
         debug_enabled=debug_enabled,
     )
 
-    print(pr.total_estimated_power_joules, r.power_metric_result.total_energy_j)
+    print("Actual total power (J):", r.power_metric_result.total_energy_j)
+    print("Predicted total power (J):", pr.total_estimated_power_joules)
+    print("Predicted power breakdown:")
+    for estimate in pr.estimates:
+        print(f"  {estimate.instruction}: {estimate.estimated_power_joules:.0f} J (count: {estimate.count:.0f}, avg per occurrence: {estimate.avg_power_per_occurrence_joules:.3e} J, used fallback: {estimate.used_fallback})")
