@@ -6,6 +6,8 @@ import shutil
 from dataclasses import dataclass
 import time
 
+from calibrator.cubindings_types import ExportJSONResponse
+
 @dataclass
 class Dim3:
     x: int
@@ -61,6 +63,23 @@ class AnalyserResult:
             "totalInstructions": self.total_instructions,
             "instructionOccurrences": self.instruction_occurrences,
         }
+
+def build_kernel_params(exports: ExportJSONResponse, parameters: list[dict[str, object]] = []) -> str:
+    return json.dumps(
+        {
+            "gridDim": {
+                "x": exports["gridDim_x"],
+                "y": exports["gridDim_y"],
+                "z": exports["gridDim_z"],
+            },
+            "blockDim": {
+                "x": exports["blockDim_x"],
+                "y": exports["blockDim_y"],
+                "z": exports["blockDim_z"],
+            },
+            "parameters": parameters,
+        }
+    )
 
 def run_ptx_analyser(
     output_path: Path,

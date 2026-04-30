@@ -1,13 +1,11 @@
 import csv
 import json
-from contextlib import contextmanager
 from pathlib import Path
 import sys
 import threading
 import time
 
 from cubindings import execute_code
-from cubindings_analyser import run_analyser
 
 # ============================================================================
 # Configuration
@@ -58,18 +56,6 @@ def spinning_cursor(stop_event: threading.Event):
         sys.stdout.write('\b')
     sys.stdout.write(' \b')
     sys.stdout.flush()
-
-@contextmanager
-def _spinner_running(label: str):
-    print(f"    {label} ", end="", flush=True)
-    stop = threading.Event()
-    t = threading.Thread(target=spinning_cursor, args=(stop,), daemon=True)
-    t.start()
-    try:
-        yield
-    finally:
-        stop.set()
-        t.join()
 
 # ============================================================================
 # Instruction templates — latency variant only (loop-carried dep on `d`)
@@ -250,11 +236,11 @@ def build_program(insn, iters, repeat=1, grid=GRID, block=BLOCK):
 
 def _execute(insn, iters, repeat):
     src = build_program(insn, iters=iters, repeat=repeat)
-    t0 = time.time()
     r = execute_code(src, nvcc_args=[], binary_args=[], enable_metrics=True, metrics_sleep_time=METRICS_WARMUP_S)
-    ar = run_analyser(r.path, Path(WEIGHTS_PATH))
-    print(f" {time.time()-t0:.1f}s total", flush=True)
-    return r, ar
+    
+    # ar = run_ptx_analyser(r.path, build_kernel_params(r.exports), debug_enabled=True)
+
+    return r
 
 
 def run_one(insn, pilot_cache: dict):
@@ -272,10 +258,10 @@ def run_one(insn, pilot_cache: dict):
         _save_pilot_cache(pilot_cache)
 
     print(f"  repeat=1 ({iters} iters)...", flush=True)
-    r1, ar1 = _execute(insn, iters=iters, repeat=1)
+    r1 = _execute(insn, iters=iters, repeat=1)
     print(f"  repeat=2 ({iters} iters)...", flush=True)
     time.sleep(1)  # Short pause to ensure any lingering effects from the first run are minimized
-    r2, ar2 = _execute(insn, iters=iters, repeat=2)
+    r2 = _execute(insn, iters=iters, repeat=2)
 
     r1_energy_per_op_j = r1.power_metric_result.total_energy_j / (iters * GRID * BLOCK)
     r2_energy_per_op_j = r2.power_metric_result.total_energy_j / (iters * GRID * BLOCK * 2) # 2x ops in repeat=2

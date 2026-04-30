@@ -1,4 +1,4 @@
-/*
+  /*
  *  Benchmark: UBench
  *  Author: Trasgo Research Group
  *  Source: https://trasgo.infor.uva.es/ubench/
@@ -116,6 +116,15 @@ int main(int argc, char *argv[]) {
   }
 
   cudaDeviceSynchronize();
+  printf("Kernel completeds\n");
+
+  // Export launch configuration
+  EXPORT_N("gridDim_x", gridDim.x);
+  EXPORT_N("gridDim_y", gridDim.y);
+  EXPORT_N("gridDim_z", gridDim.z);
+  EXPORT_N("blockDim_x", blockDim.x);
+  EXPORT_N("blockDim_y", blockDim.y);
+  EXPORT_N("blockDim_z", blockDim.z);
 
   METRICS_KERNEL_END
   

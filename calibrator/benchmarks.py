@@ -8,12 +8,12 @@ from pathlib import Path
 from typing import Callable
 
 from cubindings import ExecutionResult
-from cubindings_analyser import AnalyserResult, run_ptx_analyser
+from cubindings_analyser import AnalyserResult, run_ptx_analyser, build_kernel_params
 from cubindings_cache import execute_program_cached
 from cubindings_predictor import LinearModelOutput, run_predictor
 from cubindings_power import PowerMetricsResult
 
-benchmark_prefix = "benchmark_ffff"  # Only change this if you want to invalidate the cache
+benchmark_prefix = "benchmark"  # Only change this if you want to invalidate the cache
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
@@ -29,25 +29,6 @@ class CSVResult:
     actual_power_joules: float
     predicted_power_joules: float
     kernel_duration_cpu_s: float = 0.0
-
-
-def build_kernel_params(execution_result: ExecutionResult, parameters: list[dict[str, object]]) -> str:
-    return json.dumps(
-        {
-            "gridDim": {
-                "x": execution_result.exports["gridDim_x"],
-                "y": execution_result.exports["gridDim_y"],
-                "z": execution_result.exports["gridDim_z"],
-            },
-            "blockDim": {
-                "x": execution_result.exports["blockDim_x"],
-                "y": execution_result.exports["blockDim_y"],
-                "z": execution_result.exports["blockDim_z"],
-            },
-            "parameters": parameters,
-        }
-    )
-
 
 def concat_results(
     kernel_name: str,
@@ -109,13 +90,13 @@ def run_benchmarks(
             cache_key=f"{benchmark_prefix}{kernel_name}",
             artifacts_path=artifacts_path,
             debug_enabled=True,
-            force_rebuild=True
+            force_rebuild=False,
         )
 
         print(execution_result.path)
 
         parameters = parameters_builder(execution_result, size) if parameters_builder else []
-        kernel_params = build_kernel_params(execution_result, parameters)
+        kernel_params = build_kernel_params(execution_result.exports, parameters)
 
         analysis_result = run_ptx_analyser(
             execution_result.path,
@@ -179,10 +160,21 @@ def main() -> None:
     #     parameters_builder=lambda execution_result, size: [],
     # )
 
+
+    sizes=[64, 128, 256, 512, 1024]
+
+    run_benchmarks(
+        kernel_name="sgemm_1_naive",
+        sizes=sizes,
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_1_naive"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
+        parameters_builder=lambda execution_result, size: [],
+    )
+
     run_benchmarks(
         kernel_name="sgemm_2D_blocktiling",
-        sizes=[64],
-        program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
+        sizes=sizes,
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
         nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
         parameters_builder=lambda execution_result, size: [],
     )
