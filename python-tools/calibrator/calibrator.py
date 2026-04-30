@@ -14,7 +14,7 @@ GRID = 152          # 2 blocks per SM on AD103 (76 SMs)
 BLOCK = 1024
 TARGET_NS = 5_000_000_000  # 5 seconds
 PILOT_ITERS = 100_000
-WEIGHTS_PATH = "/home/p10/aau-p10-ptx-energy/linear-model/weights.csv" # Set to p10 since all users have access there
+WEIGHTS_OUTPUT_PATH = "/home/p10/aau-p10-ptx-energy/linear-model/weights.csv" # Set to p10 since all users have access there
 BUF_BYTES_PER_THREAD = 1024
 PILOT_CACHE_PATH = Path(__file__).parent / "pilot_cache.json"
 METRICS_WARMUP_S = 1
@@ -250,7 +250,7 @@ def run_one(insn, pilot_cache: dict):
         print(f"  pilot cached -> {iters} iters", flush=True)
     else:
         print(f"  pilot ({PILOT_ITERS} iters)...", flush=True)
-        pilot_r, _ = _execute(insn, iters=PILOT_ITERS, repeat=1)
+        pilot_r = _execute(insn, iters=PILOT_ITERS, repeat=1)
         dur_ns = pilot_r.power_metric_result.kernel_duration_gpu_ns
         iters = max(PILOT_ITERS, int(PILOT_ITERS * TARGET_NS / max(dur_ns, 1.0)))
         print(f"  pilot done ({dur_ns*1e-9:.2f}s) -> {iters} iters", flush=True)
@@ -312,7 +312,7 @@ def main():
               f"{r['err_delta_energy_per_op_j']:>8.2f} "
         )
 
-    out_path = Path(WEIGHTS_PATH)
+    out_path = Path(WEIGHTS_OUTPUT_PATH)
     with out_path.open("w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["kernel_name", "instruction", "count", "total_instructions", "power_consumption_joules"])
         writer.writeheader()
