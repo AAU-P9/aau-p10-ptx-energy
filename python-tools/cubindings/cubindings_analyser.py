@@ -128,3 +128,47 @@ def run_ptx_analyser(
             print(f"[Warning] Failed to start ptx-analyser: {e}", file=sys.stderr)
     else:
         print("[Warning] ptx-analyser not found in PATH", file=sys.stderr)
+
+def anayser_result_to_feature_csv(kernel_name: str, csv_path: Path, total_power_consumption_joules: float, analyser_result: AnalyserResult) -> None:
+    # Create a CSV
+    columns = [
+        "kernelName",
+        "gridDim_x",
+        "gridDim_y",
+        "gridDim_z",
+        "blockDim_x",
+        "blockDim_y",
+        "blockDim_z",
+        "instruction",
+        "occurrences",
+        "total_instructions",
+        "total_power_consumption_joules",
+    ]
+
+    rows = []
+    for instruction, count in analyser_result.instruction_occurrences.items():
+        row = {
+            "kernelName": kernel_name,
+            "gridDim_x": analyser_result.grid_dim.x,
+            "gridDim_y": analyser_result.grid_dim.y,
+            "gridDim_z": analyser_result.grid_dim.z,
+            "blockDim_x": analyser_result.block_dim.x,
+            "blockDim_y": analyser_result.block_dim.y,
+            "blockDim_z": analyser_result.block_dim.z,
+            "instruction": instruction,
+            "occurrences": count,
+            "total_instructions": analyser_result.total_instructions,
+            "total_power_consumption_joules": total_power_consumption_joules,
+        }
+
+        rows.append(row)
+    
+    # Write header only for new/empty files, then append rows.
+    write_header = not csv_path.exists() or csv_path.stat().st_size == 0
+
+    with csv_path.open("a") as f:
+        if write_header:
+            f.write(",".join(columns) + "\n")
+
+        for row in rows:
+            f.write(",".join(str(row[col]) for col in columns) + "\n")
