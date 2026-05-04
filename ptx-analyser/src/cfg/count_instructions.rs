@@ -1,10 +1,11 @@
 use ptx_parser::r#type::{FunctionStatement, MetaTag, Operand};
 use crate::{Dim3, Parameter};
 use serde::Serialize;
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 use super::common::{BasicBlock, BlockId, ControlFlowGraph, statement_opcode};
+use super::ddg::{build_ddg, InstrId};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -16,6 +17,12 @@ pub struct InstructionAnalysisReport {
     pub parameters: Vec<Parameter>,
     pub total_instructions: u64,
     pub instruction_occurrences: BTreeMap<String, u64>,
+    /// Consecutive opcode pairs where the first instruction produces a value the
+    /// second consumes (RAW dependency confirmed by DDG). Key: "opA,opB".
+    pub dependent_pairs: BTreeMap<String, u64>,
+    /// Consecutive opcode pairs with no RAW dependency between them.
+    /// Key: "opA,opB".
+    pub independent_pairs: BTreeMap<String, u64>,
 }
 
 #[allow(dead_code)]
@@ -156,18 +163,27 @@ impl GetCmpInfo for BasicBlock {
     }
 }
 
+/// State carried forward across the instruction walk to emit consecutive pairs.
+struct PrevInstr {
+    opcode: String,
+    id: InstrId,
+}
 
 /// Recursively count all instructions in the CFG starting from a given block.
 fn count_instructions_recursive(
     block_id: BlockId,
     cfg: &ControlFlowGraph,
+    ddg_edges: &HashSet<(InstrId, InstrId)>,
     visited: &mut BTreeSet<BlockId>,
     total_instructions: &mut u64,
     scope_instructions: &mut u64,
     scope_iterations: &mut u64,
     registers: &HashMap<String, u64>,
     instruction_occurrences: &mut HashMap<String, u64>,
+    dependent_pairs: &mut HashMap<String, u64>,
+    independent_pairs: &mut HashMap<String, u64>,
     last_meta_loop: &mut Option<MetaTag>,
+    prev: &mut Option<PrevInstr>,
 ) {
     // Avoid infinite loops by tracking visited blocks
     if visited.contains(&block_id) || cfg.successors.get(&block_id).is_none() {
@@ -182,11 +198,9 @@ fn count_instructions_recursive(
 
     visited.insert(block_id);
 
-    // Count instructions in current block1x
     let block = &cfg.blocks[block_id];
-    let block_predecessor_count = cfg.predecessors.get(&block_id).unwrap().len();
+    let _block_predecessor_count = cfg.predecessors.get(&block_id).unwrap().len();
 
-    // Debug: Print if the block has no instructions, this should be impossible.
     if block.statements.is_empty() {
         println!("[ERROR] Block {} has no statements", block_id);
     }
@@ -196,25 +210,43 @@ fn count_instructions_recursive(
         block_id, *scope_instructions, *scope_iterations
     );
 
-    // Itterate over all instructions in the block to find any setp instructions that might affect loop iteration counts
+    let mut instr_idx = 0usize;
     for stmt in &block.statements {
-        if let FunctionStatement::Instruction { instruction, .. } = stmt {
-            let formatted_inst = statement_opcode(&stmt).unwrap_or("Unknown".to_string());
+        if let FunctionStatement::Instruction { .. } = stmt {
+            let cur_id: InstrId = (block_id, instr_idx);
+            instr_idx += 1;
+
+            let cur_opcode = statement_opcode(stmt).unwrap_or("Unknown".to_string());
 
             println!(
-                "[INSTRUCTION] Found instruction in block {}: {:?} {:?}",
-                block_id, formatted_inst, statement_opcode(&stmt)
+                "[INSTRUCTION] Found instruction in block {}: {:?}",
+                block_id, cur_opcode
             );
 
+            // Emit pair weighted by scope_iterations, classified via DDG
+            if let Some(p) = prev.as_ref() {
+                let pair_key = format!("{},{}", p.opcode, cur_opcode);
+                let target = if ddg_edges.contains(&(p.id, cur_id)) {
+                    &mut *dependent_pairs
+                } else {
+                    &mut *independent_pairs
+                };
+                target
+                    .entry(pair_key)
+                    .and_modify(|c| *c += *scope_iterations)
+                    .or_insert(*scope_iterations);
+            }
+            *prev = Some(PrevInstr { opcode: cur_opcode.clone(), id: cur_id });
+
             *scope_instructions += 1;
-            instruction_occurrences.entry(formatted_inst)
+            instruction_occurrences
+                .entry(cur_opcode)
                 .and_modify(|count| *count += *scope_iterations)
                 .or_insert(*scope_iterations);
         } else if let FunctionStatement::Meta { directive, .. } = stmt {
             if let MetaTag::Loop { .. } = directive.tag {
                 *last_meta_loop = Some(directive.tag.clone());
             }
-            // Handle meta directives if needed for power estimation (e.g., loop annotations)
             println!(
                 "[META] Found meta directive in block {}: {:?}",
                 block_id, directive
@@ -236,25 +268,27 @@ fn count_instructions_recursive(
             count_instructions_recursive(
                 *successors.iter().nth(0).unwrap(),
                 cfg,
+                ddg_edges,
                 visited,
                 total_instructions,
                 scope_instructions,
                 scope_iterations,
                 registers,
                 instruction_occurrences,
+                dependent_pairs,
+                independent_pairs,
                 last_meta_loop,
+                prev,
             );
         } else if successors.len() > 1 {
-            // Check if last_meta_loop is Some, and if so read the loop bounds
             let mut branch_iterations_count: u64 = 1;
             if let Some(MetaTag::Loop { max_iters, min_iters, .. }) = last_meta_loop {
                 println!(
                     "[META_LOOP] Found loop meta directive in block {}: min_iters={}, max_iters={}",
                     block_id, min_iters, max_iters
                 );
-
                 branch_iterations_count = min_iters.clone().into();
-                last_meta_loop.take(); // Clear the last_meta_loop after using it
+                last_meta_loop.take();
             }
 
             let branch_info = block.get_cmp_info(registers).unwrap();
@@ -285,6 +319,9 @@ fn count_instructions_recursive(
 
             let mut block_a_scope_instructions = 0;
             let mut block_b_scope_instructions = 0;
+            // Each branch gets its own prev state so cross-branch pairs don't bleed over.
+            let mut branch_a_prev = prev.as_ref().map(|p| PrevInstr { opcode: p.opcode.clone(), id: p.id });
+            let mut branch_b_prev = prev.as_ref().map(|p| PrevInstr { opcode: p.opcode.clone(), id: p.id });
 
             if is_block_a_true_branch {
                 let mut block_a_scope_iterations = *scope_iterations;
@@ -301,30 +338,37 @@ fn count_instructions_recursive(
                 count_instructions_recursive(
                     successor_b_id,
                     cfg,
+                    ddg_edges,
                     visited,
                     total_instructions,
                     &mut block_b_scope_instructions,
                     &mut block_b_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    dependent_pairs,
+                    independent_pairs,
                     last_meta_loop,
+                    &mut branch_b_prev,
                 );
 
                 println!(
                     "[A_TRUE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}",
                     successor_a_id, block_a_scope_iterations, block_id
                 );
-
                 count_instructions_recursive(
                     successor_a_id,
                     cfg,
+                    ddg_edges,
                     visited,
                     total_instructions,
                     &mut block_a_scope_instructions,
                     &mut block_a_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    dependent_pairs,
+                    independent_pairs,
                     last_meta_loop,
+                    &mut branch_a_prev,
                 );
             } else {
                 let mut block_a_scope_iterations = if is_loop {
@@ -338,34 +382,40 @@ fn count_instructions_recursive(
                     "[A_FALSE_BRANCH] Visiting false branch (block {}) with scope iterations {} from block {}",
                     successor_a_id, block_a_scope_iterations, block_id
                 );
-
                 count_instructions_recursive(
                     successor_a_id,
                     cfg,
+                    ddg_edges,
                     visited,
                     total_instructions,
                     &mut block_a_scope_instructions,
                     &mut block_a_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    dependent_pairs,
+                    independent_pairs,
                     last_meta_loop,
+                    &mut branch_a_prev,
                 );
 
                 println!(
                     "[A_FALSE_BRANCH] Visiting true branch (block {}) with scope iterations {} from block {}",
                     successor_b_id, block_b_scope_iterations, block_id
                 );
-
                 count_instructions_recursive(
                     successor_b_id,
                     cfg,
+                    ddg_edges,
                     visited,
                     total_instructions,
                     &mut block_b_scope_instructions,
                     &mut block_b_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    dependent_pairs,
+                    independent_pairs,
                     last_meta_loop,
+                    &mut branch_b_prev,
                 );
             }
 
@@ -407,17 +457,20 @@ pub fn analyze_cfg(
         }
     }
 
-    // Count total instructions by recursively walking the CFG tree
+    // Build DDG and flatten edges into a set for O(1) dependency lookup.
+    let ddg = build_ddg(cfg);
+    let ddg_edges: HashSet<(InstrId, InstrId)> = ddg.edges.iter().map(|e| (e.from, e.to)).collect();
+
     let mut visited = BTreeSet::new();
     let mut total_instructions: u64 = 0;
     let mut scope_instructions: u64 = 0;
     let mut scope_iterations: u64 = (grid_x * grid_y * grid_z * block_x * block_y * block_z).into();
 
-    // Registers for tracking loop iteration counts (e.g., from setp instructions)
     let registers: HashMap<String, u64> = HashMap::new();
-
-    // Track occurrences of each instruction type for potential use in a more detailed power model
     let mut instruction_occurrences: HashMap<String, u64> = HashMap::new();
+    let mut dependent_pairs: HashMap<String, u64> = HashMap::new();
+    let mut independent_pairs: HashMap<String, u64> = HashMap::new();
+    let mut prev: Option<PrevInstr> = None;
 
     if let Some(block) = cfg.blocks.get(cfg.entry) {
         println!(
@@ -430,14 +483,18 @@ pub fn analyze_cfg(
 
     count_instructions_recursive(
         cfg.entry,
-        &cfg,
+        cfg,
+        &ddg_edges,
         &mut visited,
         &mut total_instructions,
         &mut scope_instructions,
         &mut scope_iterations,
         &registers,
         &mut instruction_occurrences,
+        &mut dependent_pairs,
+        &mut independent_pairs,
         &mut None,
+        &mut prev,
     );
 
     let report = InstructionAnalysisReport {
@@ -456,6 +513,12 @@ pub fn analyze_cfg(
         parameters: params.clone(),
         total_instructions,
         instruction_occurrences: instruction_occurrences
+            .into_iter()
+            .collect::<BTreeMap<_, _>>(),
+        dependent_pairs: dependent_pairs
+            .into_iter()
+            .collect::<BTreeMap<_, _>>(),
+        independent_pairs: independent_pairs
             .into_iter()
             .collect::<BTreeMap<_, _>>(),
     };
