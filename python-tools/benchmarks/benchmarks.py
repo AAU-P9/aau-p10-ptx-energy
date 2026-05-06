@@ -160,7 +160,7 @@ def main() -> None:
     # )
 
 
-    sizes=[4096]
+    sizes=[65536]
 
     # run_benchmarks(
     #     kernel_name="matrix_mul",
