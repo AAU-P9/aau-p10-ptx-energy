@@ -38,10 +38,11 @@ class AnalyserResult:
     parameters: list
     total_instructions: int
     instruction_occurrences: dict[str, int]
+    dependent_pairs: dict[str, int]
+    independent_pairs: dict[str, int]
 
     @staticmethod
     def from_dict(data: dict) -> "AnalyserResult":
-        power = data.get("powerConsumptionJoules")
         return AnalyserResult(
             kernel_name=data.get("kernelName"),
             grid_dim=Dim3.from_dict(data.get("gridDim", {})),
@@ -51,6 +52,14 @@ class AnalyserResult:
             instruction_occurrences={
                 str(op): int(count)
                 for op, count in data.get("instructionOccurrences", {}).items()
+            },
+            dependent_pairs={
+                str(pair): int(count)
+                for pair, count in data.get("dependentPairs", {}).items()
+            },
+            independent_pairs={
+                str(pair): int(count)
+                for pair, count in data.get("independentPairs", {}).items()
             },
         )
 
@@ -62,6 +71,8 @@ class AnalyserResult:
             "parameters": self.parameters,
             "totalInstructions": self.total_instructions,
             "instructionOccurrences": self.instruction_occurrences,
+            "dependentPairs": self.dependent_pairs,
+            "independentPairs": self.independent_pairs,
         }
 
 def build_kernel_params(exports: ExportJSONResponse, parameters: list[dict[str, object]] = []) -> str:

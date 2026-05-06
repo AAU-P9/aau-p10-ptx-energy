@@ -1,8 +1,8 @@
 use ptx_parser::parse_ptx;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command as ProcessCommand;
-use serde::{Deserialize, Serialize};
 
 use clap::{Parser, Subcommand};
 
@@ -20,7 +20,7 @@ pub enum ParameterType {
     Int16,
     Int8,
     Int4,
-    Unknown, 
+    Unknown,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -167,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
-            
+
             let kernel_config: KernelParameters = if let Some(json) = kernel_params {
                 serde_json::from_str(&json)
                     .map_err(|e| format!("Failed to parse kernel_params JSON: {}", e))?
@@ -176,7 +176,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 serde_json::from_str(&contents)
                     .map_err(|e| format!("Failed to parse JSON in {}: {}", path.display(), e))?
             } else {
-                return Err("You must provide either --kernel-params or --kernel-params-file".into());
+                return Err(
+                    "You must provide either --kernel-params or --kernel-params-file".into(),
+                );
             };
 
             let file_name = input_file
@@ -186,10 +188,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .to_string();
             let cfg = cfg::cfg::build_cfg(&module, &file_name);
 
-            println!("Analyzing CFGs with grid=({},{},{}), block=({},{},{}), parameters={:?}",
-                kernel_config.grid_dim.x, kernel_config.grid_dim.y, kernel_config.grid_dim.z,
-                kernel_config.block_dim.x, kernel_config.block_dim.y, kernel_config.block_dim.z,
-                kernel_config.parameters);
+            println!(
+                "Analyzing CFGs with grid=({},{},{}), block=({},{},{}), parameters={:?}",
+                kernel_config.grid_dim.x,
+                kernel_config.grid_dim.y,
+                kernel_config.grid_dim.z,
+                kernel_config.block_dim.x,
+                kernel_config.block_dim.y,
+                kernel_config.block_dim.z,
+                kernel_config.parameters
+            );
 
             cfg::analyze_cfg(
                 &cfg,
@@ -258,7 +266,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
 
                     let ddg = cfg::ddg::build_ddg(graph);
-                    let ddg_html_path = base.parent().unwrap_or(std::path::Path::new(".")).join("ddg.html");
+                    let ddg_html_path = base
+                        .parent()
+                        .unwrap_or(std::path::Path::new("."))
+                        .join("ddg.html");
                     let ddg_html = ddg.to_html(graph);
                     fs::write(&ddg_html_path, &ddg_html)?;
                     println!(
@@ -279,7 +290,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     );
 
                     let ddg = cfg::ddg::build_ddg(graph);
-                    let ddg_html_path = base.parent().unwrap_or(std::path::Path::new(".")).join("ddg.html");
+                    let ddg_html_path = base
+                        .parent()
+                        .unwrap_or(std::path::Path::new("."))
+                        .join("ddg.html");
                     let ddg_html = ddg.to_html(graph);
                     fs::write(&ddg_html_path, &ddg_html)?;
                     println!(
