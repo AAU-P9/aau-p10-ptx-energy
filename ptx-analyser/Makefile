@@ -9,15 +9,15 @@ build:
 	$(CARGO) build
 
 release:
-	$(CARGO) build
+	$(CARGO) build --release
 
-install: release
-	sudo install -m 755 target/release/$(BIN_NAME) $(BINDIR)/$(BIN_NAME)
-	@echo "Installed $(BIN_NAME) to $(BINDIR)/$(BIN_NAME)"
+install:
+	$(CARGO) install --path .
+	@echo "Installed $(BIN_NAME) to $$(dirname $$(which $(BIN_NAME)))"
 
 uninstall:
-	sudo rm -f $(BINDIR)/$(BIN_NAME)
-	@echo "Removed $(BINDIR)/$(BIN_NAME)"
+	$(CARGO) uninstall $(BIN_NAME)
+	@echo "Removed $(BIN_NAME)"
 
 clean:
 	$(CARGO) clean
