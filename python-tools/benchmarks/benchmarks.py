@@ -91,7 +91,7 @@ def run_benchmarks(
             cache_key=f"{benchmark_prefix}{kernel_name}",
             artifacts_path=artifacts_path,
             debug_enabled=True,
-            force_rebuild=False,
+            force_rebuild=True,
         )
 
         parameters = parameters_builder(execution_result, size) if parameters_builder else []
@@ -102,6 +102,7 @@ def run_benchmarks(
             kernel_params,
             program_name=program_name,
             debug_enabled=debug_enabled,
+            power_consumption_joules=execution_result.power_metric_result.total_energy_j,
         )
 
         # Add the benchmark to the feature dataset for the Neural Network.
@@ -159,7 +160,7 @@ def main() -> None:
     # )
 
 
-    sizes=[8192]
+    sizes=[4096]
 
     # run_benchmarks(
     #     kernel_name="matrix_mul",
