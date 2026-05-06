@@ -7,13 +7,14 @@ import json
 from pathlib import Path
 from typing import Callable
 
-from cubindings import ExecutionResult
-from cubindings_analyser import AnalyserResult, run_ptx_analyser, build_kernel_params
-from cubindings_cache import execute_program_cached
-from cubindings_predictor import LinearModelOutput, run_predictor
-from cubindings_power import PowerMetricsResult
+from cubindings.cubindings import ExecutionResult
+from cubindings.cubindings_analyser import AnalyserResult, run_ptx_analyser, build_kernel_params, anayser_result_to_feature_csv
+from cubindings.cubindings_cache import execute_program_cached
+from cubindings.cubindings_predictor import LinearModelOutput, run_predictor
+from cubindings.cubindings_power import PowerMetricsResult
 
 benchmark_prefix = "benchmark"  # Only change this if you want to invalidate the cache
+model_path=Path("/home/rasmus/aau-p10-ptx-energy/linear-model/linear-model.py")
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
@@ -93,8 +94,6 @@ def run_benchmarks(
             force_rebuild=False,
         )
 
-        print(execution_result.path)
-
         parameters = parameters_builder(execution_result, size) if parameters_builder else []
         kernel_params = build_kernel_params(execution_result.exports, parameters)
 
@@ -104,9 +103,16 @@ def run_benchmarks(
             program_name=program_name,
             debug_enabled=debug_enabled,
         )
+
+        # Add the benchmark to the feature dataset for the Neural Network.
+        # csv_path = Path("/home/rasmus/aau-p10-ptx-energy/neural-network/data.csv")
+        # anayser_result_to_feature_csv(kernel_name, csv_path, execution_result.power_metric_result.total_energy_j, analysis_result)
+
         predictor_result = run_predictor(
-            execution_result.path, weights_path,
-            debug_enabled=debug_enabled
+            model_path=model_path,
+            output_path=execution_result.path,
+            weights_path=weights_path,
+            debug_enabled=debug_enabled,
         )
 
         concat_results(
@@ -145,14 +151,6 @@ def write_csv_results(output_path: Path) -> None:
 
 def main() -> None:
     # run_benchmarks(
-    #     kernel_name="vector_add_old",
-    #     sizes=[1024, 2048, 4096, 8192, 16384],
-    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
-    #     nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
-    #     parameters_builder=lambda execution_result, size: [],
-    # )
-
-    # run_benchmarks(
     #     kernel_name="matrix_mult",
     #     sizes=[1024, 2048, 4096, 8192, 16384],
     #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
@@ -161,23 +159,25 @@ def main() -> None:
     # )
 
 
-    sizes=[64, 128, 256, 512, 1024]
+    sizes=[8192]
+
+    # run_benchmarks(
+    #     kernel_name="matrix_mul",
+    #     sizes=sizes,
+    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
+    #     parameters_builder=lambda execution_result, size: [],
+    # )
+
 
     run_benchmarks(
-        kernel_name="sgemm_1_naive",
+        kernel_name="vector_add_old",
         sizes=sizes,
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_1_naive"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
         parameters_builder=lambda execution_result, size: [],
     )
 
-    run_benchmarks(
-        kernel_name="sgemm_2D_blocktiling",
-        sizes=sizes,
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/sgemm_2D_blocktiling"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
-        parameters_builder=lambda execution_result, size: [],
-    )
 
     write_csv_results(Path("benchmark_results.csv"))
 
