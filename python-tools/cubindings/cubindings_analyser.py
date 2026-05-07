@@ -40,6 +40,7 @@ class AnalyserResult:
     instruction_occurrences: dict[str, int]
     dependent_pairs: dict[str, int]
     independent_pairs: dict[str, int]
+    memory_profiles: list[dict]
 
     @staticmethod
     def from_dict(data: dict) -> "AnalyserResult":
@@ -61,6 +62,7 @@ class AnalyserResult:
                 str(pair): int(count)
                 for pair, count in data.get("independentPairs", {}).items()
             },
+            memory_profiles=data.get("memoryProfiles", []),
         )
 
     def to_dict(self) -> dict:
@@ -73,6 +75,7 @@ class AnalyserResult:
             "instructionOccurrences": self.instruction_occurrences,
             "dependentPairs": self.dependent_pairs,
             "independentPairs": self.independent_pairs,
+            "memoryProfiles": self.memory_profiles,
         }
 
 def build_kernel_params(exports: ExportJSONResponse, parameters: list[dict[str, object]] = []) -> str:
