@@ -118,6 +118,7 @@ model.compile(
     optimizer=Adam(learning_rate=0.05),
     loss="mse"
 )
+
 if SKIP_TRAINING:
     # Load weights from disk
     weights_path = os.path.join(os.path.dirname(__file__), "weights_858e05.npz")
@@ -141,12 +142,17 @@ else:
 # Verify that the model can predict the power consumption for the 'matrix_mul' kernel
 for kernel_name in testing_kernels:
     kernel_xs = testing_kernels_xs[kernel_name]
-    ys = testing_kernels_ys[kernel_name]
+    actual_power = testing_kernels_ys[kernel_name]
 
     xs_log = np.log1p([kernel_xs])
     normalized_target = model.predict(xs_log)
     print(f"Log-scaled prediction for '{kernel_name}' kernel:", normalized_target)
 
     predicted_power = np.expm1(normalized_target)
-    print(f"Predicted power consumption for '{kernel_name}' kernel:", predicted_power[0][0])
-    print(f"Actual power consumption for '{kernel_name}' kernel:", ys)
+    predicted_power = predicted_power[0][0]
+    print(f"Predicted power consumption for '{kernel_name}' kernel:", predicted_power)
+    print(f"Actual power consumption for '{kernel_name}' kernel:", actual_power)
+
+    # Print the % error of the prediction
+    error_percentage = abs(predicted_power - actual_power) / actual_power * 100
+    print(f"Prediction error for '{kernel_name}' kernel: {error_percentage:.2f}%\n")

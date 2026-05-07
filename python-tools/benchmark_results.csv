@@ -1,3 +1,2 @@
 kernel_name,block_dim,grid_dim,actual_power_joules,predicted_power_joules,kernel_duration_cpu_s
-vector_add_old,1024,16,431.6129965245,274.0648593652725,5.039758848
-vector_add_old,1024,32,548.7145229980001,548.129718730545,5.050879744
+vector_add_old,1024,128,1687.7037146155,2192.51887492218,10.14631424
