@@ -6,6 +6,7 @@ use std::fs;
 use std::path::PathBuf;
 use super::common::{BasicBlock, BlockId, ControlFlowGraph, statement_opcode};
 use super::ddg::{build_ddg, InstrId};
+use super::mem_analysis::{build_memory_profiles, MemoryProfile};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -23,6 +24,11 @@ pub struct InstructionAnalysisReport {
     /// Consecutive opcode pairs with no RAW dependency between them.
     /// Key: "opA,opB".
     pub independent_pairs: BTreeMap<String, u64>,
+    /// Per-occurrence memory access profiles for every ld/st/atom instruction.
+    /// Each entry is a distinct CFG site (block_id, instr_idx), so two ld.global.f32
+    /// instructions in different blocks get separate profiles with different
+    /// address patterns, loop depths, and estimated cache behaviour.
+    pub memory_profiles: Vec<MemoryProfile>,
 }
 
 #[allow(dead_code)]
@@ -180,6 +186,7 @@ fn count_instructions_recursive(
     scope_iterations: &mut u64,
     registers: &HashMap<String, u64>,
     instruction_occurrences: &mut HashMap<String, u64>,
+    per_instr_occurrences: &mut HashMap<InstrId, u64>,
     dependent_pairs: &mut HashMap<String, u64>,
     independent_pairs: &mut HashMap<String, u64>,
     last_meta_loop: &mut Option<MetaTag>,
@@ -243,6 +250,10 @@ fn count_instructions_recursive(
                 .entry(cur_opcode)
                 .and_modify(|count| *count += *scope_iterations)
                 .or_insert(*scope_iterations);
+            per_instr_occurrences
+                .entry(cur_id)
+                .and_modify(|c| *c += *scope_iterations)
+                .or_insert(*scope_iterations);
         } else if let FunctionStatement::Meta { directive, .. } = stmt {
             if let MetaTag::Loop { .. } = directive.tag {
                 *last_meta_loop = Some(directive.tag.clone());
@@ -275,6 +286,7 @@ fn count_instructions_recursive(
                 scope_iterations,
                 registers,
                 instruction_occurrences,
+                per_instr_occurrences,
                 dependent_pairs,
                 independent_pairs,
                 last_meta_loop,
@@ -345,6 +357,7 @@ fn count_instructions_recursive(
                     &mut block_b_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    per_instr_occurrences,
                     dependent_pairs,
                     independent_pairs,
                     last_meta_loop,
@@ -365,6 +378,7 @@ fn count_instructions_recursive(
                     &mut block_a_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    per_instr_occurrences,
                     dependent_pairs,
                     independent_pairs,
                     last_meta_loop,
@@ -392,6 +406,7 @@ fn count_instructions_recursive(
                     &mut block_a_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    per_instr_occurrences,
                     dependent_pairs,
                     independent_pairs,
                     last_meta_loop,
@@ -412,6 +427,7 @@ fn count_instructions_recursive(
                     &mut block_b_scope_iterations,
                     registers,
                     instruction_occurrences,
+                    per_instr_occurrences,
                     dependent_pairs,
                     independent_pairs,
                     last_meta_loop,
@@ -470,6 +486,7 @@ pub fn analyze_cfg(
     let mut instruction_occurrences: HashMap<String, u64> = HashMap::new();
     let mut dependent_pairs: HashMap<String, u64> = HashMap::new();
     let mut independent_pairs: HashMap<String, u64> = HashMap::new();
+    let mut per_instr_occurrences: HashMap<InstrId, u64> = HashMap::new();
     let mut prev: Option<PrevInstr> = None;
 
     if let Some(block) = cfg.blocks.get(cfg.entry) {
@@ -491,11 +508,14 @@ pub fn analyze_cfg(
         &mut scope_iterations,
         &registers,
         &mut instruction_occurrences,
+        &mut per_instr_occurrences,
         &mut dependent_pairs,
         &mut independent_pairs,
         &mut None,
         &mut prev,
     );
+
+    let memory_profiles = build_memory_profiles(cfg, &ddg, &per_instr_occurrences);
 
     let report = InstructionAnalysisReport {
         kernel_name: kernel_name.clone(),
@@ -521,6 +541,7 @@ pub fn analyze_cfg(
         independent_pairs: independent_pairs
             .into_iter()
             .collect::<BTreeMap<_, _>>(),
+        memory_profiles,
     };
 
     let json = serde_json::to_string_pretty(&report)

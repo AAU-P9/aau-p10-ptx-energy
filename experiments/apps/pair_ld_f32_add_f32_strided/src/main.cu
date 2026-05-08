@@ -34,9 +34,9 @@ __global__ void ptx_kernel(const float * __restrict__ data, float *out, int len)
     float acc = 0.0f;
 
     // Non-coalesced: thread N reads element N*THREAD_STRIDE.
-    // Adjacent threads are THREAD_STRIDE*4 = 128 bytes apart → separate cache lines.
+    // Adjacent threads are THREAD_STRIDE*4 = 128 bytes apart separate cache lines.
     for (int i = 0; i < ITERATIONS; ++i) {
-        int addr = (tid * THREAD_STRIDE + i * stride * THREAD_STRIDE) % len;
+        int addr = (int)(((long long)tid * THREAD_STRIDE + (long long)i * stride * THREAD_STRIDE) % len);
         float val = data[addr];
         asm volatile("add.f32 %0, %0, %1;" : "+f"(acc) : "f"(val));
     }
@@ -63,6 +63,7 @@ int main()
 
     ptx_kernel<<<_GRID_DIM, _BLOCK_DIM>>>(d_data, d_out, len);
     cudaDeviceSynchronize();
+    printf("[LOG]here" );
 
     EXPORT_N("gridDim_x", _GRID_DIM);
     EXPORT_N("gridDim_y", 1);
@@ -76,5 +77,5 @@ int main()
     cudaFree(d_data);
     cudaFree(d_out);
     free(h_data);
-    disableCUPTI();
+    //disableCUPTI();
 }

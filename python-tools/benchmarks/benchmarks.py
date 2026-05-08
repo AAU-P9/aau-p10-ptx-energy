@@ -1,21 +1,24 @@
-from dataclasses import dataclass
-import json
-from pathlib import Path
-from dataclasses import dataclass
 import csv
 import json
+import shutil
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 import shutil
 
 from cubindings.cubindings import ExecutionResult
-from cubindings.cubindings_analyser import AnalyserResult, run_ptx_analyser, build_kernel_params, anayser_result_to_feature_csv
+from cubindings.cubindings_analyser import (
+    AnalyserResult,
+    anayser_result_to_feature_csv,
+    build_kernel_params,
+    run_ptx_analyser,
+)
 from cubindings.cubindings_cache import execute_program_cached
-from cubindings.cubindings_predictor import LinearModelOutput, run_predictor
 from cubindings.cubindings_power import PowerMetricsResult
+from cubindings.cubindings_predictor import LinearModelOutput, run_predictor
 
 benchmark_prefix = "benchmark"  # Only change this if you want to invalidate the cache
-model_path=Path("/home/rasmus/aau-p10-ptx-energy/linear-model/linear-model.py")
+model_path = Path("/home/rasmus/aau-p10-ptx-energy/linear-model/linear-model.py")
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
@@ -31,6 +34,7 @@ class CSVResult:
     actual_power_joules: float
     predicted_power_joules: float
     kernel_duration_cpu_s: float = 0.0
+
 
 def concat_results(
     kernel_name: str,
@@ -49,7 +53,9 @@ def concat_results(
     print(f"Actual Power (Joules): {actual_power_joules}")
 
     if actual_power_joules != 0:
-        print(f"Error (%): {((1 - (predicted_power_joules / actual_power_joules)) * 100):.2f}")
+        print(
+            f"Error (%): {((1 - (predicted_power_joules / actual_power_joules)) * 100):.2f}"
+        )
     else:
         print("Error (%): n/a")
 
@@ -57,7 +63,9 @@ def concat_results(
     print(f"Total Instructions: {total_instructions}")
 
     for estimate in predictor_result.estimates:
-        percentage = (estimate.count / total_instructions * 100) if total_instructions else 0.0
+        percentage = (
+            (estimate.count / total_instructions * 100) if total_instructions else 0.0
+        )
         print(
             f"  {estimate.instruction}: {estimate.count} occurrences, "
             f"{percentage:.2f}%, {estimate.estimated_power_joules} Joules"
@@ -80,8 +88,10 @@ def run_benchmarks(
     sizes: list[int],
     program_path: Path,
     nvcc_args_builder: Callable[[int], list[str]],
-    parameters_builder: Callable[[ExecutionResult, int], list[dict[str, object]]] | None = None,
+    parameters_builder: Callable[[ExecutionResult, int], list[dict[str, object]]]
+    | None = None,
     program_name: str = "main.cu",
+    data_output_path: Path | None = None,
 ) -> None:
     for size in sizes:
         nvcc_args = nvcc_args_builder(size)
@@ -95,7 +105,9 @@ def run_benchmarks(
             force_rebuild=True,
         )
 
-        parameters = parameters_builder(execution_result, size) if parameters_builder else []
+        parameters = (
+            parameters_builder(execution_result, size) if parameters_builder else []
+        )
         kernel_params = build_kernel_params(execution_result.exports, parameters)
 
         analysis_result = run_ptx_analyser(
@@ -105,6 +117,14 @@ def run_benchmarks(
             debug_enabled=debug_enabled,
             power_consumption_joules=execution_result.power_metric_result.total_energy_j,
         )
+
+        if data_output_path is not None:
+            data_output_path.mkdir(parents=True, exist_ok=True)
+            shutil.copy(execution_result.path / "analyser_output.json", data_output_path / f"{kernel_name}.json")
+
+        # Add the benchmark to the feature dataset for the Neural Network.
+        # csv_path = Path("/home/rasmus/aau-p10-ptx-energy/neural-network/data.csv")
+        # anayser_result_to_feature_csv(kernel_name, csv_path, execution_result.power_metric_result.total_energy_j, analysis_result)
 
         predictor_result = run_predictor(
             model_path=model_path,
@@ -156,8 +176,7 @@ def main() -> None:
     #     parameters_builder=lambda execution_result, size: [],
     # )
 
-
-    sizes=[131072]
+    sizes = [131072]
 
     # run_benchmarks(
     #     kernel_name="matrix_mul",
@@ -167,15 +186,174 @@ def main() -> None:
     #     parameters_builder=lambda execution_result, size: [],
     # )
 
-
     run_benchmarks(
         kernel_name="vector_add_old",
         sizes=sizes,
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"),
+        program_path=Path(
+            "/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"
+        ),
         nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
         parameters_builder=lambda execution_result, size: [],
     )
 
+    pair_benchmarks = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    pair_sizes = [1]
+    pair_data_output = Path("/home/lasse/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/data")
+
+    run_benchmarks(
+        kernel_name="pair_add_f32_st_global_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_add_f32_st_global_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_add_s32_add_s32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_add_s32_add_s32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_add_s32_add_s32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_add_s32_add_s32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_add_s64_ld_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_add_s64_ld_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_cvt_shl_add_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_cvt_shl_add_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_add_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_add_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f32_add_f32_coalesced",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f32_add_f32_coalesced/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f32_add_f32_strided",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f32_add_f32_strided/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f32_ld_f32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f32_ld_f32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f32_mul_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f32_mul_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f32_st_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f32_st_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_f64_add_f64_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_f64_add_f64_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_s32_add_s32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_s32_add_s32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_ld_shared_f32_add_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_ld_shared_f32_add_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mov_f32_add_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mov_f32_add_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mov_u32_add_s32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mov_u32_add_s32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mov_u32_add_s32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mov_u32_add_s32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mul_f32_add_f32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mul_f32_add_f32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mul_f32_add_f32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mul_f32_add_f32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mul_s32_add_s32_dep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mul_s32_add_s32_dep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_mul_s32_add_s32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_mul_s32_add_s32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
+    run_benchmarks(
+        kernel_name="pair_st_f32_st_f32_indep",
+        sizes=pair_sizes,
+        program_path=pair_benchmarks / "pair_st_f32_st_f32_indep/src",
+        nvcc_args_builder=lambda size: [],
+        data_output_path=pair_data_output,
+    )
 
     write_csv_results(Path("benchmark_results.csv"))
 

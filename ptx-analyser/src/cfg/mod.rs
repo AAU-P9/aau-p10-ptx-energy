@@ -6,6 +6,7 @@ pub mod ddg;
 mod html;
 mod util;
 pub mod count_instructions;
+pub mod mem_analysis;
 
 #[allow(unused_imports)]
 pub use cfgMerge::{CallSite, MergedCfg, merge_cfgs};
