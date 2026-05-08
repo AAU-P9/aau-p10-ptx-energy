@@ -14,9 +14,15 @@ from keras.layers import Dense, Input
 
 # Boolean to skip training and load weights instead
 SKIP_TRAINING = False
+weights_file = "weights_e04.npz"
 
 # Load dataset from JSON files in data folder
 data_folder = os.path.join(os.path.dirname(__file__), "data")
+data_json_files = sorted(glob.glob(os.path.join(data_folder, "*.json")))
+
+kernels_dir = Path(__file__).resolve().parent / "kernels"
+kernels_json_files = sorted(kernels_dir.glob("*.json"))
+
 
 # Instructions - fixed list for consistency
 instructions = [
@@ -49,11 +55,10 @@ instruction_indices = {pair: idx for idx, pair in enumerate(instruction_pairs)}
 print("Instruction pairs [0:5]:\n", instruction_pairs[0:5])
 
 # Load feature vectors and targets from JSON files
-json_files = sorted(glob.glob(os.path.join(data_folder, "*.json")))
 kernel_xs = {}
 kernel_ys = {}
 
-for json_file in json_files:
+for json_file in data_json_files:
     with open(json_file, 'r') as f:
         data = json.load(f)
         kernel_name = Path(json_file).stem
@@ -104,17 +109,18 @@ input_features = len(instruction_pairs)
 output_units = 1
 
 layers = [Input(shape=(input_features,))]
-layers.append(Dense(output_units, activation="relu", kernel_constraint="non_neg"))
+layers.append(Dense(64, activation="leaky_relu"))
+layers.append(Dense(output_units))
 model = Sequential(layers)
 
 
 model.compile(
-    optimizer=Adam(learning_rate=0.03),
+    optimizer=Adam(learning_rate=0.1),
     loss="mse"
 )
 if SKIP_TRAINING:
     # Load weights from disk
-    weights_path = os.path.join(os.path.dirname(__file__), "weights_00016.npz")
+    weights_path = os.path.join(os.path.dirname(__file__), weights_file)
     loaded_weights = np.load(weights_path, allow_pickle=True)
     weights_list = [loaded_weights[f"arr_{i}"] for i in range(len(loaded_weights.files))]
     model.set_weights(weights_list)
@@ -137,9 +143,40 @@ predictions = model.predict(xs)
 predictions_original = np.expm1(predictions)
 actual_original = np.expm1(ys)
 
-print("\nPredictions:")
-print(f"{'Filename':<60} {'Log-scaled Pred':<20} {'Original Pred':<20} {'Log-scaled Actual':<20} {'Original Actual':<20} {'% Error':<15}")
-print("-" * 155)
-for i, filename in enumerate(kernel_names):
-    percent_error = abs(predictions_original[i][0] - actual_original[i][0]) / actual_original[i][0] * 100
-    print(f"{filename:<60} {predictions[i][0]:<20.6f} {predictions_original[i][0]:<20.6f} {ys[i][0]:<20.6f} {actual_original[i][0]:<20.6f} {percent_error:<15.2f}%")
+# print("\nPredictions:")
+# print(f"{'Filename':<60} {'Log-scaled Pred':<20} {'Original Pred':<20} {'Log-scaled Actual':<20} {'Original Actual':<20} {'% Error':<15}")
+# print("-" * 155)
+# for i, filename in enumerate(kernel_names):
+#     percent_error = abs(predictions_original[i][0] - actual_original[i][0]) / actual_original[i][0] * 100
+#     print(f"{filename:<60} {predictions[i][0]:<20.6f} {predictions_original[i][0]:<20.6f} {ys[i][0]:<20.6f} {actual_original[i][0]:<20.6f} {percent_error:<15.2f}%")
+
+# Itterate over kernels in 'kernels_json_files' and predict power consumption, then print the results
+print("\nPredictions for kernels:")
+print(f"{'Filename':<60} {'Log-scaled Pred':<20} {'Original Pred':<20}")
+print("-" * 100)
+for json_file in kernels_json_files:
+    feature_vector = [0] * len(instruction_pairs)
+    with open(json_file, 'r') as f:
+        data = json.load(f)
+        for pair, count in data.get("dependentPairs", {}).items():
+            if pair in instruction_indices:
+                feature_vector[instruction_indices[pair]] = count
+            else:
+                print(f"[Warning] Pair '{pair}' from {json_file} not in instruction_pairs, skipping.")
+        for pair, count in data.get("independentPairs", {}).items():
+            if pair in instruction_indices:
+                feature_vector[instruction_indices[pair]] += count
+            else:
+                print(f"[Warning] Pair '{pair}' from {json_file} not in instruction_pairs, skipping.")
+
+        # Get the actual power consumption from the JSON file for comparison
+        actual_power = data.get("powerConsumptionJoules")
+
+        # Normalize the feature vector using log scaling
+        feature_vector = np.log1p(feature_vector).reshape(1, -1)
+
+        # Predict the log-scaled power consumption and convert back to original scale
+        predicted_log_power = model.predict(feature_vector, verbose=0)[0][0]
+        predicted_power = np.expm1(predicted_log_power)
+
+        print(f"{json_file.name:<60} {actual_power:<20.6f} {predicted_power:<20.6f}")
