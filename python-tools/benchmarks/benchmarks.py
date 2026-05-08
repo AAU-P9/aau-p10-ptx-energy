@@ -6,6 +6,7 @@ import csv
 import json
 from pathlib import Path
 from typing import Callable
+import shutil
 
 from cubindings.cubindings import ExecutionResult
 from cubindings.cubindings_analyser import AnalyserResult, run_ptx_analyser, build_kernel_params, anayser_result_to_feature_csv
@@ -104,10 +105,6 @@ def run_benchmarks(
             debug_enabled=debug_enabled,
             power_consumption_joules=execution_result.power_metric_result.total_energy_j,
         )
-
-        # Add the benchmark to the feature dataset for the Neural Network.
-        # csv_path = Path("/home/rasmus/aau-p10-ptx-energy/neural-network/data.csv")
-        # anayser_result_to_feature_csv(kernel_name, csv_path, execution_result.power_metric_result.total_energy_j, analysis_result)
 
         predictor_result = run_predictor(
             model_path=model_path,

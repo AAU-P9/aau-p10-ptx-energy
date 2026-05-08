@@ -96,7 +96,7 @@ def run_ptx_analyser(
     output_path: Path,
     kernel_params: str,
     program_name="program.cu",
-    power_consumption_joules: float = 1.0,
+    power_consumption_joules: float = -1.0,
     debug_enabled: bool = False
 ) -> AnalyserResult:
     pipe = sys.stdout if debug_enabled else subprocess.PIPE

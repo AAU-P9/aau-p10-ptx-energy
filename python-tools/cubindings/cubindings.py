@@ -67,8 +67,9 @@ def execute_code(
     program_str: str,
     path: Path = None,
     nvcc_args: list[str] = [], binary_args: list[str] = [],
-    enable_metrics: bool = False,
+    enable_metrics: bool = True,
     metrics_sleep_time: int = 5,
+    debug: bool = False,
 ) -> ExecutionResult:
     # Fallback temporary directory if the specified path cannot be created
     if path is None:
@@ -101,6 +102,7 @@ def execute_code(
         binary_args=binary_args,
         enable_metrics=enable_metrics,
         metrics_sleep_time=metrics_sleep_time,
+        debug=debug,
     )
 
 def execute_program(
@@ -201,6 +203,7 @@ def execute_program(
                 check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             )
             time.sleep(0.5)
+
             try:
                 pmd2_cmd = [
                     pmd2_cli,

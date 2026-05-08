@@ -1,12 +1,13 @@
 import csv
 import json
 from pathlib import Path
+import shutil
 import sys
 import threading
 import time
 
 from cubindings.cubindings import execute_code, ExecutionResult
-from cubindings.cubindings_analyser import run_ptx_analyser, build_kernel_params
+from cubindings.cubindings_analyser import run_ptx_analyser, build_kernel_params, anayser_result_to_feature_csv
 from calibrator.calibrator import build_program, INSTRUCTION_TEMPLATES
 
 # ============================================================================
@@ -109,7 +110,13 @@ def run_one(insn, pilot_cache: dict):
     ptx1 = run_ptx_analyser(
         r1.path,
         kernel_params=build_kernel_params(r1.exports),
+        power_consumption_joules=r1.power_metric_result.total_energy_j,
     )
+
+    # Write the analyser output to the data folder for the Neural Network.
+    analyser_output_file = r1.path / "analyser_output.json"
+    shutil.copy(analyser_output_file, Path(f"/home/rasmus/aau-p10-ptx-energy/python-tools/nn-single-occurrences/data/{insn}.json"))
+
 
     instruction_count = ptx1.instruction_occurrences.get(insn, -1)
 
