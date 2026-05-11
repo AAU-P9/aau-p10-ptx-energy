@@ -57,8 +57,7 @@ float warpReduceSum(float val) {
 template <int BLOCK_SIZE>
 __inline__ __device__
 float blockReduceSum(float val, typename cub::BlockReduce<float, BLOCK_SIZE>::TempStorage &temp_storage) {
-    typedef cub::BlockReduce<float, BLOCK_SIZE> BlockReduce;
-    return BlockReduce(temp_storage).Reduce(val, cub::Sum());
+    return cub::BlockReduce<float, BLOCK_SIZE>(temp_storage).Sum(val);
 }
 
 __inline__ __device__
@@ -68,11 +67,14 @@ float warpReduceMax(float val) {
     return val;
 }
 
+struct FloatMax {
+    __device__ float operator()(float a, float b) const { return a > b ? a : b; }
+};
+
 template <int BLOCK_SIZE>
 __inline__ __device__
 float blockReduceMax(float val, typename cub::BlockReduce<float, BLOCK_SIZE>::TempStorage &temp_storage) {
-    typedef cub::BlockReduce<float, BLOCK_SIZE> BlockReduce;
-    return BlockReduce(temp_storage).Reduce(val, cub::Max());
+    return cub::BlockReduce<float, BLOCK_SIZE>(temp_storage).Reduce(val, FloatMax{});
 }
 
 extern "C" __global__
