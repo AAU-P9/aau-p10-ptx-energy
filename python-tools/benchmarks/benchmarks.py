@@ -114,7 +114,7 @@ def run_benchmarks(
             execution_result.path,
             kernel_params,
             program_name=program_name,
-            debug_enabled=debug_enabled,
+            debug_enabled=True,
             power_consumption_joules=execution_result.power_metric_result.total_energy_j,
         )
 
@@ -168,24 +168,28 @@ def write_csv_results(output_path: Path) -> None:
 
 
 def main() -> None:
-    run_benchmarks(
-        kernel_name="matrix_mult",
-        sizes=[1024, 2048, 4096, 8192, 16384],
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
-        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
-        parameters_builder=lambda execution_result, size: [],
-        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"),
-    )
+    print("Running benchmarks...")
 
-    # sizes = [131072]
+    # TODO: Fix the following stack trace when running the benchmarks:
+    # thread 'main' (4150861) panicked at src/cfg/count_instructions.rs:140:70:
+    # called `Result::unwrap()` on an `Err` value: ParseIntError { kind: InvalidDigit }
+    # note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+    # run_benchmarks(
+    #     kernel_name="matrix_mult_relu",
+    #     sizes=[1024, 2048, 4096, 8192, 16384],
+    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult_relu/src"),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
+    #     parameters_builder=lambda execution_result, size: [],
+    #     data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"),
+    # )
 
-    # # run_benchmarks(
-    # #     kernel_name="matrix_mul",
-    # #     sizes=sizes,
-    # #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
-    # #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
-    # #     parameters_builder=lambda execution_result, size: [],
-    # # )
+    # run_benchmarks(
+    #     kernel_name="matrix_mul",
+    #     sizes=sizes,
+    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
+    #     parameters_builder=lambda execution_result, size: [],
+    # )
 
     # run_benchmarks(
     #     kernel_name="vector_add_old",
