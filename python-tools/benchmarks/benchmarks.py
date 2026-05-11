@@ -169,11 +169,12 @@ def write_csv_results(output_path: Path) -> None:
 
 def main() -> None:
     print("Running benchmarks...")
+    
     run_benchmarks(
         kernel_name="flip_flop_mha",
-        sizes=[1],
+        sizes=[32, 64, 128, 256],
         program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/flip_flop_mha"),
-        nvcc_args_builder=lambda size: [],
+        nvcc_args_builder=lambda size: [f"-DN_STEPS={size}"],
     )
 
     # TODO: Fix the following stack trace when running the benchmarks:
