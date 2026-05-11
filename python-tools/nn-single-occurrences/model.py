@@ -17,10 +17,9 @@ print(f"JAX devices: {jax.devices()}")
 from keras import Sequential
 from keras.layers import Dense, Input
 
-import matplotlib.pyplot as plt
-
 # Boolean to skip training and load weights instead
 SKIP_TRAINING = False
+weights_file = "weights_0_076.npz"
 
 # Load JSON files from the data folder next to this script
 data_dir = Path(__file__).resolve().parent / "data"
@@ -113,7 +112,7 @@ model.compile(
 
 if SKIP_TRAINING:
     # Load weights from disk
-    weights_path = os.path.join(os.path.dirname(__file__), "weights_test.npz")
+    weights_path = os.path.join(os.path.dirname(__file__), weights_file)
     loaded_weights = np.load(weights_path, allow_pickle=True)
     weights_list = [loaded_weights[f"arr_{i}"] for i in range(len(loaded_weights.files))]
     model.set_weights(weights_list)
@@ -122,7 +121,7 @@ else:
     print("Starting training on GPU...")
 
     start_time = time.time()
-    model.fit(x=xs, y=ys, epochs=100_000, verbose=1)
+    model.fit(x=xs, y=ys, epochs=150_000, verbose=1)
     elapsed = time.time() - start_time
     print(f"Training completed in {elapsed:.2f} seconds")
 

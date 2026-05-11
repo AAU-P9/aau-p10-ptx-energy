@@ -6,9 +6,17 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 1000000
+#endif
+
+#ifndef TILE_DIM
 #define TILE_DIM 32
+#endif
+
+#ifndef SIZE_N
 #define SIZE_N 1024
+#endif
 
 __global__ void matrix_transpose(const float *A, float *B, int N) {
 
@@ -60,6 +68,13 @@ int main(int argc, char *argv[]) {
     printf("[LOG] Running kernel with %d iterations...\n", ITERATIONS);
 
     matrix_transpose<<<grid_size, block_size>>>(d_a, d_b, SIZE_N);
+
+    EXPORT_N("gridDim_x", grid_size.x);
+    EXPORT_N("gridDim_y", grid_size.y);
+    EXPORT_N("gridDim_z", grid_size.z);
+    EXPORT_N("blockDim_x", block_size.x);
+    EXPORT_N("blockDim_y", block_size.y);
+    EXPORT_N("blockDim_z", block_size.z);
 
     cudaError_t err = cudaDeviceSynchronize();
 

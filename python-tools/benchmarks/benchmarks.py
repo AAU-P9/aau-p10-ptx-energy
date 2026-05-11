@@ -183,9 +183,18 @@ def main() -> None:
     #     data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"),
     # )
 
+    run_benchmarks(
+        kernel_name="matrix_transpose",
+        sizes=[1024, 2048, 4096, 8192, 16384],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_transpose/src"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", f"-DSIZE_N={size}"],
+        parameters_builder=lambda execution_result, size: [],
+        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-single-occurrences/kernels"),
+    )
+
     # run_benchmarks(
     #     kernel_name="matrix_mul",
-    #     sizes=sizes,
+    #     sizes=[1024, 2048, 4096, 8192, 16384],
     #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
     #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
     #     parameters_builder=lambda execution_result, size: [],
