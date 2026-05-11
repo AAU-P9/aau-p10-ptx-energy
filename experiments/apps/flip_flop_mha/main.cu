@@ -139,8 +139,10 @@ void mha(
         const float *k_ptr = k + candidate_id * (qk_col * n_steps)
                                + threadIdx.x * qk_col
                                + head_id * dim_per_head;
-        for (int i = 0; i < dim_per_head; i++)
+        META_LOOP(dot_loop, 1, DIM_PER_HEAD, false);
+        for (int i = 0; i < dim_per_head; i++) {
             dot_val += sq[i] * k_ptr[i];
+        }
         dot_val *= scale;
     }
 
@@ -172,6 +174,7 @@ void mha(
     if (threadIdx.x < dim_per_head) {
         float weighted_sum = 0.f;
         int v_index = candidate_id * (v_col * n_steps) + head_id * dim_per_head + threadIdx.x;
+        META_LOOP(weighted_sum, 1, N_STEPS, false);
         for (int t = 0; t < n_steps; t++)
             weighted_sum += logits[t] * v[v_index + t * v_col];
         dst[candidate_id * v_col + head_id * dim_per_head + threadIdx.x] = weighted_sum;
