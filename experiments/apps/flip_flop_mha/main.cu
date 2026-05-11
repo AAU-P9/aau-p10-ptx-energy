@@ -41,6 +41,10 @@
 #define THRESHOLD 20
 #endif
 
+#ifndef ITERATIONS
+#define ITERATIONS 100000
+#endif
+
 #define QK_COL (NHEAD * DIM_PER_HEAD)
 #define V_COL  QK_COL
 #define SMEM_BYTES ((DIM_PER_HEAD + N_STEPS) * sizeof(float))
@@ -90,6 +94,7 @@ void mha(
     const int nhead,
     const float scale,
     const int threshold,
+    const int iterations,
     float *__restrict__ dst)
 {
     KERNEL_META(mha,
@@ -102,11 +107,13 @@ void mha(
         _META_FRAG_PARAM_INT(6,  v_col,     i32, dim,    RANGE(1, 4096))
         _META_FRAG_PARAM_INT(7,  nhead,     i32, dim,    RANGE(1, 64))
         _META_FRAG_PARAM_FLOAT(8, scale,    f32, scalar, "")
-        _META_FRAG_PARAM_INT(9,  threshold, i32, scalar, RANGE(1, 100))
-        _META_FRAG_PARAM_PTR(10, dst,       f32, output, WRITEONLY NOALIAS ALIGN(128))
+        _META_FRAG_PARAM_INT(9,  threshold,  i32, scalar, RANGE(1, 100))
+        _META_FRAG_PARAM_INT(10, iterations, i32, scalar, RANGE(1, 10000000))
+        _META_FRAG_PARAM_PTR(11, dst,        f32, output, WRITEONLY NOALIAS ALIGN(128))
         _META_FRAG_LAUNCH(_BLOCK_DIM, 1, 1, "beam_size*nhead 1 1")
         _META_FRAG_SHARED(sq,     f32, DIM_PER_HEAD)
         _META_FRAG_SHARED(logits, f32, N_STEPS)
+        _META_FRAG_LOOP(iter_loop,    1, ITERATIONS,   false)
         _META_FRAG_LOOP(dot_loop,     1, DIM_PER_HEAD, false)
         _META_FRAG_LOOP(weighted_sum, 1, N_STEPS,      false)
         _META_FRAG_ASSUME("n_steps <= blockDim.x")
@@ -126,6 +133,9 @@ void mha(
     extern __shared__ float shared_buffer[];
     float *sq     = shared_buffer;
     float *logits = shared_buffer + dim_per_head;
+
+    META_LOOP(iter_loop, 1, ITERATIONS, false);
+    for (int iter = 0; iter < iterations; iter++) {
 
     // Load query vector for this candidate/head into shared memory
     int q_index = candidate_id * qk_col + head_id * dim_per_head + threadIdx.x;
@@ -179,6 +189,8 @@ void mha(
             weighted_sum += logits[t] * v[v_index + t * v_col];
         dst[candidate_id * v_col + head_id * dim_per_head + threadIdx.x] = weighted_sum;
     }
+
+    } // for iter
 }
 
 int main()
@@ -217,15 +229,17 @@ int main()
     cudaMemcpy(d_k, h_k, k_elems * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_v, h_v, v_elems * sizeof(float), cudaMemcpyHostToDevice);
 
-    printf("[LOG] flip_flop_mha: beam=%d nhead=%d dim_per_head=%d n_steps=%d\n",
-           beam_size, nhead, dim_per_head, n_steps);
+    const int iterations = ITERATIONS;
+
+    printf("[LOG] flip_flop_mha: beam=%d nhead=%d dim_per_head=%d n_steps=%d iterations=%d\n",
+           beam_size, nhead, dim_per_head, n_steps, iterations);
     printf("[LOG] Launching with gridDim=%d blockDim=%d smem=%zu bytes\n",
            beam_size * nhead, _BLOCK_DIM, SMEM_BYTES);
 
     mha<<<beam_size * nhead, _BLOCK_DIM, SMEM_BYTES>>>(
         d_q, d_k, d_v,
         beam_size, n_steps, qk_col, v_col, nhead,
-        scale, threshold,
+        scale, threshold, iterations,
         d_dst);
     cudaDeviceSynchronize();
 
@@ -239,6 +253,7 @@ int main()
     EXPORT_N("nhead",      nhead);
     EXPORT_N("dim_per_head", dim_per_head);
     EXPORT_N("n_steps",    n_steps);
+    EXPORT_N("iterations", iterations);
     EXPORT_N("smem_bytes", (int)SMEM_BYTES);
 
     METRICS_KERNEL_END
