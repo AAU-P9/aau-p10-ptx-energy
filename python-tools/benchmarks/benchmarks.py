@@ -168,194 +168,195 @@ def write_csv_results(output_path: Path) -> None:
 
 
 def main() -> None:
-    # run_benchmarks(
-    #     kernel_name="matrix_mult",
-    #     sizes=[1024, 2048, 4096, 8192, 16384],
-    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
-    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
-    #     parameters_builder=lambda execution_result, size: [],
-    # )
-
-    sizes = [131072]
-
-    # run_benchmarks(
-    #     kernel_name="matrix_mul",
-    #     sizes=sizes,
-    #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
-    #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
-    #     parameters_builder=lambda execution_result, size: [],
-    # )
-
     run_benchmarks(
-        kernel_name="vector_add_old",
-        sizes=sizes,
-        program_path=Path(
-            "/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"
-        ),
-        nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
+        kernel_name="matrix_mult",
+        sizes=[1024, 2048, 4096, 8192, 16384],
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+        nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=32", "-DSIZE_K=32"],
         parameters_builder=lambda execution_result, size: [],
+        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"),
     )
 
-    pair_benchmarks = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
-    pair_sizes = [1]
-    pair_data_output = Path("/home/lasse/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/data")
+    # sizes = [131072]
 
-    run_benchmarks(
-        kernel_name="pair_add_f32_st_global_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_add_f32_st_global_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_add_s32_add_s32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_add_s32_add_s32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_add_s32_add_s32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_add_s32_add_s32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_add_s64_ld_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_add_s64_ld_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_cvt_shl_add_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_cvt_shl_add_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_add_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_add_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f32_add_f32_coalesced",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f32_add_f32_coalesced/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f32_add_f32_strided",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f32_add_f32_strided/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f32_ld_f32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f32_ld_f32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f32_mul_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f32_mul_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f32_st_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f32_st_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_f64_add_f64_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_f64_add_f64_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_s32_add_s32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_s32_add_s32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_ld_shared_f32_add_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_ld_shared_f32_add_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mov_f32_add_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mov_f32_add_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mov_u32_add_s32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mov_u32_add_s32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mov_u32_add_s32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mov_u32_add_s32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mul_f32_add_f32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mul_f32_add_f32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mul_f32_add_f32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mul_f32_add_f32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mul_s32_add_s32_dep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mul_s32_add_s32_dep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_mul_s32_add_s32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_mul_s32_add_s32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
-    run_benchmarks(
-        kernel_name="pair_st_f32_st_f32_indep",
-        sizes=pair_sizes,
-        program_path=pair_benchmarks / "pair_st_f32_st_f32_indep/src",
-        nvcc_args_builder=lambda size: [],
-        data_output_path=pair_data_output,
-    )
+    # # run_benchmarks(
+    # #     kernel_name="matrix_mul",
+    # #     sizes=sizes,
+    # #     program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_mult/src"),
+    # #     nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", "-DSIZE_N=64", "-DSIZE_K=64"],
+    # #     parameters_builder=lambda execution_result, size: [],
+    # # )
 
-    write_csv_results(Path("benchmark_results.csv"))
+    # run_benchmarks(
+    #     kernel_name="vector_add_old",
+    #     sizes=sizes,
+    #     program_path=Path(
+    #         "/home/rasmus/aau-p10-ptx-energy/experiments/apps/vector_add_old/src"
+    #     ),
+    #     nvcc_args_builder=lambda size: [f"-DSIZE_N={size}"],
+    #     parameters_builder=lambda execution_result, size: [],
+    # )
+
+    # pair_benchmarks = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # pair_sizes = [1]
+    # pair_data_output = Path("/home/lasse/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/data")
+
+    # run_benchmarks(
+    #     kernel_name="pair_add_f32_st_global_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_add_f32_st_global_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_add_s32_add_s32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_add_s32_add_s32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_add_s32_add_s32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_add_s32_add_s32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_add_s64_ld_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_add_s64_ld_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_cvt_shl_add_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_cvt_shl_add_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_add_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_add_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f32_add_f32_coalesced",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f32_add_f32_coalesced/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f32_add_f32_strided",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f32_add_f32_strided/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f32_ld_f32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f32_ld_f32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f32_mul_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f32_mul_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f32_st_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f32_st_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_f64_add_f64_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_f64_add_f64_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_s32_add_s32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_s32_add_s32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_ld_shared_f32_add_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_ld_shared_f32_add_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mov_f32_add_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mov_f32_add_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mov_u32_add_s32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mov_u32_add_s32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mov_u32_add_s32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mov_u32_add_s32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mul_f32_add_f32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mul_f32_add_f32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mul_f32_add_f32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mul_f32_add_f32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mul_s32_add_s32_dep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mul_s32_add_s32_dep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_mul_s32_add_s32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_mul_s32_add_s32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+    # run_benchmarks(
+    #     kernel_name="pair_st_f32_st_f32_indep",
+    #     sizes=pair_sizes,
+    #     program_path=pair_benchmarks / "pair_st_f32_st_f32_indep/src",
+    #     nvcc_args_builder=lambda size: [],
+    #     data_output_path=pair_data_output,
+    # )
+
+    # write_csv_results(Path("benchmark_results.csv"))
 
 
 if __name__ == "__main__":

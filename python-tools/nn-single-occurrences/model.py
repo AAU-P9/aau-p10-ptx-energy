@@ -107,7 +107,7 @@ layers = [
 model = Sequential(layers)
 
 model.compile(
-    optimizer=Adam(learning_rate=0.0001),
+    optimizer=Adam(learning_rate=0.000001),
     loss="mse",
 )
 

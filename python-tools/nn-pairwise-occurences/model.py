@@ -14,7 +14,7 @@ from keras.layers import Dense, Input
 
 # Boolean to skip training and load weights instead
 SKIP_TRAINING = False
-weights_file = "weights_e04.npz"
+weights_file = "weights.npz"
 
 # Load dataset from JSON files in data folder
 data_folder = os.path.join(os.path.dirname(__file__), "data")
@@ -64,7 +64,7 @@ for json_file in data_json_files:
         kernel_name = Path(json_file).stem
 
         # Create feature vector initialized to zeros
-        feature_vector = [0] * len(instruction_pairs)
+        feature_vector = [1] * len(instruction_pairs)
         
         # Add counts from dependent pairs (only if in our fixed set)
         for pair, count in data.get("dependentPairs", {}).items():
@@ -109,7 +109,7 @@ input_features = len(instruction_pairs)
 output_units = 1
 
 layers = [Input(shape=(input_features,))]
-layers.append(Dense(64, activation="leaky_relu"))
+layers.append(Dense(16, activation="leaky_relu"))
 layers.append(Dense(output_units))
 model = Sequential(layers)
 
@@ -152,10 +152,10 @@ actual_original = np.expm1(ys)
 
 # Itterate over kernels in 'kernels_json_files' and predict power consumption, then print the results
 print("\nPredictions for kernels:")
-print(f"{'Filename':<60} {'Log-scaled Pred':<20} {'Original Pred':<20}")
+print(f"{'Filename':<60} {'Actual Power':<20} {'Original Pred':<20}")
 print("-" * 100)
 for json_file in kernels_json_files:
-    feature_vector = [0] * len(instruction_pairs)
+    feature_vector = [1] * len(instruction_pairs)
     with open(json_file, 'r') as f:
         data = json.load(f)
         for pair, count in data.get("dependentPairs", {}).items():
