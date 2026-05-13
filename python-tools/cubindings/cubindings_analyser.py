@@ -100,6 +100,7 @@ def run_ptx_analyser(
     kernel_params: str,
     program_name="program.cu",
     power_consumption_joules: float = -1.0,
+    kernel_duration_s: float = -1.0,
     debug_enabled: bool = False
 ) -> AnalyserResult:
     pipe = sys.stdout if debug_enabled else subprocess.PIPE
@@ -113,6 +114,8 @@ def run_ptx_analyser(
                     "analyze-cfg",
                     "--power-consumption-joules",
                     str(power_consumption_joules),
+                    "--kernel-duration-s",
+                    str(kernel_duration_s),
                     "--kernel-params",
                     kernel_params,
                     "--output-json-path",

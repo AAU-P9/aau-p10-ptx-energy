@@ -29,6 +29,7 @@ def run_random_kernel():
             kernel_params=build_kernel_params(r.exports),
             debug_enabled=True,
             power_consumption_joules=r.power_metric_result.total_energy_j,
+            kernel_duration_s=r.power_metric_result.kernel_duration_cpu_s,
     )
 
     kernel_name = "_".join(insts) + f"_r{loop_iters}_b{block_size}_g{grid_size}"
