@@ -13,6 +13,7 @@ use super::mem_analysis::{build_memory_profiles, MemoryProfile};
 pub struct InstructionAnalysisReport {
     pub kernel_name: Option<String>,
     pub power_consumption_joules: Option<f64>,
+    pub kernel_duration_s: Option<f64>,
     pub grid_dim: Dim3,
     pub block_dim: Dim3,
     pub parameters: Vec<Parameter>,
@@ -458,6 +459,7 @@ pub fn analyze_cfg(
     output_json_path: &Option<PathBuf>,
     kernel_name: &Option<String>,
     power_consumption_joules: &Option<f64>,
+    kernel_duration_s: &Option<f64>,
 ) {
     println!(
         "[ANALYZE_CFGS] Grid dimensions: ({}, {}, {}), Block dimensions: ({}, {}, {})",
@@ -480,7 +482,7 @@ pub fn analyze_cfg(
     let mut visited = BTreeSet::new();
     let mut total_instructions: u64 = 0;
     let mut scope_instructions: u64 = 0;
-    let mut scope_iterations: u64 = (grid_x * grid_y * grid_z * block_x * block_y * block_z).into();
+    let mut scope_iterations: u64 = 1;
 
     let registers: HashMap<String, u64> = HashMap::new();
     let mut instruction_occurrences: HashMap<String, u64> = HashMap::new();
@@ -520,6 +522,7 @@ pub fn analyze_cfg(
     let report = InstructionAnalysisReport {
         kernel_name: kernel_name.clone(),
         power_consumption_joules: *power_consumption_joules,
+        kernel_duration_s: *kernel_duration_s,
         grid_dim: Dim3 {
             x: grid_x,
             y: grid_y,

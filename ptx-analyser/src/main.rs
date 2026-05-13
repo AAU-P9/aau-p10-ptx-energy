@@ -84,6 +84,10 @@ enum Command {
         #[arg(long)]
         /// Power consumption to include in the JSON output.
         power_consumption_joules: Option<f64>,
+
+        #[arg(long)]
+        /// Kernel duration to include in the JSON output.
+        kernel_duration_s: Option<f64>,
     },
 
     BuildCfg {
@@ -164,6 +168,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             output_json_path,
             kernel_name,
             power_consumption_joules,
+            kernel_duration_s,
         } => {
             let ptx_source = fs::read_to_string(&input_file)?;
             let module = parse_ptx(&ptx_source)?;
@@ -211,6 +216,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 &output_json_path,
                 &kernel_name,
                 &power_consumption_joules,
+                &kernel_duration_s,
             );
         }
         Command::BuildCfg {
