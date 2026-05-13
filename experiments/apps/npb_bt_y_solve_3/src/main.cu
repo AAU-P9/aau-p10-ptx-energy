@@ -1,0 +1,329 @@
+#include "cupti_timing.h"
+#include "ptx_meta.h"
+#include <cuda.h>
+#include <stdio.h>
+
+#ifndef PROBLEM_SIZE
+#define PROBLEM_SIZE 12
+#endif
+
+#define IMAX     (PROBLEM_SIZE)
+#define JMAX     (PROBLEM_SIZE)
+#define KMAX     (PROBLEM_SIZE)
+#define IMAXP    (IMAX/2*2)
+#define JMAXP    (JMAX/2*2)
+#define M_SIZE   5
+#define AA 0
+#define BB 1
+#define CC 2
+
+#ifndef ITERATIONS
+#define ITERATIONS 1000
+#endif
+
+namespace constants_device {
+__constant__ double tx1, tx2, tx3, ty1, ty2, ty3, tz1, tz2, tz3,
+    dx1, dx2, dx3, dx4, dx5, dy1, dy2, dy3, dy4, dy5,
+    dz1, dz2, dz3, dz4, dz5, dssp, dt,
+    dxmax, dymax, dzmax, xxcon1, xxcon2, xxcon3, xxcon4, xxcon5,
+    dx1tx1, dx2tx1, dx3tx1, dx4tx1, dx5tx1,
+    yycon1, yycon2, yycon3, yycon4, yycon5,
+    dy1ty1, dy2ty1, dy3ty1, dy4ty1, dy5ty1,
+    zzcon1, zzcon2, zzcon3, zzcon4, zzcon5,
+    dz1tz1, dz2tz1, dz3tz1, dz4tz1, dz5tz1,
+    dIMAXm1, dJMAXm1, dKMAXm1,
+    c1c2, c1c5, c3c4, c1345, coKMAX1,
+    c1, c2, c3, c4, c5, c4dssp, c5dssp, dtdssp,
+    dttx1, dttx2, dtty1, dtty2, dttz1, dttz2,
+    c2dttx1, c2dtty1, c2dttz1,
+    comz1, comz4, comz5, comz6,
+    c3c4tx3, c3c4ty3, c3c4tz3, c2iv, con43, con16,
+    ce[5][13];
+}
+
+static inline size_t round_work(size_t n, size_t t) {
+    return t == 0 ? n : ((n + t - 1) / t) * t;
+}
+
+#define BUF_5D  (sizeof(double)*KMAX*(JMAXP+1)*(IMAXP+1)*5)
+#define BUF_3D  (sizeof(double)*KMAX*(JMAXP+1)*(IMAXP+1))
+#define BUF_LHS (sizeof(double)*(JMAXP+1)*(PROBLEM_SIZE-1)*(PROBLEM_SIZE+1)*5*5)
+
+__global__ void bt_kernel(double* rhs_device,
+		double* lhsA_device, 
+		double* lhsB_device, 
+		double* lhsC_device){
+	extern __shared__ double tmp_l_lhs[];
+	double *tmp_l_r = &tmp_l_lhs[blockDim.x * 3 * 5 * 5];
+
+	int k = (blockDim.y * blockIdx.y + threadIdx.y)/5;
+	int m = (blockDim.y * blockIdx.y + threadIdx.y)%5;
+	int i = blockDim.x * blockIdx.x + threadIdx.x+1;
+	int l_i = threadIdx.x;
+	if (k+0 < 1 || k+0 > KMAX-2 || k >= PROBLEM_SIZE || i > IMAX-2){return;}
+
+	int j, n, p, jsize;
+
+	double (*rhs)[JMAXP+1][IMAXP+1][5] = (double(*)[JMAXP+1][IMAXP+1][5])rhs_device;
+
+#define lhsA(a, b, c, d, e) lhsA_device[((((a) * 5 + (b)) *  PROBLEM_SIZE + (c)) * (PROBLEM_SIZE+1) + (d)) * (PROBLEM_SIZE-1) + (e)]
+#define lhsB(a, b, c, d, e) lhsB_device[((((a) * 5 + (b)) *  PROBLEM_SIZE + (c)) * (PROBLEM_SIZE+1) + (d)) * (PROBLEM_SIZE-1) + (e)]
+#define lhsC(a, b, c, d, e) lhsC_device[((((a) * 5 + (b)) *  PROBLEM_SIZE + (c)) * (PROBLEM_SIZE+1) + (d)) * (PROBLEM_SIZE-1) + (e)]
+
+	double (*tmp2_l_lhs)[3][5][5] = (double(*)[3][5][5])tmp_l_lhs;
+	double (*l_lhs)[5][5] = tmp2_l_lhs[l_i];
+	double (*tmp2_l_r)[2][5] = (double(*)[2][5])tmp_l_r;
+	double (*l_r)[5] = tmp2_l_r[l_i]; 
+
+	double pivot, coeff;
+
+	jsize = JMAX - 1;
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * performs guaussian elimination on this cell.
+	 * ---------------------------------------------------------------------
+	 * assumes that unpacking routines for non-first cells 
+	 * preload C' and rhs' from previous cell.
+	 * ---------------------------------------------------------------------
+	 * assumed send happens outside this routine, but that
+	 * c'(JMAX) and rhs'(JMAX) will be sent to next cell
+	 * ---------------------------------------------------------------------
+	 */
+	/* load data */
+	for(p=0; p<5; p++){
+		l_lhs[BB][p][m] = lhsB(p, m, k, 0, i-1);
+		l_lhs[CC][p][m] = lhsC(p, m, k, 0, i-1);
+	}
+
+	l_r[1][m] = rhs[k][0][i][m];
+
+	__syncthreads();
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * multiply c[k][0][i] by b_inverse and copy back to c
+	 * multiply rhs(0) by b_inverse(0) and copy to rhs
+	 * ---------------------------------------------------------------------
+	 */
+	for(p=0; p<5; p++){
+		pivot = 1.00/l_lhs[BB][p][p];
+		if(m > p && m < 5){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
+		if(m < 5){l_lhs[CC][m][p] = l_lhs[CC][m][p]*pivot;}
+		if(p == m){l_r[1][p] = l_r[1][p]*pivot;}
+
+		__syncthreads();
+
+		if(p != m){
+			coeff = l_lhs[BB][p][m];
+			for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
+			for(n=0; n<5; n++){l_lhs[CC][n][m] = l_lhs[CC][n][m] - coeff*l_lhs[CC][n][p];}
+			l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
+		}
+
+		__syncthreads();
+	}
+
+	/* update data */
+	rhs[k][0][i][m] = l_r[1][m];
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * begin inner most do loop
+	 * do all the elements of the cell unless last 
+	 * ---------------------------------------------------------------------
+	 */
+	for(j=1; j<=jsize-1; j++){
+
+		/* load data */
+		for(n=0; n<5; n++){
+			l_lhs[AA][n][m] = lhsA(n, m, k, j, i-1);
+			l_lhs[BB][n][m] = lhsB(n, m, k, j, i-1);
+		}
+		l_r[0][m] = l_r[1][m];
+		l_r[1][m] = rhs[k][j][i][m];
+
+		__syncthreads();
+
+		/*
+		 * ---------------------------------------------------------------------
+		 * subtract A*lhs_vector(j-1) from lhs_vector(j)
+		 * 
+		 * rhs(j) = rhs(j) - A*rhs(j-1)
+		 * ---------------------------------------------------------------------
+		 */
+		l_r[1][m] = l_r[1][m] - l_lhs[AA][0][m]*l_r[0][0]
+			- l_lhs[AA][1][m]*l_r[0][1]
+			- l_lhs[AA][2][m]*l_r[0][2]
+			- l_lhs[AA][3][m]*l_r[0][3]
+			- l_lhs[AA][4][m]*l_r[0][4];
+
+		/*
+		 * ---------------------------------------------------------------------
+		 * B(j) = B(j) - C(j-1)*A(j)
+		 * ---------------------------------------------------------------------
+		 */
+		for(p=0; p<5; p++){
+			l_lhs[BB][m][p] = l_lhs[BB][m][p] - l_lhs[AA][0][p]*l_lhs[CC][m][0]
+				- l_lhs[AA][1][p]*l_lhs[CC][m][1]
+				- l_lhs[AA][2][p]*l_lhs[CC][m][2]
+				- l_lhs[AA][3][p]*l_lhs[CC][m][3]
+				- l_lhs[AA][4][p]*l_lhs[CC][m][4];
+		}
+
+		__syncthreads();
+
+		/* update data */
+		for(n=0; n<5; n++){l_lhs[CC][n][m] = lhsC(n, m, k, j, i-1);}
+
+		__syncthreads();
+
+		/*
+		 * ---------------------------------------------------------------------
+		 * multiply c[k][j][i] by b_inverse and copy back to c
+		 * multiply rhs[k][0][i] by b_inverse[k][0][i] and copy to rhs
+		 * ---------------------------------------------------------------------
+		 */
+		for(p=0; p<5; p++){
+			pivot = 1.00/l_lhs[BB][p][p];
+			if(m > p){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
+			l_lhs[CC][m][p] = l_lhs[CC][m][p]*pivot;
+			if(p == m){l_r[1][p] = l_r[1][p]*pivot;}
+
+			__syncthreads();
+			if(p != m){
+				coeff = l_lhs[BB][p][m];
+				for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
+				for(n=0; n<5; n++){l_lhs[CC][n][m] = l_lhs[CC][n][m] - coeff*l_lhs[CC][n][p];}
+				l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
+			}
+
+			__syncthreads();
+
+		}
+
+		/* update global memory */
+		for(n=0; n<5; n++){
+			lhsC(n, m, k, j, i-1) = l_lhs[CC][n][m];
+		}
+		rhs[k][j][i][m] = l_r[1][m];
+	}
+
+	/* load data */
+	for(n=0; n<5; n++){
+		l_lhs[AA][n][m] = lhsA(n, m, k, j, i-1);
+		l_lhs[BB][n][m] = lhsB(n, m, k, j, i-1);
+	}
+	l_r[0][m] = l_r[1][m];
+	l_r[1][m] = rhs[k][j][i][m];
+
+	__syncthreads();
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * rhs(jsize) = rhs(jsize) - A*rhs(jsize-1)
+	 * ---------------------------------------------------------------------
+	 */
+	l_r[1][m] = l_r[1][m] - l_lhs[AA][0][m]*l_r[0][0]
+		- l_lhs[AA][1][m]*l_r[0][1]
+		- l_lhs[AA][2][m]*l_r[0][2]
+		- l_lhs[AA][3][m]*l_r[0][3]
+		- l_lhs[AA][4][m]*l_r[0][4];
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * B(jsize) = B(jsize) - C(jsize-1)*A(jsize)
+	 * matmul_sub(AA,i,jsize,k,c, CC,i,jsize-1,k,c,BB,i,jsize,k)
+	 * ---------------------------------------------------------------------
+	 */
+	for(p=0; p<5; p++){
+		l_lhs[BB][m][p] = l_lhs[BB][m][p] - l_lhs[AA][0][p]*l_lhs[CC][m][0]
+			- l_lhs[AA][1][p]*l_lhs[CC][m][1]
+			- l_lhs[AA][2][p]*l_lhs[CC][m][2]
+			- l_lhs[AA][3][p]*l_lhs[CC][m][3]
+			- l_lhs[AA][4][p]*l_lhs[CC][m][4];
+	}
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * multiply rhs(jsize) by b_inverse(jsize) and copy to rhs
+	 * ---------------------------------------------------------------------
+	 * binvrhs_p( lhs[jsize][BB], rhs[k][jsize][i], run_computation, m);
+	 * ---------------------------------------------------------------------
+	 */
+	for(p=0; p<5; p++){
+		pivot = 1.00/l_lhs[BB][p][p];
+		if(m > p && m < 5){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
+		if(p == m){l_r[1][p] = l_r[1][p]*pivot;}
+
+		__syncthreads();
+
+		if(p != m){
+			coeff = l_lhs[BB][p][m];
+			for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
+			l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
+		}
+
+		__syncthreads();
+
+	}
+
+	rhs[k][j][i][m] = l_r[1][m];
+
+	__syncthreads();
+
+	/*
+	 * ---------------------------------------------------------------------
+	 * back solve: if last cell, then generate U(jsize)=rhs(jsize)
+	 * else assume U(jsize) is loaded in un pack backsub_info
+	 * so just use it
+	 * after u(jstart) will be sent to next cell
+	 * ---------------------------------------------------------------------
+	 */
+	for(j=jsize-1; j>=0; j--){
+		for(n=0; n<M_SIZE; n++){
+			rhs[k][j][i][m] = rhs[k][j][i][m] - lhsC(n, m, k, j, i-1)*rhs[k][j+1][i][n];
+		}
+		__syncthreads();
+	}
+
+#undef lhsA
+#undef lhsB
+#undef lhsC
+}
+
+
+int main() {
+    METRICS_KERNEL_START
+
+    double *rhs, *lhsA, *lhsB, *lhsC;
+    cudaMalloc(&rhs,  BUF_5D);  cudaMemset(rhs,  0, BUF_5D);
+    cudaMalloc(&lhsA, BUF_LHS); cudaMemset(lhsA, 0, BUF_LHS);
+    cudaMalloc(&lhsB, BUF_LHS); cudaMemset(lhsB, 0, BUF_LHS);
+    cudaMalloc(&lhsC, BUF_LHS); cudaMemset(lhsC, 0, BUF_LHS);
+
+    size_t tpb_i = 4;
+    size_t wx = round_work(IMAX-2, tpb_i);
+    size_t wy = round_work(PROBLEM_SIZE*5, 5);
+    dim3 block(wx/tpb_i, wy/5, 1);
+    dim3 thread(tpb_i, 5, 1);
+    size_t smem = sizeof(double) * tpb_i * (3*5*5 + 2*5);
+
+    printf("[LOG] bt_y_solve_3: PROBLEM_SIZE=%d, ITERATIONS=%d\n", PROBLEM_SIZE, ITERATIONS);
+    for (int it = 0; it < ITERATIONS; it++) {
+        bt_kernel<<<block, thread, smem>>>(rhs, lhsA, lhsB, lhsC);
+    }
+    cudaDeviceSynchronize();
+
+    EXPORT_N("gridDim_x", (int)block.x);
+    EXPORT_N("gridDim_y", (int)block.y);
+    EXPORT_N("gridDim_z", 1);
+    EXPORT_N("blockDim_x", (int)thread.x);
+    EXPORT_N("blockDim_y", (int)thread.y);
+    EXPORT_N("blockDim_z", 1);
+
+    METRICS_KERNEL_END
+
+    cudaFree(rhs); cudaFree(lhsA); cudaFree(lhsB); cudaFree(lhsC);
+    return 0;
+}

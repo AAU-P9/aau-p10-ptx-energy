@@ -4,7 +4,6 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
-import shutil
 
 from cubindings.cubindings import ExecutionResult
 from cubindings.cubindings_analyser import (
@@ -120,7 +119,10 @@ def run_benchmarks(
 
         if data_output_path is not None:
             data_output_path.mkdir(parents=True, exist_ok=True)
-            shutil.copy(execution_result.path / "analyser_output.json", data_output_path / f"{kernel_name}.json")
+            shutil.copy(
+                execution_result.path / "analyser_output.json",
+                data_output_path / f"{kernel_name}.json",
+            )
 
         # Add the benchmark to the feature dataset for the Neural Network.
         # csv_path = Path("/home/rasmus/aau-p10-ptx-energy/neural-network/data.csv")
@@ -169,14 +171,258 @@ def write_csv_results(output_path: Path) -> None:
 
 def main() -> None:
     print("Running benchmarks...")
-    
+
     run_benchmarks(
         kernel_name="flip_flop_mha",
-        sizes=[32, 64, 128, 256],
-        program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/flip_flop_mha"),
+        sizes=[
+            32,
+            64,
+            128,
+            256,
+        ],  # N_STEPS: number of key/value time steps in the attention window
+        program_path=Path(
+            "/home/lasse/aau-p10-ptx-energy/experiments/apps/flip_flop_mha"
+        ),
         nvcc_args_builder=lambda size: [f"-DN_STEPS={size}"],
-        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels")
+        data_output_path=Path(
+            "/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"
+        ),
     )
+
+    bt_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # PROBLEM_SIZE sets IMAX=JMAX=KMAX, i.e. the 3-D grid side length
+    # 12=class S (small), 24=class W (workstation), 64=class A
+    bt_sizes = [12, 24, 64]
+
+    for bt_kernel in [
+        "npb_bt_add",
+        "npb_bt_compute_rhs_1",
+        "npb_bt_compute_rhs_2",
+        "npb_bt_compute_rhs_3",
+        "npb_bt_compute_rhs_4",
+        "npb_bt_compute_rhs_5",
+        "npb_bt_compute_rhs_6",
+        "npb_bt_compute_rhs_7",
+        "npb_bt_compute_rhs_8",
+        "npb_bt_compute_rhs_9",
+        "npb_bt_x_solve_1",
+        "npb_bt_x_solve_2",
+        "npb_bt_x_solve_3",
+        "npb_bt_y_solve_1",
+        "npb_bt_y_solve_2",
+        "npb_bt_y_solve_3",
+        "npb_bt_z_solve_1",
+        "npb_bt_z_solve_2",
+        "npb_bt_z_solve_3",
+    ]:
+        run_benchmarks(
+            kernel_name=bt_kernel,
+            sizes=bt_sizes,
+            program_path=bt_apps / bt_kernel / "src",
+            nvcc_args_builder=lambda size: [
+                f"-DPROBLEM_SIZE={size}"
+            ],  # 3-D grid side length (IMAX=JMAX=KMAX)
+        )
+
+    run_benchmarks(
+        kernel_name="npb_ep_kernel",
+        # M_EP is the log2 of the total sample count; NN=2^(M-16) threads are launched
+        # 24=class S, 25=class W, 28=class A
+        sizes=[24, 25, 28],
+        program_path=Path(
+            "/home/lasse/aau-p10-ptx-energy/experiments/apps/npb_ep_kernel/src"
+        ),
+        nvcc_args_builder=lambda size: [
+            f"-DM_EP={size}"
+        ],  # log2 of problem size; drives grid dimension
+    )
+
+    cg_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # NA is the sparse matrix dimension (number of rows/columns)
+    # NZ=NA*(NONZER+1)^2 non-zeros; NONZER=7 is the sparsity parameter (fixed per NPB spec)
+    # 1400=class S, 7000=class W, 14000=class A
+    cg_sizes = [1400, 7000, 14000]
+    for cg_kernel in [
+        "npb_cg_kernel_one",
+        "npb_cg_kernel_two",
+        "npb_cg_kernel_three",
+        "npb_cg_kernel_four",
+        "npb_cg_kernel_five_1",
+        "npb_cg_kernel_five_2",
+        "npb_cg_kernel_six",
+        "npb_cg_kernel_seven",
+        "npb_cg_kernel_eight",
+        "npb_cg_kernel_nine",
+        "npb_cg_kernel_ten_1",
+        "npb_cg_kernel_ten_2",
+        "npb_cg_kernel_eleven",
+    ]:
+        run_benchmarks(
+            kernel_name=cg_kernel,
+            sizes=cg_sizes,
+            program_path=cg_apps / cg_kernel / "src",
+            nvcc_args_builder=lambda size: [
+                f"-DNA={size}",
+                "-DNONZER=7",
+            ],  # NA=matrix dimension, NONZER=nonzeros per row (sparsity pattern)
+        )
+
+    ft_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # NX×NY×NZ is the 3-D complex FFT grid
+    # class 0=S (64×64×64), 1=W (128×128×32), 2=A (256×256×128)
+    ft_classes = {
+        0: ["-DNX=64", "-DNY=64", "-DNZ=64"],
+        1: ["-DNX=128", "-DNY=128", "-DNZ=32"],
+        2: ["-DNX=256", "-DNY=256", "-DNZ=128"],
+    }
+    for ft_kernel in [
+        "npb_ft_cffts1_kernel_1",
+        "npb_ft_cffts1_kernel_2",
+        "npb_ft_cffts1_kernel_3",
+        "npb_ft_cffts2_kernel_1",
+        "npb_ft_cffts2_kernel_2",
+        "npb_ft_cffts2_kernel_3",
+        "npb_ft_cffts3_kernel_1",
+        "npb_ft_cffts3_kernel_2",
+        "npb_ft_cffts3_kernel_3",
+        "npb_ft_checksum_kernel",
+        "npb_ft_compute_indexmap_kernel",
+        "npb_ft_compute_initial_conditions_kernel",
+        "npb_ft_evolve_kernel",
+        "npb_ft_init_ui_kernel",
+    ]:
+        run_benchmarks(
+            kernel_name=ft_kernel,
+            sizes=[0, 1, 2],  # class index; maps to NX/NY/NZ via ft_classes
+            program_path=ft_apps / ft_kernel / "src",
+            nvcc_args_builder=lambda cls, _c=ft_classes: _c[
+                cls
+            ],  # NX=grid x-dim, NY=y-dim, NZ=z-dim
+        )
+
+    is_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # IS_CLASS encodes the NPB class: 1=S (2^16 keys), 2=W (2^20 keys), 3=A (2^23 keys)
+    # IS sorts integer keys; MAX_KEY = 2^(MAX_KEY_LOG_2) is the key range
+    for is_kernel in [
+        "npb_is_create_seq_kernel",
+        "npb_is_full_verify_kernel_1",
+        "npb_is_full_verify_kernel_2",
+        "npb_is_full_verify_kernel_3",
+        "npb_is_rank_kernel_1",
+        "npb_is_rank_kernel_2",
+        "npb_is_rank_kernel_3",
+        "npb_is_rank_kernel_4",
+        "npb_is_rank_kernel_5",
+        "npb_is_rank_kernel_6",
+        "npb_is_rank_kernel_7",
+    ]:
+        run_benchmarks(
+            kernel_name=is_kernel,
+            sizes=[
+                1,
+                2,
+                3,
+            ],  # IS_CLASS index: 1=S (2^16 keys), 2=W (2^20 keys), 3=A (2^23 keys)
+            program_path=is_apps / is_kernel / "src",
+            nvcc_args_builder=lambda cls: [
+                f"-DIS_CLASS={cls}"
+            ],  # sets TOTAL_KEYS, MAX_KEY, NUM_BUCKETS, CLASS char
+        )
+
+    lu_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # PROBLEM_SIZE = ISIZ1=ISIZ2=ISIZ3, the cubic grid side length
+    # 12=class S, 33=class W, 64=class A
+    for lu_kernel in [
+        "npb_lu_erhs_1",
+        "npb_lu_erhs_2",
+        "npb_lu_erhs_3",
+        "npb_lu_erhs_4",
+        "npb_lu_error_gpu_kernel",
+        "npb_lu_norm_gpu_kernel",
+        "npb_lu_l2norm_gpu_kernel",
+        "npb_lu_pintgr_1",
+        "npb_lu_pintgr_2",
+        "npb_lu_pintgr_3",
+        "npb_lu_pintgr_4",
+        "npb_lu_rhs_1",
+        "npb_lu_rhs_2",
+        "npb_lu_rhs_3",
+        "npb_lu_rhs_4",
+        "npb_lu_setbv_1",
+        "npb_lu_setbv_2",
+        "npb_lu_setbv_3",
+        "npb_lu_setiv_gpu_kernel",
+        "npb_lu_jacld_blts_gpu_kernel",
+        "npb_lu_jacu_buts_gpu_kernel",
+        "npb_lu_ssor_1",
+        "npb_lu_ssor_2",
+    ]:
+        run_benchmarks(
+            kernel_name=lu_kernel,
+            sizes=[
+                12,
+                33,
+                64,
+            ],  # PROBLEM_SIZE: cubic grid side length (NX=NY=NZ); 12=S, 33=W, 64=A
+            program_path=lu_apps / lu_kernel / "src",
+            nvcc_args_builder=lambda size: [
+                f"-DPROBLEM_SIZE={size}"
+            ],  # sets NX=NY=NZ=PROBLEM_SIZE
+        )
+
+    mg_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # MG_PROBLEM_SIZE = finest-level cubic grid side length (power of 2)
+    # 32=class S, 128=class W, 256=class A
+    for mg_kernel in [
+        "npb_mg_comm3_kernel_1",
+        "npb_mg_comm3_kernel_2",
+        "npb_mg_comm3_kernel_3",
+        "npb_mg_interp_gpu_kernel",
+        "npb_mg_norm2u3_gpu_kernel",
+        "npb_mg_psinv_gpu_kernel",
+        "npb_mg_resid_gpu_kernel",
+        "npb_mg_rprj3_gpu_kernel",
+        "npb_mg_zero3_gpu_kernel",
+    ]:
+        run_benchmarks(
+            kernel_name=mg_kernel,
+            sizes=[
+                32,
+                128,
+                256,
+            ],  # MG_PROBLEM_SIZE: finest-level grid side (power of 2); 32=S, 128=W, 256=A
+            program_path=mg_apps / mg_kernel / "src",
+            nvcc_args_builder=lambda size: [
+                f"-DMG_PROBLEM_SIZE={size}"
+            ],  # sets NM=size+2 (grid dim with ghost cells)
+        )
+
+    sp_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
+    # PROBLEM_SIZE = NX=NY=NZ; 12=class S, 36=class W, 64=class A
+    for sp_kernel in [
+        "npb_sp_add_gpu_kernel",
+        "npb_sp_compute_rhs_gpu_kernel_1",
+        "npb_sp_compute_rhs_gpu_kernel_2",
+        "npb_sp_error_norm_gpu_kernel_1",
+        "npb_sp_error_norm_gpu_kernel_2",
+        "npb_sp_exact_rhs_gpu_kernel_1",
+        "npb_sp_exact_rhs_gpu_kernel_2",
+        "npb_sp_exact_rhs_gpu_kernel_3",
+        "npb_sp_exact_rhs_gpu_kernel_4",
+        "npb_sp_initialize_gpu_kernel",
+        "npb_sp_rhs_norm_gpu_kernel_1",
+        "npb_sp_rhs_norm_gpu_kernel_2",
+        "npb_sp_txinvr_gpu_kernel",
+        "npb_sp_x_solve_gpu_kernel",
+        "npb_sp_y_solve_gpu_kernel",
+        "npb_sp_z_solve_gpu_kernel",
+    ]:
+        run_benchmarks(
+            kernel_name=sp_kernel,
+            sizes=[12, 36, 64],  # PROBLEM_SIZE: NX=NY=NZ; 12=S, 36=W, 64=A
+            program_path=sp_apps / sp_kernel / "src",
+            nvcc_args_builder=lambda size: [f"-DPROBLEM_SIZE={size}"],
+        )
 
     # TODO: Fix the following stack trace when running the benchmarks:
     # thread 'main' (4150861) panicked at src/cfg/count_instructions.rs:140:70:
@@ -194,10 +440,14 @@ def main() -> None:
     run_benchmarks(
         kernel_name="matrix_transpose",
         sizes=[1024, 2048, 4096, 8192, 16384],
-        program_path=Path("/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_transpose/src"),
+        program_path=Path(
+            "/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_transpose/src"
+        ),
         nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", f"-DSIZE_N={size}"],
         parameters_builder=lambda execution_result, size: [],
-        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-single-occurrences/kernels"),
+        data_output_path=Path(
+            "/home/rasmus/aau-p10-ptx-energy/python-tools/nn-single-occurrences/kernels"
+        ),
     )
 
     # run_benchmarks(
