@@ -216,11 +216,11 @@ def main() -> None:
         )
 
     run_benchmarks(
-        kernel_name="ep_kernel",
+        kernel_name="npb_ep_kernel",
         # M_EP is the log2 of the total sample count; NN=2^(M-16) threads are launched
         # 24=class S, 25=class W, 28=class A
         sizes=[24, 25, 28],
-        program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/ep_kernel/src"),
+        program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/npb_ep_kernel/src"),
         nvcc_args_builder=lambda size: [f"-DM_EP={size}"],  # log2 of problem size; drives grid dimension
     )
 
@@ -230,19 +230,19 @@ def main() -> None:
     # 1400=class S, 7000=class W, 14000=class A
     cg_sizes = [1400, 7000, 14000]
     for cg_kernel in [
-        "cg_kernel_one",
-        "cg_kernel_two",
-        "cg_kernel_three",
-        "cg_kernel_four",
-        "cg_kernel_five_1",
-        "cg_kernel_five_2",
-        "cg_kernel_six",
-        "cg_kernel_seven",
-        "cg_kernel_eight",
-        "cg_kernel_nine",
-        "cg_kernel_ten_1",
-        "cg_kernel_ten_2",
-        "cg_kernel_eleven",
+        "npb_cg_kernel_one",
+        "npb_cg_kernel_two",
+        "npb_cg_kernel_three",
+        "npb_cg_kernel_four",
+        "npb_cg_kernel_five_1",
+        "npb_cg_kernel_five_2",
+        "npb_cg_kernel_six",
+        "npb_cg_kernel_seven",
+        "npb_cg_kernel_eight",
+        "npb_cg_kernel_nine",
+        "npb_cg_kernel_ten_1",
+        "npb_cg_kernel_ten_2",
+        "npb_cg_kernel_eleven",
     ]:
         run_benchmarks(
             kernel_name=cg_kernel,
@@ -260,20 +260,20 @@ def main() -> None:
         2: ["-DNX=256", "-DNY=256", "-DNZ=128"],
     }
     for ft_kernel in [
-        "ft_cffts1_kernel_1",
-        "ft_cffts1_kernel_2",
-        "ft_cffts1_kernel_3",
-        "ft_cffts2_kernel_1",
-        "ft_cffts2_kernel_2",
-        "ft_cffts2_kernel_3",
-        "ft_cffts3_kernel_1",
-        "ft_cffts3_kernel_2",
-        "ft_cffts3_kernel_3",
-        "ft_checksum_kernel",
-        "ft_compute_indexmap_kernel",
-        "ft_compute_initial_conditions_kernel",
-        "ft_evolve_kernel",
-        "ft_init_ui_kernel",
+        "npb_ft_cffts1_kernel_1",
+        "npb_ft_cffts1_kernel_2",
+        "npb_ft_cffts1_kernel_3",
+        "npb_ft_cffts2_kernel_1",
+        "npb_ft_cffts2_kernel_2",
+        "npb_ft_cffts2_kernel_3",
+        "npb_ft_cffts3_kernel_1",
+        "npb_ft_cffts3_kernel_2",
+        "npb_ft_cffts3_kernel_3",
+        "npb_ft_checksum_kernel",
+        "npb_ft_compute_indexmap_kernel",
+        "npb_ft_compute_initial_conditions_kernel",
+        "npb_ft_evolve_kernel",
+        "npb_ft_init_ui_kernel",
     ]:
         run_benchmarks(
             kernel_name=ft_kernel,
@@ -286,17 +286,17 @@ def main() -> None:
     # IS_CLASS encodes the NPB class: 1=S (2^16 keys), 2=W (2^20 keys), 3=A (2^23 keys)
     # IS sorts integer keys; MAX_KEY = 2^(MAX_KEY_LOG_2) is the key range
     for is_kernel in [
-        "is_create_seq_kernel",
-        "is_full_verify_kernel_1",
-        "is_full_verify_kernel_2",
-        "is_full_verify_kernel_3",
-        "is_rank_kernel_1",
-        "is_rank_kernel_2",
-        "is_rank_kernel_3",
-        "is_rank_kernel_4",
-        "is_rank_kernel_5",
-        "is_rank_kernel_6",
-        "is_rank_kernel_7",
+        "npb_is_create_seq_kernel",
+        "npb_is_full_verify_kernel_1",
+        "npb_is_full_verify_kernel_2",
+        "npb_is_full_verify_kernel_3",
+        "npb_is_rank_kernel_1",
+        "npb_is_rank_kernel_2",
+        "npb_is_rank_kernel_3",
+        "npb_is_rank_kernel_4",
+        "npb_is_rank_kernel_5",
+        "npb_is_rank_kernel_6",
+        "npb_is_rank_kernel_7",
     ]:
         run_benchmarks(
             kernel_name=is_kernel,
@@ -309,29 +309,29 @@ def main() -> None:
     # PROBLEM_SIZE = ISIZ1=ISIZ2=ISIZ3, the cubic grid side length
     # 12=class S, 33=class W, 64=class A
     for lu_kernel in [
-        "lu_erhs_1",
-        "lu_erhs_2",
-        "lu_erhs_3",
-        "lu_erhs_4",
-        "lu_error_gpu_kernel",
-        "lu_norm_gpu_kernel",
-        "lu_l2norm_gpu_kernel",
-        "lu_pintgr_1",
-        "lu_pintgr_2",
-        "lu_pintgr_3",
-        "lu_pintgr_4",
-        "lu_rhs_1",
-        "lu_rhs_2",
-        "lu_rhs_3",
-        "lu_rhs_4",
-        "lu_setbv_1",
-        "lu_setbv_2",
-        "lu_setbv_3",
-        "lu_setiv_gpu_kernel",
+        "npb_lu_erhs_1",
+        "npb_lu_erhs_2",
+        "npb_lu_erhs_3",
+        "npb_lu_erhs_4",
+        "npb_lu_error_gpu_kernel",
+        "npb_lu_norm_gpu_kernel",
+        "npb_lu_l2norm_gpu_kernel",
+        "npb_lu_pintgr_1",
+        "npb_lu_pintgr_2",
+        "npb_lu_pintgr_3",
+        "npb_lu_pintgr_4",
+        "npb_lu_rhs_1",
+        "npb_lu_rhs_2",
+        "npb_lu_rhs_3",
+        "npb_lu_rhs_4",
+        "npb_lu_setbv_1",
+        "npb_lu_setbv_2",
+        "npb_lu_setbv_3",
+        "npb_lu_setiv_gpu_kernel",
         "lu_jacld_blts_gpu_kernel",
         "lu_jacu_buts_gpu_kernel",
-        "lu_ssor_1",
-        "lu_ssor_2",
+        "npb_lu_ssor_1",
+        "npb_lu_ssor_2",
     ]:
         run_benchmarks(
             kernel_name=lu_kernel,
@@ -344,15 +344,15 @@ def main() -> None:
     # MG_PROBLEM_SIZE = finest-level cubic grid side length (power of 2)
     # 32=class S, 128=class W, 256=class A
     for mg_kernel in [
-        "mg_comm3_kernel_1",
-        "mg_comm3_kernel_2",
-        "mg_comm3_kernel_3",
-        "mg_interp_gpu_kernel",
-        "mg_norm2u3_gpu_kernel",
-        "mg_psinv_gpu_kernel",
-        "mg_resid_gpu_kernel",
-        "mg_rprj3_gpu_kernel",
-        "mg_zero3_gpu_kernel",
+        "npb_mg_comm3_kernel_1",
+        "npb_mg_comm3_kernel_2",
+        "npb_mg_comm3_kernel_3",
+        "npb_mg_interp_gpu_kernel",
+        "npb_mg_norm2u3_gpu_kernel",
+        "npb_mg_psinv_gpu_kernel",
+        "npb_mg_resid_gpu_kernel",
+        "npb_mg_rprj3_gpu_kernel",
+        "npb_mg_zero3_gpu_kernel",
     ]:
         run_benchmarks(
             kernel_name=mg_kernel,
@@ -364,7 +364,7 @@ def main() -> None:
     sp_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
     # PROBLEM_SIZE = NX=NY=NZ; 12=class S, 36=class W, 64=class A
     for sp_kernel in [
-        "sp_add_gpu_kernel",
+        "npb_sp_add_gpu_kernel",
         "sp_compute_rhs_gpu_kernel_1",
         "sp_compute_rhs_gpu_kernel_2",
         "sp_error_norm_gpu_kernel_1",
@@ -376,10 +376,10 @@ def main() -> None:
         "sp_initialize_gpu_kernel",
         "sp_rhs_norm_gpu_kernel_1",
         "sp_rhs_norm_gpu_kernel_2",
-        "sp_txinvr_gpu_kernel",
-        "sp_x_solve_gpu_kernel",
-        "sp_y_solve_gpu_kernel",
-        "sp_z_solve_gpu_kernel",
+        "npb_sp_txinvr_gpu_kernel",
+        "npb_sp_x_solve_gpu_kernel",
+        "npb_sp_y_solve_gpu_kernel",
+        "npb_sp_z_solve_gpu_kernel",
     ]:
         run_benchmarks(
             kernel_name=sp_kernel,
