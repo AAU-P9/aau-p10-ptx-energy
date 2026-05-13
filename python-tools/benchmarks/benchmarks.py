@@ -175,6 +175,7 @@ def main() -> None:
         sizes=[32, 64, 128, 256],
         program_path=Path("/home/lasse/aau-p10-ptx-energy/experiments/apps/flip_flop_mha"),
         nvcc_args_builder=lambda size: [f"-DN_STEPS={size}"],
+        data_output_path=Path("/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels")
     )
 
     # TODO: Fix the following stack trace when running the benchmarks:

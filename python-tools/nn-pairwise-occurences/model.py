@@ -64,7 +64,7 @@ for json_file in data_json_files:
         kernel_name = Path(json_file).stem
 
         # Create feature vector initialized to zeros
-        feature_vector = [1] * len(instruction_pairs)
+        feature_vector = [0] * len(instruction_pairs)
         
         # Add counts from dependent pairs (only if in our fixed set)
         for pair, count in data.get("dependentPairs", {}).items():
@@ -94,8 +94,8 @@ print("First feature vector (X[0]):\n", raw_xs[0])
 print("First target value (y[0]):\n", raw_ys[0])
 
 # Apply log scaling to prevent NaN from large values
-xs = np.log1p(raw_xs)
-ys = np.log1p(raw_ys)
+xs = raw_xs.astype(np.float32) / raw_xs.max()
+ys = raw_ys.astype(np.float32) / raw_ys.max()
 
 print("First normalized feature vector (X[0]):\n", xs[0])
 print("First normalized target value (y[0]):\n", ys[0])
@@ -108,16 +108,18 @@ loaded_stats = False
 input_features = len(instruction_pairs)
 output_units = 1
 
-layers = [Input(shape=(input_features,))]
-layers.append(Dense(16, activation="leaky_relu"))
-layers.append(Dense(output_units))
+layers = [
+    Input(shape=(input_features,)),
+    Dense(len(instructions) * 4, activation="relu"),
+    Dense(output_units)
+]
 model = Sequential(layers)
 
-
 model.compile(
-    optimizer=Adam(learning_rate=0.1),
-    loss="mse"
+    optimizer=Adam(learning_rate=0.000001),
+    loss="mse",
 )
+
 if SKIP_TRAINING:
     # Load weights from disk
     weights_path = os.path.join(os.path.dirname(__file__), weights_file)
@@ -155,7 +157,7 @@ print("\nPredictions for kernels:")
 print(f"{'Filename':<60} {'Actual Power':<20} {'Original Pred':<20}")
 print("-" * 100)
 for json_file in kernels_json_files:
-    feature_vector = [1] * len(instruction_pairs)
+    feature_vector = [0] * len(instruction_pairs)
     with open(json_file, 'r') as f:
         data = json.load(f)
         for pair, count in data.get("dependentPairs", {}).items():
@@ -173,10 +175,10 @@ for json_file in kernels_json_files:
         actual_power = data.get("powerConsumptionJoules")
 
         # Normalize the feature vector using log scaling
-        feature_vector = np.log1p(feature_vector).reshape(1, -1)
+        feature_vector = np.array(feature_vector, dtype=np.float32) / raw_xs.max()
 
         # Predict the log-scaled power consumption and convert back to original scale
         predicted_log_power = model.predict(feature_vector, verbose=0)[0][0]
-        predicted_power = np.expm1(predicted_log_power)
+        predicted_power = predicted_log_power * raw_ys.max()
 
         print(f"{json_file.name:<60} {actual_power:<20.6f} {predicted_power:<20.6f}")

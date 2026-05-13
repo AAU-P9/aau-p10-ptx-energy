@@ -85,10 +85,8 @@ print("First feature vector (X[0]):\n", raw_xs[0])
 print("First target value (y[0]):\n", raw_ys[0])
 
 # Apply log scaling to prevent NaN from large values
-xs = np.log1p(raw_xs)
-
-# Apply a less aggressive log scaling to the targets to prevent NaN from large values, but still allow the model to learn the relationship
-ys = np.log1p(raw_ys)
+xs = raw_xs.astype(np.float32) / raw_xs.max()
+ys = raw_ys.astype(np.float32) / raw_ys.max()
 
 # numeric stability: heavy-tailed counts cause overflow/NaN in training.
 instruction_names = None
@@ -100,13 +98,13 @@ output_units = 1
 
 layers = [
     Input(shape=(len(instructions),)),
-    Dense(128, activation="leaky_relu"),
+    Dense(len(instructions) * 8, activation="leaky_relu"),
     Dense(output_units) 
 ]
 model = Sequential(layers)
 
 model.compile(
-    optimizer=Adam(learning_rate=0.000001),
+    optimizer=Adam(learning_rate=0.0001),
     loss="mse",
 )
 
@@ -121,7 +119,7 @@ else:
     print("Starting training on GPU...")
 
     start_time = time.time()
-    model.fit(x=xs, y=ys, epochs=150_000, verbose=1)
+    model.fit(x=xs, y=ys, epochs=100_000, batch_size=len(xs), verbose=1)
     elapsed = time.time() - start_time
     print(f"Training completed in {elapsed:.2f} seconds")
 
@@ -172,9 +170,9 @@ for json_file in kernels_json_files:
         #     print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
 
     # Apply the same log scaling to the feature vector as we did for training
-    feature_vector = np.log1p(feature_vector)   
+    feature_vector = np.array(feature_vector, dtype=np.float32) / raw_xs.max()
     predicted_power = model.predict(feature_vector.reshape(1, -1), verbose=0)
-    predicted_power = np.expm1(predicted_power[0][0])
+    predicted_power = predicted_power[0][0] * raw_ys.max()  # Scale back to original units
 
     # Print the predicted power consumption for this kernel
     print(f"'{kernel_name}': Power consumption {data.get("powerConsumptionJoules")} Joules, Predicted: {predicted_power:.6f} Joules")
