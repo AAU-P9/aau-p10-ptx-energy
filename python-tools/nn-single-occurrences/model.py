@@ -22,7 +22,7 @@ SKIP_TRAINING = False
 weights_file = "weights_0_076.npz"
 
 # Load JSON files from the data folder next to this script
-data_dir = Path(__file__).resolve().parent / "data"
+data_dir = Path("/home/rasmus/aau-p10-ptx-energy/data/generates")
 data_json_files = sorted(data_dir.glob("*.json"))
 
 kernels_dir = Path(__file__).resolve().parent / "kernels"
@@ -63,10 +63,16 @@ for json_file in data_json_files:
     # Create feature vector initialized to zeros
     feature_vector = [0] * len(instructions)
 
+    # Calculate the itterations from the block and grid size
+    # NOTE: Uncomment if we want to use itterations as a feature instead of baking it into the instruction counts
+    block_multiplier = data.get("blockDim").get("x") * data.get("blockDim").get("y") * data.get("blockDim").get("z")
+    grid_multiplier = data.get("gridDim").get("x") * data.get("gridDim").get("y") * data.get("gridDim").get("z")
+    iters_multiplier = block_multiplier * grid_multiplier
+
     # Add counts from instruction occurrences if they exist in our fixed set
     for instruction, count in data.get("instructionOccurrences", {}).items():
         if instruction in instruction_indices:
-            feature_vector[instruction_indices[instruction]] = count
+            feature_vector[instruction_indices[instruction]] = count * iters_multiplier
         else:
             print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
 
@@ -142,15 +148,18 @@ weights = model.layers[-1].get_weights()
 print(f"Model weights: {weights}")
 
 # Verify on the training data that the model can predict the power consumption
-# for i in range(len(xs)):
-#     features = xs[i]
-#     actual_power = raw_ys[i][0]
+error_accum = 0.0
+for i in range(len(xs)):
+    features = xs[i]
+    actual_power = raw_ys[i][0]
 
-#     predicted_power = model.predict(features.reshape(1, -1), verbose=0)
-#     predicted_power = np.expm1(predicted_power[0][0])
+    predicted_power = model.predict(features.reshape(1, -1), verbose=0)
+    predicted_power = predicted_power[0][0] * raw_ys.max()  # Scale back to original units
 
-#     print(f"Predicted power consumption for kernel {i}:", predicted_power)
-#     print(f"Actual power consumption for kernel {i}:", actual_power)
+    error = abs(predicted_power - actual_power)
+    error_accum += error
+
+print(f"Average prediction error on training data: {error_accum / len(xs):.6f} Joules")
 
 # Verify on the kernels JSON files that the model can predict the power consumption
 for json_file in kernels_json_files:

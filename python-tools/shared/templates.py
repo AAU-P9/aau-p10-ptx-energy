@@ -44,16 +44,18 @@ INSTRUCTION_TEMPLATES = {
     },
     "setp.lt.s32": {
         "setup": "int b{VAR_SUFFIX} = 512, d{VAR_SUFFIX} = 0;",
-        "asm":   ('"setp.lt.s32 %%p{PRED_IDX}, %0, %1;\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%p{PRED_IDX};"'
+        "asm":   ('".reg .pred p{PRED_IDX};\\n\\t"'
+                  '"setp.lt.s32 p{PRED_IDX}, %0, %1;\\n\\t"'
+                  '"selp.s32 %0, 1, 0, p{PRED_IDX};"'
                   ' : "+r"(d{VAR_SUFFIX}) : "r"(b{VAR_SUFFIX})'),
         "sink":  "((int*)sink)[tid] = d{VAR_SUFFIX};",
     },
     "not.pred": {
         "setup": "int a{VAR_SUFFIX} = tid & 1, d{VAR_SUFFIX} = 0;",
-        "asm":   ('"setp.ne.s32 %%p{PRED_IDX}, %1, 0;\\n\\t"'
-                  '"not.pred %%q{PRED_IDX}, %%p{PRED_IDX};\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%q{PRED_IDX};"'
+        "asm":   ('".reg .pred p{PRED_IDX}, q{PRED_IDX};\\n\\t"'
+                  '"setp.ne.s32 p{PRED_IDX}, %1, 0;\\n\\t"'
+                  '"not.pred q{PRED_IDX}, p{PRED_IDX};\\n\\t"'
+                  '"selp.s32 %0, 1, 0, q{PRED_IDX};"'
                   ' : "=r"(d{VAR_SUFFIX}) : "r"(a{VAR_SUFFIX})'),
         "sink":  "((int*)sink)[tid] = d{VAR_SUFFIX};",
     },
@@ -81,9 +83,10 @@ INSTRUCTION_TEMPLATES = {
     },
     "mov.pred": {
         "setup": "int d{VAR_SUFFIX} = tid & 1;",
-        "asm":   ('"setp.ne.s32 %%p{PRED_IDX}, %0, 0;\\n\\t"'
-                  '"mov.pred %%q{PRED_IDX}, %%p{PRED_IDX};\\n\\t"'
-                  '"selp.s32 %0, 1, 0, %%q{PRED_IDX};"'
+        "asm":   ('".reg .pred p{PRED_IDX}, q{PRED_IDX};\\n\\t"'
+                  '"setp.ne.s32 p{PRED_IDX}, %0, 0;\\n\\t"'
+                  '"mov.pred q{PRED_IDX}, p{PRED_IDX};\\n\\t"'
+                  '"selp.s32 %0, 1, 0, q{PRED_IDX};"'
                   ' : "+r"(d{VAR_SUFFIX})'),
         "sink":  "((int*)sink)[tid] = d{VAR_SUFFIX};",
     },
@@ -177,10 +180,6 @@ def build_program(
     # Check if any instruction needs buffer
     needs_buf: bool = any(INSTRUCTION_TEMPLATES[insn].get("needs_buf", False) for insn in instructions)
     
-    # Check if any instruction needs predicates
-    pred_instructions = {"setp.lt.s32", "not.pred", "mov.pred"}
-    needs_pred: bool = any(insn in pred_instructions for insn in instructions)
-    
     # Build asm blocks for each instruction, using instruction index as suffix
     asm_blocks_list: list[str] = []
     for idx, insn in enumerate(instructions):
@@ -197,16 +196,7 @@ def build_program(
         for idx, insn in enumerate(instructions)
     )
     
-    # Generate predicate declarations outside the loop
-    pred_decls: str = ""
-    if needs_pred:
-        # Declare enough predicates for all instructions that might use them
-        # Each can use up to 2 predicates (p and q), so declare 2*len(instructions)
-        pred_list = []
-        for i in range(len(instructions) * 2):
-            pred_list.append(f"%%p{i}, %%q{i}")
-        pred_decls_str = ", ".join(pred_list)
-        pred_decls = f'    asm volatile (".reg .pred {pred_decls_str};" ::: );\n'
+    # Predicates are now declared inline in each asm block that needs them
     
     # Combine sink statements from all instructions
     sink: str = "\n    ".join(
@@ -220,7 +210,7 @@ def build_program(
         block=block,
         extra_args=", float* __restrict__ buf" if needs_buf else "",
         setup=setup,
-        pred_decls=pred_decls,
+        pred_decls="",
         asm_blocks=asm_blocks,
         sink=sink,
         host_setup=(f"float* buf; cudaMalloc(&buf, {buf_bytes_per_thread} * {grid} * {block});"
