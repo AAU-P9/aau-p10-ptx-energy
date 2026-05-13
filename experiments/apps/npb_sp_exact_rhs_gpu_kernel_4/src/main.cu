@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -141,6 +143,8 @@ __global__ static void sp_kernel(double* forcing,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 	double xi, eta, zeta, dtpp, dtemp[5];
 	double ue[5][5], buf[3][5], cuf[3], q[3];
@@ -158,20 +162,29 @@ __global__ static void sp_kernel(double* forcing,
 	 * zeta-direction flux differences                      
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(k_sweep, 3, 3, true);
 	for(k=0; k<3; k++){
 		zeta=(double)k*dnzm1;
 		exact_solution_gpu_device(xi, eta, zeta, dtemp);
+		#pragma unroll
+		META_LOOP(m_vars_1, 5, 5, true);
 		for(m=0;m<5;m++){ue[k+1][m]=dtemp[m];}
 		dtpp=1.0/dtemp[0];
+		#pragma unroll
+		META_LOOP(m_vars_2, 5, 5, true);
 		for(m=1;m<5;m++){buf[k][m]=dtpp*dtemp[m];}
 		cuf[k]=buf[k][3]*buf[k][3];
 		buf[k][0]=cuf[k]+buf[k][1]*buf[k][1]+buf[k][2]*buf[k][2];
 		q[k]=0.5*(buf[k][1]*ue[k+1][1]+buf[k][2]*ue[k+1][2]+buf[k][3]*ue[k+1][3]);
 	}
+	META_LOOP(k_sweep_1, 1, NZ, false);
 	for(k=1; k<nz-1; k++){
 		if(k+2<nz){
 			zeta=(double)(k+2)*dnzm1;
 			exact_solution_gpu_device(xi, eta, zeta, dtemp);
+			#pragma unroll
+			META_LOOP(m_vars_3, 5, 5, true);
 			for(m=0;m<5;m++){ue[4][m]=dtemp[m];}
 		}
 		dtemp[0]=forcing(0,i,j,k)-tz2*(ue[3][3]-ue[1][3])+dz1tz1*(ue[3][0]-2.0*ue[2][0]+ue[1][0]);
@@ -185,14 +198,24 @@ __global__ static void sp_kernel(double* forcing,
 		 * ---------------------------------------------------------------------
 		 */
 		if(k==1){
+			#pragma unroll
+			META_LOOP(m_vars_4, 5, 5, true);
 			for(m=0;m<5;m++){dtemp[m]=dtemp[m]-dssp*(5.0*ue[2][m]-4.0*ue[3][m]+ue[4][m]);}
 		}else if(k==2){
+			#pragma unroll
+			META_LOOP(m_vars_5, 5, 5, true);
 			for(m=0;m<5;m++){dtemp[m]=dtemp[m]-dssp*(-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]+ue[4][m]);}
 		}else if(k>=3 && k<nz-3){
+			#pragma unroll
+			META_LOOP(m_vars_6, 5, 5, true);
 			for(m=0;m<5;m++){dtemp[m]=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]+ue[4][m]);}
 		}else if(k==nz-3){
+			#pragma unroll
+			META_LOOP(m_vars_7, 5, 5, true);
 			for(m=0;m<5;m++){dtemp[m]=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]);}
 		}else if(k==nz-2){
+			#pragma unroll
+			META_LOOP(m_vars_8, 5, 5, true);
 			for(m=0;m<5;m++){dtemp[m]=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+5.0*ue[2][m]);}
 		}
 		/*
@@ -200,7 +223,11 @@ __global__ static void sp_kernel(double* forcing,
 		 * now change the sign of the forcing function
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(m_vars_9, 5, 5, true);
 		for(m=0;m<5;m++){forcing(m,i,j,k)=-1.0*dtemp[m];}
+		#pragma unroll
+		META_LOOP(m_vars_10, 5, 5, true);
 		for(m=0; m<5; m++){
 			ue[0][m]=ue[1][m]; 
 			ue[1][m]=ue[2][m];
@@ -215,11 +242,14 @@ __global__ static void sp_kernel(double* forcing,
 		q[1]=q[2];
 		if(k<nz-2){
 			dtpp=1.0/ue[3][0];
+			#pragma unroll
+			META_LOOP(m_vars_11, 5, 5, true);
 			for(m=1;m<5;m++){buf[2][m]=dtpp*ue[3][m];}
 			cuf[2]=buf[2][3]*buf[2][3];
 			buf[2][0]=cuf[2]+buf[2][1]*buf[2][1]+buf[2][2]*buf[2][2];
 			q[2]=0.5*(buf[2][1]*ue[3][1]+buf[2][2]*ue[3][2]+buf[2][3]*ue[3][3]);
 		}
+	}
 	}
 }
 
@@ -230,11 +260,9 @@ int main() {
     double *forcing; cudaMalloc(&forcing, BUF_5NXZ); cudaMemset(forcing, 0, BUF_5NXZ);
 
     printf("[LOG] sp_exact_rhs_gpu_kernel_4: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = (NZ < TPB) ? NZ : TPB;
-        dim3 grid(NY, NX);
-        sp_kernel<<<grid, tpb>>>(forcing, NX, NY, NZ);
-    }
+    int tpb = (NZ < TPB) ? NZ : TPB;
+    dim3 grid(NY, NX);
+    sp_kernel<<<grid, tpb>>>(forcing, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

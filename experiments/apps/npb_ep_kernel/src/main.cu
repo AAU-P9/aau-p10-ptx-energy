@@ -54,6 +54,7 @@ __device__ void vranlc_device(int n, double* x_seed, double a, double* y) {
     a1 = (int)t1;
     a2 = a - T23 * a1;
     x = *x_seed;
+    META_LOOP(i_sweep, 256, 256, false);
     for (i = 0; i < n; i++) {
         t1 = R23 * x;
         x1 = (int)t1;
@@ -70,6 +71,8 @@ __device__ void vranlc_device(int n, double* x_seed, double a, double* y) {
 }
 
 __global__ void ep_kernel(double* q_global, double* sx_global, double* sy_global, double an) {
+    META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+    for (int _iter = 0; _iter < ITERATIONS; _iter++) {
     double x_local[2*RECOMPUTATION];
     double q_local[NQ];
     double sx_local, sy_local;
@@ -87,6 +90,7 @@ __global__ void ep_kernel(double* q_global, double* sx_global, double* sy_global
     t1 = EP_S;
     t2 = an;
 
+    META_LOOP(binary_exp, 1, 100, false);
     for (i = 1; i <= 100; i++) {
         ik = kk / 2;
         if ((2*ik) != kk) { t3 = randlc_device(&t1, t2); }
@@ -96,8 +100,10 @@ __global__ void ep_kernel(double* q_global, double* sx_global, double* sy_global
     }
 
     seed = t1;
+    META_LOOP(outer_sample, 512, 512, false);
     for (ii = 0; ii < NK; ii = ii + RECOMPUTATION) {
         vranlc_device(2*RECOMPUTATION, &seed, EP_A, x_local);
+        META_LOOP(inner_sample, 128, 128, false);
         for (i = 0; i < RECOMPUTATION; i++) {
             x1 = 2.0*x_local[2*i]   - 1.0;
             x2 = 2.0*x_local[2*i+1] - 1.0;
@@ -126,6 +132,7 @@ __global__ void ep_kernel(double* q_global, double* sx_global, double* sy_global
     atomicAdd(q_global + blockIdx.x*NQ+9, q_local[9]);
     atomicAdd(sx_global + blockIdx.x, sx_local);
     atomicAdd(sy_global + blockIdx.x, sy_local);
+    }
 }
 
 int main() {
@@ -147,9 +154,7 @@ int main() {
 
     printf("[LOG] ep_kernel: M_EP=%d NN=%d blocks=%d tpb=%d ITERATIONS=%d\n",
            M_EP, NN, blocks, tpb, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        ep_kernel<<<blocks, tpb>>>(q, sx, sy, an);
-    }
+    ep_kernel<<<blocks, tpb>>>(q, sx, sy, an);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  blocks);

@@ -41,6 +41,8 @@ __global__ void mg_kernel(double* z_device,
 		int amount_of_work){
 	int check=blockIdx.x*blockDim.x+threadIdx.x;
 	if(check>=amount_of_work){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	double* z1 = (double*)(extern_share_data);
 	double* z2 = (double*)(z1+M);
@@ -66,6 +68,7 @@ __global__ void mg_kernel(double* z_device,
 		u_device[(2*i3+1)*n2*n1+(2*i2+1)*n1+2*i1]+=0.25*z3[i1];
 		u_device[(2*i3+1)*n2*n1+(2*i2+1)*n1+2*i1+1]+=0.125*(z3[i1]+z3[i1+1]);
 	}
+	}
 }
 
 int main() {
@@ -75,14 +78,12 @@ int main() {
     double *u; cudaMalloc(&u, NV*sizeof(double)); cudaMemset(u, 0, NV*sizeof(double));
     int mm1=NC, mm2=NC, mm3=NC, n1=NM, n2=NM, n3=NM;
     printf("[LOG] mg_interp_gpu_kernel: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        // tpb=mm1 to match blockDim.x used for scratch indexing
-        dim3 tpb2(mm1, 1);
-        int aw = (mm2-1)*mm1;
-        dim3 grid(mm2-1, mm3-1);
-        size_t smem = (size_t)3*M*sizeof(double);
-        mg_kernel<<<grid, tpb2, smem>>>(z, u, mm1, mm2, mm3, n1, n2, n3, aw);
-    }
+    // tpb=mm1 to match blockDim.x used for scratch indexing
+    dim3 tpb2(mm1, 1);
+    int aw = (mm2-1)*mm1;
+    dim3 grid(mm2-1, mm3-1);
+    size_t smem = (size_t)3*M*sizeof(double);
+    mg_kernel<<<grid, tpb2, smem>>>(z, u, mm1, mm2, mm3, n1, n2, n3, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

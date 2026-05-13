@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -137,12 +138,15 @@ __global__ void is_kernel(INT_TYPE* source,
 		INT_TYPE* destiny,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	INT_TYPE* shared_data = (INT_TYPE*)(extern_share_data);
 
 	shared_data[threadIdx.x] = 0;
 	INT_TYPE position = blockDim.x + threadIdx.x;
 	shared_data[position] = source[threadIdx.x];
 
+	META_LOOP(offset_loop, 1, blockDim.x, false);
 	for(INT_TYPE offset=1; offset<blockDim.x; offset<<=1){
 		__syncthreads();
 		INT_TYPE t = shared_data[position] + shared_data[position - offset];
@@ -153,6 +157,7 @@ __global__ void is_kernel(INT_TYPE* source,
 	__syncthreads();
 
 	destiny[threadIdx.x] = shared_data[position - 1];
+	}
 }
 
 int main() {
@@ -165,9 +170,7 @@ int main() {
 
     printf("[LOG] is_rank_kernel_5: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, 2 * TPB * sizeof(INT_TYPE)>>>(sum, sum, 1, tpb);
-    }
+    is_kernel<<<grid, tpb, 2 * TPB * sizeof(INT_TYPE)>>>(sum, sum, 1, tpb);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

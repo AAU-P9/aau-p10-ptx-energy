@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -138,6 +139,8 @@ __global__ void is_kernel(INT_TYPE* source,
 		INT_TYPE* sum,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	INT_TYPE* shared_data = (INT_TYPE*)(extern_share_data);
 
 	shared_data[threadIdx.x] = 0;
@@ -147,9 +150,11 @@ __global__ void is_kernel(INT_TYPE* source,
 	INT_TYPE start = factor * blockIdx.x;
 	INT_TYPE end = start + factor;
 
+	META_LOOP(i_sweep, 1, NUM_KEYS, false);
 	for(INT_TYPE i=start; i<end; i+=blockDim.x){
 		shared_data[position] = source[i + threadIdx.x];
 
+		META_LOOP(offset_loop, 1, blockDim.x, false);
 		for(INT_TYPE offset=1; offset<blockDim.x; offset<<=1){
 			__syncthreads();
 			INT_TYPE t = shared_data[position] + shared_data[position - offset];
@@ -163,6 +168,7 @@ __global__ void is_kernel(INT_TYPE* source,
 
 	__syncthreads();
 	if(threadIdx.x==0){sum[blockIdx.x]=destiny[end-1];}
+	}
 }
 
 int main() {
@@ -178,9 +184,7 @@ int main() {
 
     printf("[LOG] is_rank_kernel_4: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, 2 * TPB * sizeof(INT_TYPE)>>>(key_buff1, key_buff1, sum, grid, amount_of_work);
-    }
+    is_kernel<<<grid, tpb, 2 * TPB * sizeof(INT_TYPE)>>>(key_buff1, key_buff1, sum, grid, amount_of_work);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

@@ -44,6 +44,8 @@ __global__ void mg_kernel(double* r_device,
 		int amount_of_work){
 	int check=blockIdx.x*blockDim.x+threadIdx.x;
 	if(check>=amount_of_work){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	int j3,j2,j1,i3,i2,i1;
 	double x2,y2;
@@ -84,6 +86,7 @@ __global__ void mg_kernel(double* r_device,
 			+0.125*(x1[i1]+x1[i1+2]+y2)
 			+0.0625*(y1[i1]+y1[i1+2]);
 	}
+	}
 }
 
 int main() {
@@ -96,12 +99,10 @@ int main() {
     int d1=1, d2=1, d3=1;
     int aw = (m2j-2)*(m1j-1);
     printf("[LOG] mg_rprj3_gpu_kernel: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        dim3 tpb2(m1j-1, 1);
-        dim3 grid(m2j-2, m3j-2);
-        size_t smem = (size_t)2*M*sizeof(double);
-        mg_kernel<<<grid, tpb2, smem>>>(r_dev, s_dev, m1k, m2k, m3k, m1j, m2j, m3j, d1, d2, d3, aw);
-    }
+    dim3 tpb2(m1j-1, 1);
+    dim3 grid(m2j-2, m3j-2);
+    size_t smem = (size_t)2*M*sizeof(double);
+    mg_kernel<<<grid, tpb2, smem>>>(r_dev, s_dev, m1k, m2k, m3k, m1j, m2j, m3j, d1, d2, d3, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

@@ -61,6 +61,8 @@ __global__ void bt_kernel(double* rhs_device,
 	int i = blockDim.x * blockIdx.x + threadIdx.x+1;
 	int l_i = threadIdx.x;
 	if (k+0 < 1 || k+0 > KMAX-2 || k >= PROBLEM_SIZE || i > IMAX-2){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	int j, n, p, jsize;
 
@@ -91,6 +93,8 @@ __global__ void bt_kernel(double* rhs_device,
 	 * ---------------------------------------------------------------------
 	 */
 	/* load data */
+	#pragma unroll
+	META_LOOP(p_pivot, 5, 5, true);
 	for(p=0; p<5; p++){
 		l_lhs[BB][p][m] = lhsB(p, m, k, 0, i-1);
 		l_lhs[CC][p][m] = lhsC(p, m, k, 0, i-1);
@@ -106,6 +110,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * multiply rhs(0) by b_inverse(0) and copy to rhs
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(p_pivot_1, 5, 5, true);
 	for(p=0; p<5; p++){
 		pivot = 1.00/l_lhs[BB][p][p];
 		if(m > p && m < 5){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
@@ -116,7 +121,11 @@ __global__ void bt_kernel(double* rhs_device,
 
 		if(p != m){
 			coeff = l_lhs[BB][p][m];
+			#pragma unroll
+			META_LOOP(n_update, 5, 5, true);
 			for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
+			#pragma unroll
+			META_LOOP(n_update_1, 5, 5, true);
 			for(n=0; n<5; n++){l_lhs[CC][n][m] = l_lhs[CC][n][m] - coeff*l_lhs[CC][n][p];}
 			l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
 		}
@@ -133,9 +142,12 @@ __global__ void bt_kernel(double* rhs_device,
 	 * do all the elements of the cell unless last 
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(j_sweep, 1, PROBLEM_SIZE, false);
 	for(j=1; j<=jsize-1; j++){
 
 		/* load data */
+		#pragma unroll
+		META_LOOP(n_update_2, 5, 5, true);
 		for(n=0; n<5; n++){
 			l_lhs[AA][n][m] = lhsA(n, m, k, j, i-1);
 			l_lhs[BB][n][m] = lhsB(n, m, k, j, i-1);
@@ -163,6 +175,8 @@ __global__ void bt_kernel(double* rhs_device,
 		 * B(j) = B(j) - C(j-1)*A(j)
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(p_pivot_2, 5, 5, true);
 		for(p=0; p<5; p++){
 			l_lhs[BB][m][p] = l_lhs[BB][m][p] - l_lhs[AA][0][p]*l_lhs[CC][m][0]
 				- l_lhs[AA][1][p]*l_lhs[CC][m][1]
@@ -174,6 +188,8 @@ __global__ void bt_kernel(double* rhs_device,
 		__syncthreads();
 
 		/* update data */
+		#pragma unroll
+		META_LOOP(n_update_3, 5, 5, true);
 		for(n=0; n<5; n++){l_lhs[CC][n][m] = lhsC(n, m, k, j, i-1);}
 
 		__syncthreads();
@@ -184,6 +200,7 @@ __global__ void bt_kernel(double* rhs_device,
 		 * multiply rhs[k][0][i] by b_inverse[k][0][i] and copy to rhs
 		 * ---------------------------------------------------------------------
 		 */
+		META_LOOP(p_pivot_3, 5, 5, true);
 		for(p=0; p<5; p++){
 			pivot = 1.00/l_lhs[BB][p][p];
 			if(m > p){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
@@ -193,7 +210,11 @@ __global__ void bt_kernel(double* rhs_device,
 			__syncthreads();
 			if(p != m){
 				coeff = l_lhs[BB][p][m];
+				#pragma unroll
+				META_LOOP(n_update_4, 5, 5, true);
 				for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
+				#pragma unroll
+				META_LOOP(n_update_5, 5, 5, true);
 				for(n=0; n<5; n++){l_lhs[CC][n][m] = l_lhs[CC][n][m] - coeff*l_lhs[CC][n][p];}
 				l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
 			}
@@ -203,6 +224,8 @@ __global__ void bt_kernel(double* rhs_device,
 		}
 
 		/* update global memory */
+		#pragma unroll
+		META_LOOP(n_update_6, 5, 5, true);
 		for(n=0; n<5; n++){
 			lhsC(n, m, k, j, i-1) = l_lhs[CC][n][m];
 		}
@@ -210,6 +233,8 @@ __global__ void bt_kernel(double* rhs_device,
 	}
 
 	/* load data */
+	#pragma unroll
+	META_LOOP(n_update_7, 5, 5, true);
 	for(n=0; n<5; n++){
 		l_lhs[AA][n][m] = lhsA(n, m, k, j, i-1);
 		l_lhs[BB][n][m] = lhsB(n, m, k, j, i-1);
@@ -236,6 +261,8 @@ __global__ void bt_kernel(double* rhs_device,
 	 * matmul_sub(AA,i,jsize,k,c, CC,i,jsize-1,k,c,BB,i,jsize,k)
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(p_pivot_4, 5, 5, true);
 	for(p=0; p<5; p++){
 		l_lhs[BB][m][p] = l_lhs[BB][m][p] - l_lhs[AA][0][p]*l_lhs[CC][m][0]
 			- l_lhs[AA][1][p]*l_lhs[CC][m][1]
@@ -251,6 +278,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * binvrhs_p( lhs[jsize][BB], rhs[k][jsize][i], run_computation, m);
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(p_pivot_5, 5, 5, true);
 	for(p=0; p<5; p++){
 		pivot = 1.00/l_lhs[BB][p][p];
 		if(m > p && m < 5){l_lhs[BB][m][p] = l_lhs[BB][m][p]*pivot;}
@@ -260,6 +288,8 @@ __global__ void bt_kernel(double* rhs_device,
 
 		if(p != m){
 			coeff = l_lhs[BB][p][m];
+			#pragma unroll
+			META_LOOP(n_update_8, 5, 5, true);
 			for(n=p+1; n<5; n++){l_lhs[BB][n][m] = l_lhs[BB][n][m] - coeff*l_lhs[BB][n][p];}
 			l_r[1][m] = l_r[1][m] - coeff*l_r[1][p];  
 		}
@@ -280,7 +310,10 @@ __global__ void bt_kernel(double* rhs_device,
 	 * after u(jstart) will be sent to next cell
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(j_sweep_back, 1, PROBLEM_SIZE, false);
 	for(j=jsize-1; j>=0; j--){
+		#pragma unroll
+		META_LOOP(n_update_9, M_SIZE, M_SIZE, true);
 		for(n=0; n<M_SIZE; n++){
 			rhs[k][j][i][m] = rhs[k][j][i][m] - lhsC(n, m, k, j, i-1)*rhs[k][j+1][i][n];
 		}
@@ -290,6 +323,7 @@ __global__ void bt_kernel(double* rhs_device,
 #undef lhsA
 #undef lhsB
 #undef lhsC
+	}
 }
 
 
@@ -310,9 +344,7 @@ int main() {
     size_t smem = sizeof(double) * tpb_i * (3*5*5 + 2*5);
 
     printf("[LOG] bt_y_solve_3: PROBLEM_SIZE=%d, ITERATIONS=%d\n", PROBLEM_SIZE, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<block, thread, smem>>>(rhs, lhsA, lhsB, lhsC);
-    }
+    bt_kernel<<<block, thread, smem>>>(rhs, lhsA, lhsB, lhsC);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)block.x);

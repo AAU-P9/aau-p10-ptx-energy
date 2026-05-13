@@ -147,6 +147,8 @@ __global__ void bt_kernel(double* qs_device,
 	int j = blockDim.y * blockIdx.y + threadIdx.y + 1;
 	int i = blockDim.x * blockIdx.x + threadIdx.x + 1;
 	if(k+0 < 1 || k+0 > KMAX-2 || k >= PROBLEM_SIZE  || j > JMAX-2 || i > IMAX-2){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	int m;
 	double tmp1, tmp2;
@@ -175,6 +177,8 @@ __global__ void bt_kernel(double* qs_device,
 	tmp1 = constants_device::dt * constants_device::ty1;
 	tmp2 = constants_device::dt * constants_device::ty2;
 
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){t_u[m] = u[k][j-1][i][m];}
 	y_solve_gpu_device_fjac(fjac, t_u, rho_i[k][j-1][i], square[k][j-1][i], qs[k][j-1][i]);
 	y_solve_gpu_device_njac(njac, t_u, rho_i[k][j-1][i]);
@@ -209,6 +213,8 @@ __global__ void bt_kernel(double* qs_device,
 	lhsA(3, 4, k, j, i-1) = - tmp2 * fjac[3][4] - tmp1 * njac[3][4];
 	lhsA(4, 4, k, j, i-1) = - tmp2 * fjac[4][4] - tmp1 * njac[4][4] - tmp1 * constants_device::dy5;
 
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0; m<5; m++){t_u[m] = u[k][j][i][m];}
 	y_solve_gpu_device_njac(njac, t_u, rho_i[k][j][i]);
 
@@ -242,6 +248,8 @@ __global__ void bt_kernel(double* qs_device,
 	lhsB(3, 4, k, j, i-1) = tmp1 * 2.0 * njac[3][4];
 	lhsB(4, 4, k, j, i-1) = 1.0 + tmp1 * 2.0 * njac[4][4] + tmp1 * 2.0 * constants_device::dy5;
 
+	#pragma unroll
+	META_LOOP(m_vars_2, 5, 5, true);
 	for(m=0; m<5; m++){t_u[m] = u[k][j+1][i][m];}
 
 	y_solve_gpu_device_fjac(fjac, t_u, rho_i[k][j+1][i], square[k][j+1][i], qs[k][j+1][i]);
@@ -280,6 +288,7 @@ __global__ void bt_kernel(double* qs_device,
 #undef lhsA
 #undef lhsB
 #undef lhsC
+	}
 }
 
 
@@ -303,9 +312,7 @@ int main() {
     dim3 thread(tpb, 1, 1);
 
     printf("[LOG] bt_y_solve_2: PROBLEM_SIZE=%d, ITERATIONS=%d\n", PROBLEM_SIZE, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<block, thread>>>(qs, rho_i, square, u, lhsA, lhsB, lhsC);
-    }
+    bt_kernel<<<block, thread>>>(qs, rho_i, square, u, lhsA, lhsB, lhsC);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)block.x);

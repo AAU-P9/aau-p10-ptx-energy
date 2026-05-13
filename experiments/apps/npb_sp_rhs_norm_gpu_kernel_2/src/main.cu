@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -141,14 +143,21 @@ __global__ static void sp_kernel(double* rms,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, m, maxpos, dist;
 
 	double* buffer = (double*)extern_share_data;
 
 	i = threadIdx.x;
 
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){buffer[i+(m*blockDim.x)]=0.0;}
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(i<nx*ny){
+		#pragma unroll
+		META_LOOP(m_vars_2, 5, 5, true);
 		for(m=0;m<5;m++){buffer[threadIdx.x+(m*blockDim.x)]+=rms[i+nx*ny*m];}
 		i+=blockDim.x;
 	}
@@ -156,8 +165,11 @@ __global__ static void sp_kernel(double* rms,
 	dist=(maxpos+1)/2;
 	i=threadIdx.x;
 	__syncthreads();
+	META_LOOP(while_loop_1, 1, PROBLEM_SIZE, false);
 	while(maxpos>1){
 		if(i<dist && i+dist<maxpos){
+			#pragma unroll
+			META_LOOP(m_vars_3, 5, 5, true);
 			for(m=0;m<5;m++){buffer[i+(m*blockDim.x)]+=buffer[(i+dist)+(m*blockDim.x)];}
 		}
 		maxpos=dist;
@@ -166,6 +178,7 @@ __global__ static void sp_kernel(double* rms,
 	}
 	m=threadIdx.x;
 	if(m<5){rms[m]=sqrt(buffer[0+(m*blockDim.x)]/((double)(nz-2)*(double)(ny-2)*(double)(nx-2)));}
+	}
 }
 
 int main() {
@@ -175,10 +188,8 @@ int main() {
     double *rms; cudaMalloc(&rms, BUF_RMS); cudaMemset(rms, 0, BUF_RMS);
 
     printf("[LOG] sp_rhs_norm_gpu_kernel_2: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        size_t smem = (size_t)TPB*5*sizeof(double);
-        sp_kernel<<<1, TPB, smem>>>(rms, NX, NY, NZ);
-    }
+    size_t smem = (size_t)TPB*5*sizeof(double);
+    sp_kernel<<<1, TPB, smem>>>(rms, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

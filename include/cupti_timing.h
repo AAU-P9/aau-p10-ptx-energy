@@ -135,7 +135,7 @@ inline void printJson() {
 
 // Flush CUPTI activity buffers
 inline void flushCUPTIBuffers() {
-    cuptiActivityFlushAll(0);
+    cuptiActivityFlushAll(CUPTI_ACTIVITY_FLAG_FLUSH_FORCED);
 }
 
 #define METRICS_KERNEL_START JSON_START initializeCUPTI(); collectTimestampOffsets();

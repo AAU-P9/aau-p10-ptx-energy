@@ -15,9 +15,10 @@ from cubindings.cubindings_analyser import (
 from cubindings.cubindings_cache import execute_program_cached
 from cubindings.cubindings_power import PowerMetricsResult
 from cubindings.cubindings_predictor import LinearModelOutput, run_predictor
+from tqdm import tqdm
 
 benchmark_prefix = "benchmark"  # Only change this if you want to invalidate the cache
-model_path = Path("/home/rasmus/aau-p10-ptx-energy/linear-model/linear-model.py")
+model_path = Path("/home/lasse/aau-p10-ptx-energy/linear-model/linear-model.py")
 weights_path = Path("/home/p10/aau-p10-ptx-energy/linear-model/weights.csv")
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 debug_enabled = False
@@ -47,25 +48,25 @@ def concat_results(
     grid_dim = analysis_result.grid_dim
     block_dim = analysis_result.block_dim
 
-    print(f"Kernel: {kernel_name}, Grid Dim: {grid_dim}, Block Dim: {block_dim}")
-    print(f"Predicted Power (Joules): {predicted_power_joules}")
-    print(f"Actual Power (Joules): {actual_power_joules}")
+    tqdm.write(f"Kernel: {kernel_name}, Grid Dim: {grid_dim}, Block Dim: {block_dim}")
+    tqdm.write(f"Predicted Power (Joules): {predicted_power_joules}")
+    tqdm.write(f"Actual Power (Joules): {actual_power_joules}")
 
     if actual_power_joules != 0:
-        print(
+        tqdm.write(
             f"Error (%): {((1 - (predicted_power_joules / actual_power_joules)) * 100):.2f}"
         )
     else:
-        print("Error (%): n/a")
+        tqdm.write("Error (%): n/a")
 
     total_instructions = sum(estimate.count for estimate in predictor_result.estimates)
-    print(f"Total Instructions: {total_instructions}")
+    tqdm.write(f"Total Instructions: {total_instructions}")
 
     for estimate in predictor_result.estimates:
         percentage = (
             (estimate.count / total_instructions * 100) if total_instructions else 0.0
         )
-        print(
+        tqdm.write(
             f"  {estimate.instruction}: {estimate.count} occurrences, "
             f"{percentage:.2f}%, {estimate.estimated_power_joules} Joules"
         )
@@ -91,8 +92,22 @@ def run_benchmarks(
     | None = None,
     program_name: str = "main.cu",
     data_output_path: Path | None = None,
+    pbar: "tqdm | None" = None,
+    _started: "list[bool] | None" = None,
+    _start_from: str = "",
 ) -> None:
+    if _started is not None and not _started[0]:
+        if kernel_name == _start_from:
+            _started[0] = True
+        else:
+            if pbar is not None:
+                pbar.update(len(sizes))
+            return
     for size in sizes:
+        tag = f"{kernel_name} s={size}"
+        if pbar is not None:
+            pbar.set_description(tag)
+            pbar.set_postfix_str("compile+run", refresh=True)
         nvcc_args = nvcc_args_builder(size)
         execution_result = execute_program_cached(
             path=program_path,
@@ -109,6 +124,8 @@ def run_benchmarks(
         )
         kernel_params = build_kernel_params(execution_result.exports, parameters)
 
+        if pbar is not None:
+            pbar.set_postfix_str("analyse", refresh=True)
         analysis_result = run_ptx_analyser(
             execution_result.path,
             kernel_params,
@@ -128,6 +145,8 @@ def run_benchmarks(
         # csv_path = Path("/home/rasmus/aau-p10-ptx-energy/neural-network/data.csv")
         # anayser_result_to_feature_csv(kernel_name, csv_path, execution_result.power_metric_result.total_energy_j, analysis_result)
 
+        if pbar is not None:
+            pbar.set_postfix_str("predict", refresh=True)
         predictor_result = run_predictor(
             model_path=model_path,
             output_path=execution_result.path,
@@ -141,6 +160,9 @@ def run_benchmarks(
             predictor_result,
             analysis_result,
         )
+        if pbar is not None:
+            pbar.set_postfix_str("done", refresh=True)
+            pbar.update(1)
 
 
 def write_csv_results(output_path: Path) -> None:
@@ -171,28 +193,35 @@ def write_csv_results(output_path: Path) -> None:
 
 def main() -> None:
     print("Running benchmarks...")
+    start_from = ""  # set to a kernel name to skip everything before it
+    _started: list[bool] = [not start_from]
+    _total = 1 + 19 + 1 + 13 + 14 + 11 + 23 + 9 + 16 + 1
+    pbar = tqdm(total=_total, unit="benchmark", dynamic_ncols=True)
 
     run_benchmarks(
         kernel_name="flip_flop_mha",
         sizes=[
             32,
-            64,
-            128,
-            256,
+            # 64,
+            # 128,
+            # 256,
         ],  # N_STEPS: number of key/value time steps in the attention window
         program_path=Path(
             "/home/lasse/aau-p10-ptx-energy/experiments/apps/flip_flop_mha"
         ),
         nvcc_args_builder=lambda size: [f"-DN_STEPS={size}"],
         data_output_path=Path(
-            "/home/rasmus/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"
+            "/home/lasse/aau-p10-ptx-energy/python-tools/nn-pairwise-occurences/kernels"
         ),
+        pbar=pbar,
+        _started=_started,
+        _start_from=start_from,
     )
 
     bt_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
     # PROBLEM_SIZE sets IMAX=JMAX=KMAX, i.e. the 3-D grid side length
     # 12=class S (small), 24=class W (workstation), 64=class A
-    bt_sizes = [12, 24, 64]
+    bt_sizes = [12]  # [12, 24, 64]
 
     for bt_kernel in [
         "npb_bt_add",
@@ -222,26 +251,33 @@ def main() -> None:
             nvcc_args_builder=lambda size: [
                 f"-DPROBLEM_SIZE={size}"
             ],  # 3-D grid side length (IMAX=JMAX=KMAX)
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     run_benchmarks(
         kernel_name="npb_ep_kernel",
         # M_EP is the log2 of the total sample count; NN=2^(M-16) threads are launched
         # 24=class S, 25=class W, 28=class A
-        sizes=[24, 25, 28],
+        sizes=[24],  # [24, 25, 28]
         program_path=Path(
             "/home/lasse/aau-p10-ptx-energy/experiments/apps/npb_ep_kernel/src"
         ),
         nvcc_args_builder=lambda size: [
-            f"-DM_EP={size}"
+            f"-DM_EP={size}",
+            "-DITERATIONS=50",
         ],  # log2 of problem size; drives grid dimension
+        pbar=pbar,
+        _started=_started,
+        _start_from=start_from,
     )
 
     cg_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
     # NA is the sparse matrix dimension (number of rows/columns)
     # NZ=NA*(NONZER+1)^2 non-zeros; NONZER=7 is the sparsity parameter (fixed per NPB spec)
     # 1400=class S, 7000=class W, 14000=class A
-    cg_sizes = [1400, 7000, 14000]
+    cg_sizes = [1400]  # [1400, 7000, 14000]
     for cg_kernel in [
         "npb_cg_kernel_one",
         "npb_cg_kernel_two",
@@ -265,6 +301,9 @@ def main() -> None:
                 f"-DNA={size}",
                 "-DNONZER=7",
             ],  # NA=matrix dimension, NONZER=nonzeros per row (sparsity pattern)
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     ft_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
@@ -293,11 +332,14 @@ def main() -> None:
     ]:
         run_benchmarks(
             kernel_name=ft_kernel,
-            sizes=[0, 1, 2],  # class index; maps to NX/NY/NZ via ft_classes
+            sizes=[0],  # [0, 1, 2] class index; maps to NX/NY/NZ via ft_classes
             program_path=ft_apps / ft_kernel / "src",
             nvcc_args_builder=lambda cls, _c=ft_classes: _c[
                 cls
             ],  # NX=grid x-dim, NY=y-dim, NZ=z-dim
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     is_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
@@ -320,13 +362,16 @@ def main() -> None:
             kernel_name=is_kernel,
             sizes=[
                 1,
-                2,
-                3,
+                # 2,
+                # 3,
             ],  # IS_CLASS index: 1=S (2^16 keys), 2=W (2^20 keys), 3=A (2^23 keys)
             program_path=is_apps / is_kernel / "src",
             nvcc_args_builder=lambda cls: [
                 f"-DIS_CLASS={cls}"
             ],  # sets TOTAL_KEYS, MAX_KEY, NUM_BUCKETS, CLASS char
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     lu_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
@@ -361,13 +406,16 @@ def main() -> None:
             kernel_name=lu_kernel,
             sizes=[
                 12,
-                33,
-                64,
+                # 33,
+                # 64,
             ],  # PROBLEM_SIZE: cubic grid side length (NX=NY=NZ); 12=S, 33=W, 64=A
             program_path=lu_apps / lu_kernel / "src",
             nvcc_args_builder=lambda size: [
                 f"-DPROBLEM_SIZE={size}"
             ],  # sets NX=NY=NZ=PROBLEM_SIZE
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     mg_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
@@ -388,13 +436,16 @@ def main() -> None:
             kernel_name=mg_kernel,
             sizes=[
                 32,
-                128,
-                256,
+                # 128,
+                # 256,
             ],  # MG_PROBLEM_SIZE: finest-level grid side (power of 2); 32=S, 128=W, 256=A
             program_path=mg_apps / mg_kernel / "src",
             nvcc_args_builder=lambda size: [
                 f"-DMG_PROBLEM_SIZE={size}"
             ],  # sets NM=size+2 (grid dim with ghost cells)
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     sp_apps = Path("/home/lasse/aau-p10-ptx-energy/experiments/apps")
@@ -419,9 +470,12 @@ def main() -> None:
     ]:
         run_benchmarks(
             kernel_name=sp_kernel,
-            sizes=[12, 36, 64],  # PROBLEM_SIZE: NX=NY=NZ; 12=S, 36=W, 64=A
+            sizes=[12],  # [12, 36, 64] PROBLEM_SIZE: NX=NY=NZ; 12=S, 36=W, 64=A
             program_path=sp_apps / sp_kernel / "src",
             nvcc_args_builder=lambda size: [f"-DPROBLEM_SIZE={size}"],
+            pbar=pbar,
+            _started=_started,
+            _start_from=start_from,
         )
 
     # TODO: Fix the following stack trace when running the benchmarks:
@@ -439,15 +493,18 @@ def main() -> None:
 
     run_benchmarks(
         kernel_name="matrix_transpose",
-        sizes=[1024, 2048, 4096, 8192, 16384],
+        sizes=[1024],  # [1024, 2048, 4096, 8192, 16384]
         program_path=Path(
-            "/home/rasmus/aau-p10-ptx-energy/experiments/apps/matrix_transpose/src"
+            "/home/lasse/aau-p10-ptx-energy/experiments/apps/matrix_transpose/src"
         ),
         nvcc_args_builder=lambda size: [f"-DSIZE_M={size}", f"-DSIZE_N={size}"],
         parameters_builder=lambda execution_result, size: [],
         data_output_path=Path(
-            "/home/rasmus/aau-p10-ptx-energy/python-tools/nn-single-occurrences/kernels"
+            "/home/lasse/aau-p10-ptx-energy/python-tools/nn-single-occurrences/kernels"
         ),
+        pbar=pbar,
+        _started=_started,
+        _start_from=start_from,
     )
 
     # run_benchmarks(
@@ -627,6 +684,7 @@ def main() -> None:
     #     data_output_path=pair_data_output,
     # )
 
+    pbar.close()
     # write_csv_results(Path("benchmark_results.csv"))
 
 

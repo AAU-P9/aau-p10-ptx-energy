@@ -39,9 +39,12 @@ __global__ void mg_kernel(double* u,
 	int i1=blockIdx.x*blockDim.x+threadIdx.x;
 
 	if(i1>=n1){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	u[0*n2*n1+i2*n1+i1]=u[(n3-2)*n2*n1+i2*n1+i1];
 	u[(n3-1)*n2*n1+i2*n1+i1]=u[1*n2*n1+i2*n1+i1];
+	}
 }
 
 int main() {
@@ -50,13 +53,11 @@ int main() {
     double *u; cudaMalloc(&u, NV*sizeof(double)); cudaMemset(u, 0, NV*sizeof(double));
 
     printf("[LOG] mg_comm3_kernel_3: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = TPB;
-        int aw = ((NM + tpb - 1) / tpb) * tpb;
-        dim3 grid((aw + tpb - 1) / tpb, NM);
-        dim3 threads(tpb, 1);
-        mg_kernel<<<grid, threads>>>(u, NM, NM, NM, aw);
-    }
+    int tpb = TPB;
+    int aw = ((NM + tpb - 1) / tpb) * tpb;
+    dim3 grid((aw + tpb - 1) / tpb, NM);
+    dim3 threads(tpb, 1);
+    mg_kernel<<<grid, threads>>>(u, NM, NM, NM, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

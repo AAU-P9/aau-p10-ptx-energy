@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -141,6 +143,8 @@ __global__ static void sp_kernel(double* forcing,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 	double xi, eta, zeta, dtemp[5], dtpp;
 	double ue[5][5], buf[3][5], cuf[3], q[3];
@@ -158,20 +162,29 @@ __global__ static void sp_kernel(double* forcing,
 	 * eta-direction flux differences             
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(j_sweep, 3, 3, true);
 	for(j=0; j<3; j++){
 		eta=(double)j*dnym1;
 		exact_solution_gpu_device(xi, eta, zeta, dtemp);
+		#pragma unroll
+		META_LOOP(m_vars_1, 5, 5, true);
 		for(m=0;m<5;m++){ue[j+1][m]=dtemp[m];}
 		dtpp=1.0/dtemp[0];
+		#pragma unroll
+		META_LOOP(m_vars_2, 5, 5, true);
 		for(m=1;m<5;m++){buf[j][m]=dtpp*dtemp[m];}
 		cuf[j]=buf[j][2]*buf[j][2];
 		buf[j][0]=cuf[j]+buf[j][1]*buf[j][1]+buf[j][3]*buf[j][3];
 		q[j]=0.5*(buf[j][1]*ue[j+1][1]+buf[j][2]*ue[j+1][2]+buf[j][3]*ue[j+1][3]);
 	}
+	META_LOOP(j_sweep_1, 1, NY, false);
 	for(j=1; j<ny-1; j++){
 		if(j+2<ny){
 			eta=(double)(j+2)*dnym1;
 			exact_solution_gpu_device(xi, eta, zeta, dtemp);
+			#pragma unroll
+			META_LOOP(m_vars_3, 5, 5, true);
 			for(m=0;m<5;m++){ue[4][m]=dtemp[m];}
 		}
 		dtemp[0]=forcing(0,i,j,k)-ty2*(ue[3][2]-ue[1][2])+dy1ty1*(ue[3][0]-2.0*ue[2][0]+ue[1][0]);
@@ -185,16 +198,28 @@ __global__ static void sp_kernel(double* forcing,
 		 * ---------------------------------------------------------------------
 		 */
 		if(j==1){
+			#pragma unroll
+			META_LOOP(m_vars_4, 5, 5, true);
 			for(m=0;m<5;m++){forcing(m,i,j,k)=dtemp[m]-dssp*(5.0*ue[2][m]-4.0*ue[3][m] +ue[4][m]);}
 		}else if(j==2){
+			#pragma unroll
+			META_LOOP(m_vars_5, 5, 5, true);
 			for(m=0;m<5;m++){forcing(m,i,j,k)=dtemp[m]-dssp*(-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]+ue[4][m]);}
 		}else if(j>=3 && j<ny-3){
+			#pragma unroll
+			META_LOOP(m_vars_6, 5, 5, true);
 			for(m=0;m<5;m++){forcing(m,i,j,k)=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]+ue[4][m]);}
 		}else if(j==ny-3){
+			#pragma unroll
+			META_LOOP(m_vars_7, 5, 5, true);
 			for(m=0;m<5;m++){forcing(m,i,j,k)=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+6.0*ue[2][m]-4.0*ue[3][m]);}
 		}else if(j==ny-2){
+			#pragma unroll
+			META_LOOP(m_vars_8, 5, 5, true);
 			for(m=0;m<5;m++){forcing(m,i,j,k)=dtemp[m]-dssp*(ue[0][m]-4.0*ue[1][m]+5.0*ue[2][m]);}
 		}
+		#pragma unroll
+		META_LOOP(m_vars_9, 5, 5, true);
 		for(m=0; m<5; m++){
 			ue[0][m]=ue[1][m]; 
 			ue[1][m]=ue[2][m];
@@ -209,11 +234,14 @@ __global__ static void sp_kernel(double* forcing,
 		q[1]=q[2];
 		if(j<ny-2){
 			dtpp=1.0/ue[3][0];
+			#pragma unroll
+			META_LOOP(m_vars_10, 5, 5, true);
 			for(m=1;m<5;m++){buf[2][m]=dtpp*ue[3][m];}
 			cuf[2]=buf[2][2]*buf[2][2];
 			buf[2][0]=cuf[2]+buf[2][1]*buf[2][1]+buf[2][3]*buf[2][3];
 			q[2]=0.5*(buf[2][1]*ue[3][1]+buf[2][2]*ue[3][2]+buf[2][3]*ue[3][3]);
 		}
+	}
 	}
 }
 
@@ -224,11 +252,9 @@ int main() {
     double *forcing; cudaMalloc(&forcing, BUF_5NXZ); cudaMemset(forcing, 0, BUF_5NXZ);
 
     printf("[LOG] sp_exact_rhs_gpu_kernel_3: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = (NY < TPB) ? NY : TPB;
-        dim3 grid(NZ, NX);
-        sp_kernel<<<grid, tpb>>>(forcing, NX, NY, NZ);
-    }
+    int tpb = (NY < TPB) ? NY : TPB;
+    dim3 grid(NZ, NX);
+    sp_kernel<<<grid, tpb>>>(forcing, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -137,6 +138,8 @@ __global__ void is_kernel(INT_TYPE* key_array,
 		INT_TYPE* global_aux,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	INT_TYPE* shared_aux = (INT_TYPE*)(extern_share_data);
 
 	INT_TYPE i = (blockIdx.x*blockDim.x+threadIdx.x) + 1;
@@ -148,6 +151,7 @@ __global__ void is_kernel(INT_TYPE* key_array,
 
 	__syncthreads();
 
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(i=blockDim.x/2; i>0; i>>=1){
 		if(threadIdx.x<i){
 			shared_aux[threadIdx.x] += shared_aux[threadIdx.x+i];
@@ -156,6 +160,7 @@ __global__ void is_kernel(INT_TYPE* key_array,
 	}
 
 	if(threadIdx.x==0){global_aux[blockIdx.x]=shared_aux[0];}
+	}
 }
 
 int main() {
@@ -169,9 +174,7 @@ int main() {
 
     printf("[LOG] is_full_verify_kernel_3: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, TPB * sizeof(INT_TYPE)>>>(key_array, memory_aux, grid, NUM_KEYS);
-    }
+    is_kernel<<<grid, tpb, TPB * sizeof(INT_TYPE)>>>(key_array, memory_aux, grid, NUM_KEYS);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

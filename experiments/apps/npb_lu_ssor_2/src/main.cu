@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -159,6 +161,8 @@ __global__ static void lu_kernel(double* u,
 	if(threadIdx.x >= (nx-2)){
 		return;
 	}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	i=threadIdx.x+1;
 	j=blockIdx.y+1;
@@ -169,6 +173,7 @@ __global__ static void lu_kernel(double* u,
 	u(2,i,j,k)+=tmp*rsd(2,i,j,k);
 	u(3,i,j,k)+=tmp*rsd(3,i,j,k);
 	u(4,i,j,k)+=tmp*rsd(4,i,j,k);
+	}
 }
 
 int main() {
@@ -179,11 +184,9 @@ int main() {
     double *rsd; cudaMalloc(&rsd, BUF_5NXZ); cudaMemset(rsd, 0, BUF_5NXZ);
     double tmp_val = 1.0;
     printf("[LOG] lu_ssor_2: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = (NX-2 > TPB) ? NX-2 : TPB;
-        dim3 grid(NZ-2, NY-2);
-        lu_kernel<<<grid, tpb>>>(u, rsd, tmp_val, NX, NY, NZ);
-    }
+    int tpb = (NX-2 > TPB) ? NX-2 : TPB;
+    dim3 grid(NZ-2, NY-2);
+    lu_kernel<<<grid, tpb>>>(u, rsd, tmp_val, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

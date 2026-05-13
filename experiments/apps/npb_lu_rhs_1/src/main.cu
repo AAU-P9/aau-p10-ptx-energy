@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -156,6 +158,8 @@ __global__ static void lu_kernel(const double* u,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i_j_k, i, j, k, m;
 	double tmp;
 
@@ -169,9 +173,12 @@ __global__ static void lu_kernel(const double* u,
 		return;
 	}
 
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){rsd(m,i,j,k)=-frct(m,i,j,k);}
 	rho_i(i,j,k)=tmp=1.0/u(0,i,j,k);
 	qs(i,j,k)=0.5*(u(1,i,j,k)*u(1,i,j,k)+u(2,i,j,k)*u(2,i,j,k)+u(3,i,j,k)*u(3,i,j,k))*tmp;
+	}
 }
 
 int main() {
@@ -185,11 +192,9 @@ int main() {
     double *rho_i; cudaMalloc(&rho_i, BUF_NXZ); cudaMemset(rho_i, 0, BUF_NXZ);
 
     printf("[LOG] lu_rhs_1: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = TPB;
-        int grid = ((NX*NY*NZ) + tpb - 1) / tpb;
-        lu_kernel<<<grid, tpb>>>(u, rsd, frct, qs, rho_i, NX, NY, NZ);
-    }
+    int tpb = TPB;
+    int grid = ((NX*NY*NZ) + tpb - 1) / tpb;
+    lu_kernel<<<grid, tpb>>>(u, rsd, frct, qs, rho_i, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);
