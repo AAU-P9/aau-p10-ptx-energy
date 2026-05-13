@@ -152,25 +152,3 @@ int main() {{
     return 0;
 }}
 """
-
-
-def build_program(insn, iters, repeat=1, grid=1, block=1):
-    spec = INSTRUCTION_TEMPLATES[insn]
-    needs_buf = spec.get("needs_buf", False)
-
-    one_block = f"        asm volatile (\n            {spec['asm']}\n        );"
-    asm_blocks = "\n".join([one_block] * repeat)
-
-    return KERNEL_TEMPLATE.format(
-        iters=iters,
-        grid=grid,
-        block=block,
-        extra_args=", float* __restrict__ buf" if needs_buf else "",
-        setup=spec["setup"],
-        asm_blocks=asm_blocks,
-        sink=spec["sink"],
-        host_setup=(f"float* buf; cudaMalloc(&buf, {BUF_BYTES_PER_THREAD} * {grid} * {block});"
-                    if needs_buf else ""),
-        launch_extra=", buf" if needs_buf else "",
-        host_teardown="cudaFree(buf);" if needs_buf else "",
-    )
