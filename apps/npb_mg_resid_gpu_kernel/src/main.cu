@@ -40,6 +40,8 @@ __global__ void mg_kernel(double* u,
 		int amount_of_work){
 	int check=blockIdx.x*blockDim.x+threadIdx.x;
 	if(check>=amount_of_work){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	double* u1=(double*)(extern_share_data);
 	double* u2=(double*)(u1+M);
@@ -49,6 +51,7 @@ __global__ void mg_kernel(double* u,
 	int lid=threadIdx.x;
 	int i1;	
 
+	META_LOOP(i1_loop, 1, MG_PROBLEM_SIZE, false);
 	for(i1=lid; i1<n1; i1+=blockDim.x){
 		u1[i1]=u[i3*n2*n1+(i2-1)*n1+i1]
 			+u[i3*n2*n1+(i2+1)*n1+i1]
@@ -59,11 +62,13 @@ __global__ void mg_kernel(double* u,
 			+u[(i3+1)*n2*n1+(i2-1)*n1+i1]
 			+u[(i3+1)*n2*n1+(i2+1)*n1+i1];
 	} __syncthreads();
+	META_LOOP(i1_loop_1, 1, MG_PROBLEM_SIZE, false);
 	for(i1=lid+1; i1<n1-1; i1+=blockDim.x){
 		r[i3*n2*n1+i2*n1+i1]=v[i3*n2*n1+i2*n1+i1]
 			-a[0]*u[i3*n2*n1+i2*n1+i1]
 			-a[2]*(u2[i1]+u1[i1-1]+u1[i1+1])
 			-a[3]*(u2[i1-1]+u2[i1+1] );
+	}
 	}
 }
 
@@ -77,12 +82,10 @@ int main() {
     int tpb_val = (NM < TPB) ? NM : TPB;
     int aw = (NM-2)*tpb_val;
     printf("[LOG] mg_resid_gpu_kernel: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        dim3 grid(NM-2, NM-2);
-        dim3 threads(tpb_val, 1);
-        size_t smem = (size_t)2*M*sizeof(double);
-        mg_kernel<<<grid, threads, smem>>>(u, v, r, a, NM, NM, NM, aw);
-    }
+    dim3 grid(NM-2, NM-2);
+    dim3 threads(tpb_val, 1);
+    size_t smem = (size_t)2*M*sizeof(double);
+    mg_kernel<<<grid, threads, smem>>>(u, v, r, a, NM, NM, NM, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

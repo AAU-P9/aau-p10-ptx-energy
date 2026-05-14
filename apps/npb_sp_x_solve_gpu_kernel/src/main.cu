@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -146,6 +148,8 @@ __global__ static void sp_kernel(const double* rho_i,
 		const int nx, 
 		const int ny, 
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 #define lhs(m,i,j,k) lhs[(j-1)+(ny-2)*((k-1)+(nz-2)*((i)+nx*(m-3)))]
 #define lhsp(m,i,j,k) lhs[(j-1)+(ny-2)*((k-1)+(nz-2)*((i)+nx*(m+4)))]
 #define lhsm(m,i,j,k) lhs[(j-1)+(ny-2)*((k-1)+(nz-2)*((i)+nx*(m-3+2)))]
@@ -176,6 +180,8 @@ __global__ static void sp_kernel(const double* rho_i,
 	_lhs[0][2]=lhsp(2,0,j,k)=1.0;
 	_lhs[0][3]=lhsp(3,0,j,k)=0.0;
 	_lhs[0][4]=lhsp(4,0,j,k)=0.0;
+	#pragma unroll
+	META_LOOP(i_sweep, 3, 3, true);
 	for(i=0; i<3; i++){
 		fac1=c3c4*rho_i(i,j,k);
 		rhon[i]=max(max(max(dx2+con43*fac1, dx5+c1c5*fac1), dxmax+fac1), dx1);
@@ -189,11 +195,15 @@ __global__ static void sp_kernel(const double* rho_i,
 	_lhs[1][2]+=comz5;
 	_lhs[1][3]-=comz4;
 	_lhs[1][4]+=comz1;
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0; m<5; m++){lhsp(m,1,j,k)=_lhs[1][m];}
 	rhon[0]=rhon[1];
 	rhon[1]=rhon[2];
 	cv[0]=cv[1];
 	cv[1]=cv[2];
+	#pragma unroll
+	META_LOOP(m3_vars, 3, 3, true);
 	for(m=0; m<3; m++){
 		_rhs[0][m]=rhs(m,0,j,k);
 		_rhs[1][m]=rhs(m,1,j,k);
@@ -205,6 +215,7 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * perform the thomas algorithm; first, FORWARD ELIMINATION     
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(i_sweep_1, 1, NX, false);
 	for(i=0; i<nx-2; i++){
 		/*
 		 * ---------------------------------------------------------------------
@@ -257,6 +268,8 @@ __global__ static void sp_kernel(const double* rho_i,
 			 * store computed lhs for later reuse
 			 * ---------------------------------------------------------------------
 			 */
+			#pragma unroll
+			META_LOOP(m_vars_2, 5, 5, true);
 			for(m=0;m<5;m++){lhsp(m,i+2,j,k)=_lhs[2][m];}
 			rhon[0]=rhon[1];
 			rhon[1]=rhon[2];
@@ -268,6 +281,8 @@ __global__ static void sp_kernel(const double* rho_i,
 		 * load rhs values for current iteration
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(m3_vars_1, 3, 3, true);
 		for(m=0;m<3;m++){_rhs[2][m]=rhs(m,i+2,j,k);}
 		/*
 		 * ---------------------------------------------------------------------
@@ -277,12 +292,18 @@ __global__ static void sp_kernel(const double* rho_i,
 		fac1=1.0/_lhs[0][2];
 		_lhs[0][3]*=fac1;
 		_lhs[0][4]*=fac1;
+		#pragma unroll
+		META_LOOP(m3_vars_2, 3, 3, true);
 		for(m=0;m<3;m++){_rhs[0][m]*=fac1;}
 		_lhs[1][2]-=_lhs[1][1]*_lhs[0][3];
 		_lhs[1][3]-=_lhs[1][1]*_lhs[0][4];
+		#pragma unroll
+		META_LOOP(m3_vars_3, 3, 3, true);
 		for(m=0;m<3;m++){_rhs[1][m]-=_lhs[1][1]*_rhs[0][m];}
 		_lhs[2][1]-=_lhs[2][0]*_lhs[0][3];
 		_lhs[2][2]-=_lhs[2][0]*_lhs[0][4];
+		#pragma unroll
+		META_LOOP(m3_vars_4, 3, 3, true);
 		for(m=0;m<3;m++){_rhs[2][m]-=_lhs[2][0]*_rhs[0][m];}
 		/*
 		 * ---------------------------------------------------------------------
@@ -292,10 +313,14 @@ __global__ static void sp_kernel(const double* rho_i,
 		 */
 		lhs(3,i,j,k)=_lhs[0][3];
 		lhs(4,i,j,k)=_lhs[0][4];
+		#pragma unroll
+		META_LOOP(m_vars_3, 5, 5, true);
 		for(m=0; m<5; m++){
 			_lhs[0][m]=_lhs[1][m];
 			_lhs[1][m]=_lhs[2][m];
 		}
+		#pragma unroll
+		META_LOOP(m3_vars_5, 3, 3, true);
 		for(m=0; m<3; m++){
 			rtmp(m,i,j,k)=_rhs[0][m];
 			_rhs[0][m]=_rhs[1][m];
@@ -313,9 +338,13 @@ __global__ static void sp_kernel(const double* rho_i,
 	fac1=1.0/_lhs[0][2];
 	_lhs[0][3]*=fac1;
 	_lhs[0][4]*=fac1;
+	#pragma unroll
+	META_LOOP(m3_vars_6, 3, 3, true);
 	for(m=0;m<3;m++){_rhs[0][m]*=fac1;}
 	_lhs[1][2]-=_lhs[1][1]*_lhs[0][3];
 	_lhs[1][3]-=_lhs[1][1]*_lhs[0][4];
+	#pragma unroll
+	META_LOOP(m3_vars_7, 3, 3, true);
 	for(m=0;m<3;m++){_rhs[1][m]-=_lhs[1][1]*_rhs[0][m];}
 	/*
 	 * ---------------------------------------------------------------------
@@ -323,6 +352,8 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * ---------------------------------------------------------------------
 	 */
 	fac1=1.0/_lhs[1][2];
+	#pragma unroll
+	META_LOOP(m3_vars_8, 3, 3, true);
 	for(m=0;m<3;m++){_rhs[1][m]*=fac1;}
 	lhs(3,nx-2,j,k)=_lhs[0][3];
 	lhs(4,nx-2,j,k)=_lhs[0][4];
@@ -331,7 +362,11 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * subsequently, fill the other factors (u+c), (u-c)
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(i_sweep_2, 3, 3, true);
 	for(i=0;i<3;i++){cv[i]=speed(i,j,k);}
+	#pragma unroll
+	META_LOOP(m_vars_4, 5, 5, true);
 	for(m=0; m<5; m++){
 		_lhsp[0][m]=_lhs[0][m]=lhsp(m,0,j,k);
 		_lhsp[1][m]=_lhs[1][m]=lhsp(m,1,j,k);
@@ -351,11 +386,14 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * do the u+c and the u-c factors                 
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(i_sweep_3, 1, NX, false);
 	for(i=0; i<nx-2; i++){
 		/*
 		 * first, fill the other factors (u+c), (u-c) 
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(m_vars_5, 5, 5, true);
 		for(m=0; m<5; m++){
 			_lhsp[2][m]=_lhs[2][m]=lhsp(m,i+2,j,k);
 		}
@@ -398,6 +436,8 @@ __global__ static void sp_kernel(const double* rho_i,
 		 * rhs is stored in a temp array such that write accesses are coalesced  
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(m_vars_6, 5, 5, true);
 		for(m=3; m<5; m++){
 			lhsp(m,i,j,k)=_lhsp[0][m];
 			lhsm(m,i,j,k)=_lhs[0][m];
@@ -405,6 +445,8 @@ __global__ static void sp_kernel(const double* rho_i,
 			_rhs[0][m]=_rhs[1][m];
 			_rhs[1][m]=_rhs[2][m];
 		}
+		#pragma unroll
+		META_LOOP(m_vars_7, 5, 5, true);
 		for(m=0; m<5; m++){
 			_lhsp[0][m]=_lhsp[1][m];
 			_lhsp[1][m]=_lhsp[2][m];
@@ -446,19 +488,26 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * BACKSUBSTITUTION 
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(m3_vars_9, 3, 3, true);
 	for(m=0;m<3;m++){_rhs[0][m]-=lhs(3,nx-2,j,k)*_rhs[1][m];}
 	_rhs[0][3]-=_lhsp[0][3]*_rhs[1][3];
 	_rhs[0][4]-=_lhs[0][3]*_rhs[1][4];
+	#pragma unroll
+	META_LOOP(m_vars_8, 5, 5, true);
 	for(m=0; m<5; m++){
 		_rhs[2][m]=_rhs[1][m];
 		_rhs[1][m]=_rhs[0][m];
 	}
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(i=nx-3; i>=0; i--){
 		/*
 		 * ---------------------------------------------------------------------
 		 * the first three factors
 		 * ---------------------------------------------------------------------
 		 */
+		#pragma unroll
+		META_LOOP(m3_vars_10, 3, 3, true);
 		for(m=0; m<3; m++){_rhs[0][m]=rtmp(m,i,j,k)-lhs(3,i,j,k)*_rhs[1][m]-lhs(4,i,j,k)*_rhs[2][m];}
 		/*
 		 * ---------------------------------------------------------------------
@@ -486,6 +535,8 @@ __global__ static void sp_kernel(const double* rho_i,
 			_rhs[2][3]=-t1+t2;
 			_rhs[2][4]=t1+t2;
 		}
+		#pragma unroll
+		META_LOOP(m_vars_9, 5, 5, true);
 		for(m=0; m<5; m++){
 			rhs(m,i+2,j,k)=_rhs[2][m];
 			_rhs[2][m]=_rhs[1][m];
@@ -504,11 +555,14 @@ __global__ static void sp_kernel(const double* rho_i,
 	rhs(2,1,j,k)=bt*(_rhs[2][3]-_rhs[2][4]);
 	rhs(3,1,j,k)=-t1+t2;
 	rhs(4,1,j,k)=t1+t2;
+	#pragma unroll
+	META_LOOP(m_vars_10, 5, 5, true);
 	for(m=0;m<5;m++){rhs(m,0,j,k)=_rhs[1][m];}
 #undef lhs
 #undef lhsp
 #undef lhsm
 #undef rtmp
+	}
 }
 
 int main() {
@@ -523,10 +577,8 @@ int main() {
     double *rhs_buf; cudaMalloc(&rhs_buf, BUF_5NXZ); cudaMemset(rhs_buf, 0, BUF_5NXZ);
 
     printf("[LOG] sp_x_solve_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        dim3 grid(1, NZ);
-        sp_kernel<<<grid, NY>>>(rho_i, us, speed, rhs, lhs, rhs_buf, NX, NY, NZ);
-    }
+    dim3 grid(1, NZ);
+    sp_kernel<<<grid, NY>>>(rho_i, us, speed, rhs, lhs, rhs_buf, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

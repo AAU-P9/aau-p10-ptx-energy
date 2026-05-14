@@ -32,6 +32,8 @@ extern __shared__ double extern_share_data[];
 #define BUF_GDATA (((NA+TPB-1)/TPB)*sizeof(double))
 
 __global__ void bt_kernel(double r[], double x[], double* sum, double global_data[]){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	double* share_data = (double*)extern_share_data;
 
 	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -45,11 +47,13 @@ __global__ void bt_kernel(double r[], double x[], double* sum, double global_dat
 	share_data[local_id] = share_data[local_id] * share_data[local_id];
 
 	__syncthreads();
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(int i=blockDim.x/2; i>0; i>>=1) {
 		if(local_id<i){share_data[local_id]+=share_data[local_id+i];}
 		__syncthreads();
 	}
 	if(local_id==0){global_data[blockIdx.x]=share_data[0];}
+	}
 }
 
 int main() {
@@ -65,9 +69,7 @@ int main() {
     int thread = TPB;
 
     printf("[LOG] cg_kernel_nine: NA=%d, ITERATIONS=%d\n", NA, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<grid, thread, TPB*sizeof(double)>>>(r, x, sum, global_data);
-    }
+    bt_kernel<<<grid, thread, TPB*sizeof(double)>>>(r, x, sum, global_data);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);

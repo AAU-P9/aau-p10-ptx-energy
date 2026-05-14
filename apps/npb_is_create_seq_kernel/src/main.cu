@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -138,6 +139,8 @@ __global__ void is_kernel(INT_TYPE* key_array,
 		double a,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	double x, s;
 	INT_TYPE i, k;
 
@@ -158,12 +161,14 @@ __global__ void is_kernel(INT_TYPE* key_array,
 
 	k = MAX_KEY/4;
 
+	META_LOOP(i_sweep, 1, NUM_KEYS, false);
 	for(i=k1; i<k2; i++){
 		x = randlc_device(&s, &an);
 		x += randlc_device(&s, &an);
 		x += randlc_device(&s, &an);
 		x += randlc_device(&s, &an);  
 		key_array[i] = k*x;
+	}
 	}
 }
 
@@ -178,9 +183,7 @@ int main() {
 
     printf("[LOG] is_create_seq_kernel: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, 0>>>(key_array, 314159265.0, 1220703125.0, grid, amount_of_work);
-    }
+    is_kernel<<<grid, tpb, 0>>>(key_array, 314159265.0, 1220703125.0, grid, amount_of_work);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

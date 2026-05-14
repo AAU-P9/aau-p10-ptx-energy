@@ -57,6 +57,8 @@ __global__ void bt_kernel(double* u_device,
 	int i = t_i / 5 + 1;
 	int m = t_i % 5;
 	if(k+0 < 1 || k+0 > KMAX-2 || k >= KMAX || j > JMAX-2 || i > IMAX-2){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	double (*u)[JMAXP+1][IMAXP+1][5] = (double(*)[JMAXP+1][IMAXP+1][5])u_device; 
 	double (*rhs)[JMAXP+1][IMAXP+1][5] = (double(*)[JMAXP+1][IMAXP+1][5])rhs_device;
@@ -87,6 +89,7 @@ __global__ void bt_kernel(double* u_device,
 			   6.0*u[k][j][i][m] - 4.0*u[k+1][j][i][m] + 
 			   u[k+2][j][i][m] );
 	}
+	}
 }
 
 
@@ -105,9 +108,7 @@ int main() {
     dim3 thread(tpb, 1, 1);
 
     printf("[LOG] bt_compute_rhs_8: PROBLEM_SIZE=%d, ITERATIONS=%d\n", PROBLEM_SIZE, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<block, thread>>>(u, rhs);
-    }
+    bt_kernel<<<block, thread>>>(u, rhs);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)(wx/tpb));

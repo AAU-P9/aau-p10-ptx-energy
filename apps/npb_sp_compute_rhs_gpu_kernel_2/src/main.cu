@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -149,6 +151,8 @@ __global__ static void sp_kernel(const double* rho_i,
 		const int nx, 
 		const int ny, 
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 
 	k=blockIdx.y;
@@ -164,6 +168,8 @@ __global__ static void sp_kernel(const double* rho_i,
 	 * including the boundary                   
 	 * ---------------------------------------------------------------------
 	 */
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){rtmp[m]=forcing(m,i,j,k);}
 	/*
 	 * ---------------------------------------------------------------------
@@ -185,14 +191,24 @@ __global__ static void sp_kernel(const double* rho_i,
 		 * ---------------------------------------------------------------------
 		 */
 		if(i==1){
+			#pragma unroll
+			META_LOOP(m_vars_2, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(5.0*u(m,i,j,k)-4.0*u(m,i+1,j,k)+u(m,i+2,j,k));}
 		}else if(i==2){
+			#pragma unroll
+			META_LOOP(m_vars_3, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(-4.0*u(m,i-1,j,k)+6.0*u(m,i,j,k)-4.0*u(m,i+1,j,k)+u(m,i+2,j,k));}
 		}else if(i>=3 && i<nx-3){
+			#pragma unroll
+			META_LOOP(m_vars_4, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i-2,j,k)-4.0*u(m,i-1,j,k)+6.0*u(m,i,j,k)-4.0*u(m,i+1,j,k)+u(m,i+2,j,k));}
 		}else if(i==nx-3){
+			#pragma unroll
+			META_LOOP(m_vars_5, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i-2,j,k)-4.0*u(m,i-1,j,k)+6.0*u(m,i,j,k)-4.0*u(m,i+1,j,k));}
 		}else if(i==nx-2){
+			#pragma unroll
+			META_LOOP(m_vars_6, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i-2,j,k)-4.0*u(m,i-1,j,k) + 5.0*u(m,i,j,k));}
 		}
 		/*
@@ -214,14 +230,24 @@ __global__ static void sp_kernel(const double* rho_i,
 		 * ---------------------------------------------------------------------
 		 */
 		if(j==1){
+			#pragma unroll
+			META_LOOP(m_vars_7, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(5.0*u(m,i,j,k)-4.0*u(m,i,j+1,k)+u(m,i,j+2,k));}
 		}else if(j==2){
+			#pragma unroll
+			META_LOOP(m_vars_8, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(-4.0*u(m,i,j-1,k)+6.0*u(m,i,j,k)-4.0*u(m,i,j+1,k)+u(m,i,j+2,k));}
 		}else if(j>=3 && j<ny-3){
+			#pragma unroll
+			META_LOOP(m_vars_9, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j-2,k)-4.0*u(m,i,j-1,k)+6.0*u(m,i,j,k)-4.0*u(m,i,j+1,k)+u(m,i,j+2,k));}
 		}else if(j==ny-3){
+			#pragma unroll
+			META_LOOP(m_vars_10, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j-2,k)-4.0*u(m,i,j-1,k)+6.0*u(m,i,j,k)-4.0*u(m,i,j+1,k));}
 		}else if(j==ny-2){
+			#pragma unroll
+			META_LOOP(m_vars_11, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j-2,k)-4.0*u(m,i,j-1,k)+5.0*u(m,i,j,k));}
 		}
 		/*
@@ -243,19 +269,34 @@ __global__ static void sp_kernel(const double* rho_i,
 		 * ---------------------------------------------------------------------
 		 */
 		if(k==1){
+			#pragma unroll
+			META_LOOP(m_vars_12, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(5.0*u(m,i,j,k)-4.0*u(m,i,j,k+1)+u(m,i,j,k+2));}
 		}else if(k==2){
+			#pragma unroll
+			META_LOOP(m_vars_13, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(-4.0*u(m,i,j,k-1)+6.0*u(m,i,j,k)-4.0*u(m,i,j,k+1)+u(m,i,j,k+2));}
 		}else if(k>=3 && k<nz-3){
+			#pragma unroll
+			META_LOOP(m_vars_14, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j,k-2)-4.0*u(m,i,j,k-1)+6.0*u(m,i,j,k)-4.0*u(m,i,j,k+1)+u(m,i,j,k+2));}
 		}else if(k==nz-3){
+			#pragma unroll
+			META_LOOP(m_vars_15, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j,k-2)-4.0*u(m,i,j,k-1)+6.0*u(m,i,j,k)-4.0*u(m,i,j,k+1));}
 		}else if(k==nz-2){
+			#pragma unroll
+			META_LOOP(m_vars_16, 5, 5, true);
 			for(m=0;m<5;m++){rtmp[m]=rtmp[m]-dssp*(u(m,i,j,k-2)-4.0*u(m,i,j,k-1)+5.0*u(m,i,j,k));}
 		}
+		#pragma unroll
+		META_LOOP(m_vars_17, 5, 5, true);
 		for(m=0;m<5;m++){rtmp[m]*=dt;}
 	}
+	#pragma unroll
+	META_LOOP(m_vars_18, 5, 5, true);
 	for(m=0;m<5;m++){rhs(m,i,j,k)=rtmp[m];}
+	}
 }
 
 int main() {
@@ -273,10 +314,8 @@ int main() {
     double *u; cudaMalloc(&u, BUF_5NXZ); cudaMemset(u, 0, BUF_5NXZ);
 
     printf("[LOG] sp_compute_rhs_gpu_kernel_2: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        dim3 grid(NY, NZ);
-        sp_kernel<<<grid, NX>>>(rho_i, us, vs, ws, qs, square, rhs, forcing, u, NX, NY, NZ);
-    }
+    dim3 grid(NY, NZ);
+    sp_kernel<<<grid, NX>>>(rho_i, us, vs, ws, qs, square, rhs, forcing, u, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -139,6 +140,8 @@ __global__ void is_kernel(INT_TYPE* key_array,
 		INT_TYPE iteration,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	key_array[iteration] = iteration;
 	key_array[iteration+MAX_ITERATIONS] = MAX_KEY - iteration;
 	/*
@@ -149,8 +152,11 @@ __global__ void is_kernel(INT_TYPE* key_array,
 	 * --------------------------------------------------------------------
 	 */
 #pragma unroll
+	#pragma unroll
+	META_LOOP(i_sweep, TEST_ARRAY_SIZE, TEST_ARRAY_SIZE, true);
 	for(INT_TYPE i=0; i<TEST_ARRAY_SIZE; i++){
 		partial_verify_vals[i] = key_array[test_index_array[i]];
+	}
 	}
 }
 
@@ -166,9 +172,7 @@ int main() {
 
     printf("[LOG] is_rank_kernel_1: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, 0>>>(key_array, partial_verify_vals, test_index_array, 0, 1, 1);
-    }
+    is_kernel<<<grid, tpb, 0>>>(key_array, partial_verify_vals, test_index_array, 0, 1, 1);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

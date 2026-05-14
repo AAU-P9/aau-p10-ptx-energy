@@ -38,11 +38,14 @@ __global__ void bt_kernel(double p[],
 		double z[]){
 	int thread_id = blockIdx.x * blockDim.x + threadIdx.x;
 	if(thread_id >= NA){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	q[thread_id] = 0.0;
 	z[thread_id] = 0.0;
 	double x_value = x[thread_id];
 	r[thread_id] = x_value;
 	p[thread_id] = x_value;
+	}
 }
 
 int main() {
@@ -59,9 +62,7 @@ int main() {
     int thread = TPB;
 
     printf("[LOG] cg_kernel_one: NA=%d, ITERATIONS=%d\n", NA, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<grid, thread, 0>>>(p, q, r, x, z);
-    }
+    bt_kernel<<<grid, thread, 0>>>(p, q, r, x, z);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);

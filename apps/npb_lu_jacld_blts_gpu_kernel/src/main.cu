@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -158,6 +160,8 @@ __global__ static void lu_kernel(const int plane,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 	double tmp1, tmp2, tmp3, tmat[5*5], tv[5];
 	double r43, c1345, c34;
@@ -206,6 +210,8 @@ __global__ static void lu_kernel(const int plane,
 	tmat[4+5*2]=-dt*tz2*(-C2*(u(2,i,j,k-1)*u(3,i,j,k-1))*tmp2)-dt*tz1*(c34-c1345)*tmp2*u(2,i,j,k-1);
 	tmat[4+5*3]=-dt*tz2*(C1*(u(4,i,j,k-1)*tmp1)-C2*(qs(i,j,k-1)*tmp1+u(3,i,j,k-1)*u(3,i,j,k-1)*tmp2))-dt*tz1*(r43*c34-c1345)*tmp2*u(3,i,j,k-1);
 	tmat[4+5*4]=-dt*tz2*(C1*(u(3,i,j,k-1)*tmp1))-dt*tz1*c1345*tmp1-dt*tz1*dz5;
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){tv[m]=v(m,i,j,k)-omega*(tmat[m+5*0]*v(0,i,j,k-1)+tmat[m+5*1]*v(1,i,j,k-1)+tmat[m+5*2]*v(2,i,j,k-1)+tmat[m+5*3]*v(3,i,j,k-1)+tmat[m+5*4]*v(4,i,j,k-1));}
 	/*
 	 * ---------------------------------------------------------------------
@@ -240,6 +246,8 @@ __global__ static void lu_kernel(const int plane,
 	tmat[4+5*2]=-dt*ty2*(C1*(u(4,i,j-1,k)*tmp1)-C2*(qs(i,j-1,k)*tmp1+u(2,i,j-1,k)*u(2,i,j-1,k)*tmp2))-dt*ty1*(r43*c34-c1345)*tmp2*u(2,i,j-1,k);
 	tmat[4+5*3]=-dt*ty2*(-C2*(u(2,i,j-1,k)*u(3,i,j-1,k))*tmp2) - dt*ty1*(c34-c1345)*tmp2*u(3,i,j-1,k);
 	tmat[4+5*4]=-dt*ty2*(C1*(u(2,i,j-1,k)*tmp1))-dt*ty1*c1345*tmp1-dt*ty1*dy5;
+	#pragma unroll
+	META_LOOP(m_vars_2, 5, 5, true);
 	for(m=0;m<5;m++){tv[m]=tv[m]-omega*(tmat[m+5*0]*v(0,i,j-1,k)+tmat[m+5*1]*v(1,i,j-1,k)+tmat[m+5*2]*v(2,i,j-1,k)+tmat[m+5*3]*v(3,i,j-1,k)+tmat[m+5*4]*v(4,i,j-1,k));}
 	/*
 	 * ---------------------------------------------------------------------
@@ -274,6 +282,8 @@ __global__ static void lu_kernel(const int plane,
 	tmat[4+5*2]=-dt*tx2*(-C2*(u(2,i-1,j,k)*u(1,i-1,j,k))*tmp2)-dt*tx1*(c34-c1345)*tmp2*u(2,i-1,j,k);
 	tmat[4+5*3]=-dt*tx2*(-C2*(u(3,i-1,j,k)*u(1,i-1,j,k))*tmp2)-dt*tx1*(c34-c1345)*tmp2*u(3,i-1,j,k);
 	tmat[4+5*4]=-dt*tx2*(C1*(u(1,i-1,j,k)*tmp1))-dt*tx1*c1345*tmp1-dt*tx1*dx5;
+	#pragma unroll
+	META_LOOP(m_vars_3, 5, 5, true);
 	for(m=0;m<5;m++){tv[m]=tv[m]-omega*(tmat[m+0*5]*v(0,i-1,j,k)+tmat[m+5*1]*v(1,i-1,j,k)+tmat[m+5*2]*v(2,i-1,j,k)+tmat[m+5*3]*v(3,i-1,j,k)+tmat[m+5*4]*v(4,i-1,j,k));}
 	/*
 	 * ---------------------------------------------------------------------
@@ -383,6 +393,7 @@ __global__ static void lu_kernel(const int plane,
 	v(1,i,j,k)=tv[1]/tmat[1+1*5];
 	tv[0]=tv[0]-tmat[0+1*5]*v(1,i,j,k)-tmat[0+2*5]*v(2,i,j,k)-tmat[0+3*5]*v(3,i,j,k)-tmat[0+4*5]*v(4,i,j,k);
 	v(0,i,j,k)=tv[0]/tmat[0+0*5];
+	}
 }
 
 int main() {
@@ -395,10 +406,8 @@ int main() {
     double *rsd; cudaMalloc(&rsd, BUF_5NXZ); cudaMemset(rsd, 0, BUF_5NXZ);
 
     printf("[LOG] lu_jacld_blts_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int plane = 5, klower = 0, jlower = 0;
-        lu_kernel<<<1, TPB>>>(plane, klower, jlower, u, rho_i, qs, rsd, NX, NY, NZ);
-    }
+    int plane = 5, klower = 0, jlower = 0;
+    lu_kernel<<<1, TPB>>>(plane, klower, jlower, u, rho_i, qs, rsd, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

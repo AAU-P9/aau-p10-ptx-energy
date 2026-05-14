@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -150,14 +152,21 @@ __device__ static void exact_gpu_device(const int i,
 
 __global__ static void lu_kernel(double* rms,
 		const int size){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, m, loc_max, dist;
 
 	double* buffer = (double*)extern_share_data;
 
 	i=threadIdx.x;
 
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){buffer[m+5*i]=0.0;}
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(i<size){
+		#pragma unroll
+		META_LOOP(m_vars_2, 5, 5, true);
 		for(m=0;m<5;m++){buffer[m+5*threadIdx.x]+=rms[m+5*i];}
 		i+=blockDim.x;
 	}
@@ -165,6 +174,7 @@ __global__ static void lu_kernel(double* rms,
 	dist=(loc_max+1)/2;
 	i=threadIdx.x;
 	__syncthreads();
+	META_LOOP(while_loop_1, 1, PROBLEM_SIZE, false);
 	while(loc_max>1){
 		if((i<dist)&&((i+dist)<loc_max)){for(m=0;m<5;m++){buffer[m+5*i]+=buffer[m+5*(i+dist)];}}
 		loc_max=dist;
@@ -172,6 +182,7 @@ __global__ static void lu_kernel(double* rms,
 		__syncthreads();
 	}
 	if(threadIdx.x<5){rms[threadIdx.x]=buffer[threadIdx.x];}
+	}
 }
 
 int main() {
@@ -181,11 +192,9 @@ int main() {
     double *norm_buf; cudaMalloc(&norm_buf, BUF_NORM); cudaMemset(norm_buf, 0, BUF_NORM);
 
     printf("[LOG] lu_norm_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = TPB;
-        size_t smem = (size_t)5*tpb*sizeof(double);
-        lu_kernel<<<1, tpb, smem>>>(norm_buf, (NZ-2)*(NY-2));
-    }
+    int tpb = TPB;
+    size_t smem = (size_t)5*tpb*sizeof(double);
+    lu_kernel<<<1, tpb, smem>>>(norm_buf, (NZ-2)*(NY-2));
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

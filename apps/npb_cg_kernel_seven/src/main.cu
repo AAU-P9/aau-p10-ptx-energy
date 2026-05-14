@@ -36,7 +36,10 @@ __global__ void bt_kernel(double beta,
 		double* r){
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 	if(j >= NA){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	p[j] = r[j] + beta*p[j];
+	}
 }
 
 int main() {
@@ -51,9 +54,7 @@ int main() {
     int thread = TPB;
 
     printf("[LOG] cg_kernel_seven: NA=%d, ITERATIONS=%d\n", NA, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<grid, thread, 0>>>(beta, p, r);
-    }
+    bt_kernel<<<grid, thread, 0>>>(beta, p, r);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);

@@ -34,7 +34,10 @@ extern __shared__ double extern_share_data[];
 __global__ void bt_kernel(double norm_temp2, double x[], double z[]){
 	int j = blockIdx.x * blockDim.x + threadIdx.x;
 	if(j >= NA){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	x[j]=norm_temp2*z[j];
+	}
 }
 
 int main() {
@@ -49,9 +52,7 @@ int main() {
     int thread = TPB;
 
     printf("[LOG] cg_kernel_eleven: NA=%d, ITERATIONS=%d\n", NA, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<grid, thread, 0>>>(norm_temp2, x, z);
-    }
+    bt_kernel<<<grid, thread, 0>>>(norm_temp2, x, z);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);

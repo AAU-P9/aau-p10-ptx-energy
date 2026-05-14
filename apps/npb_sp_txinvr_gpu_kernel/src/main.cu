@@ -120,6 +120,8 @@ __device__ static void exact_solution_gpu_device(const double xi,
 		const double zeta,
 		double* dtemp){
 	using namespace constants_device;
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(int m=0; m<5; m++){
 		dtemp[m]=ce[0][m]+xi*
 			(ce[1][m]+xi*
@@ -147,6 +149,8 @@ __global__ static void sp_kernel(const double* rho_i,
 		const int nx, 
 		const int ny, 
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i_j_k, i, j, k;
 
 	i_j_k = blockIdx.x * blockDim.x + threadIdx.x;
@@ -179,6 +183,7 @@ __global__ static void sp_kernel(const double* rho_i,
 	rhs(2,i,j,k)=ru1*(vv*r1-r3);
 	rhs(3,i,j,k)=-t2+t3;
 	rhs(4,i,j,k)=t2+t3;
+	}
 }
 
 int main() {
@@ -194,11 +199,9 @@ int main() {
     double *rhs; cudaMalloc(&rhs, BUF_5NXZ); cudaMemset(rhs, 0, BUF_5NXZ);
 
     printf("[LOG] sp_txinvr_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = TPB;
-        int grid = ((NX*NY*NZ) + tpb - 1) / tpb;
-        sp_kernel<<<grid, tpb>>>(rho_i, us, vs, ws, speed, qs, rhs, NX, NY, NZ);
-    }
+    int tpb = TPB;
+    int grid = ((NX*NY*NZ) + tpb - 1) / tpb;
+    sp_kernel<<<grid, tpb>>>(rho_i, us, vs, ws, speed, qs, rhs, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

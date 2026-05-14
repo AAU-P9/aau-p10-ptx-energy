@@ -118,6 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -137,8 +138,11 @@ __global__ void is_kernel(INT_TYPE* key_array,
 		INT_TYPE* key_buff2,
 		INT_TYPE number_of_blocks,
 		INT_TYPE amount_of_work){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	INT_TYPE i = blockIdx.x*blockDim.x+threadIdx.x;
 	key_buff2[i] = key_array[i];
+	}
 }
 
 int main() {
@@ -152,9 +156,7 @@ int main() {
 
     printf("[LOG] is_full_verify_kernel_1: CLASS=%c TOTAL_KEYS=%d MAX_KEY=%d ITERATIONS=%d\n",
            CLASS, TOTAL_KEYS, MAX_KEY, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        is_kernel<<<grid, tpb, 0>>>(key_array, key_buff2, grid, NUM_KEYS);
-    }
+    is_kernel<<<grid, tpb, 0>>>(key_array, key_buff2, grid, NUM_KEYS);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  grid);

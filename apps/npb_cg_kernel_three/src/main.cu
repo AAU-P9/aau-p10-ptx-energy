@@ -36,6 +36,8 @@ __global__ void bt_kernel(int colidx[],
 		double a[], 
 		double p[], 
 		double q[]){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	double* share_data = (double*)extern_share_data;
 
 	int j = (int) ((blockIdx.x*blockDim.x+threadIdx.x) / blockDim.x);
@@ -44,17 +46,20 @@ __global__ void bt_kernel(int colidx[],
 	int begin = rowstr[j];
 	int end = rowstr[j+1];
 	double sum = 0.0;
+	META_LOOP(k_sweep, 1, NA, false);
 	for(int k=begin+local_id; k<end; k+=blockDim.x){
 		sum = sum + a[k]*p[colidx[k]];
 	}
 	share_data[local_id] = sum;
 
 	__syncthreads();
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(local_id<i){share_data[local_id]+=share_data[local_id+i];}
 		__syncthreads();
 	}
 	if(local_id==0){q[j]=share_data[0];}
+	}
 }
 
 int main() {
@@ -72,9 +77,7 @@ int main() {
     int thread = TPB;
 
     printf("[LOG] cg_kernel_three: NA=%d, ITERATIONS=%d\n", NA, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        bt_kernel<<<grid, thread, TPB*sizeof(double)>>>(colidx, rowstr, a, p, q);
-    }
+    bt_kernel<<<grid, thread, TPB*sizeof(double)>>>(colidx, rowstr, a, p, q);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);

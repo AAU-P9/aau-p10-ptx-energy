@@ -37,7 +37,10 @@ __global__ void mg_kernel(double* z,
 		int amount_of_work){
 	int thread_id=blockIdx.x*blockDim.x+threadIdx.x;
 	if(thread_id>=(n1*n2*n3)){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	z[thread_id]=0.0;
+	}
 }
 
 int main() {
@@ -46,12 +49,10 @@ int main() {
     double *z; cudaMalloc(&z, NV*sizeof(double)); cudaMemset(z, 0, NV*sizeof(double));
 
     printf("[LOG] mg_zero3_gpu_kernel: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = TPB;
-        int aw = NM*NM*NM;
-        int grid = (aw + tpb - 1) / tpb;
-        mg_kernel<<<grid, tpb>>>(z, NM, NM, NM, aw);
-    }
+    int tpb = TPB;
+    int aw = NM*NM*NM;
+    int grid = (aw + tpb - 1) / tpb;
+    mg_kernel<<<grid, tpb>>>(z, NM, NM, NM, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

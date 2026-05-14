@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -153,6 +155,8 @@ __global__ static void lu_kernel(const double* v,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 
 	double* sum_loc = (double*)extern_share_data;
@@ -161,8 +165,13 @@ __global__ static void lu_kernel(const double* v,
 	j=blockIdx.y+1;
 	i=threadIdx.x+1;
 
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0;m<5;m++){sum_loc[m+5*threadIdx.x]=0.0;}
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(i<(nx-1)){
+		#pragma unroll
+		META_LOOP(m_vars_2, 5, 5, true);
 		for(m=0;m<5;m++){sum_loc[m+5*threadIdx.x]+=v(m,i,j,k)*v(m,i,j,k);}
 		i+=blockDim.x;
 	}
@@ -170,8 +179,11 @@ __global__ static void lu_kernel(const double* v,
 	int loc_max=blockDim.x;
 	int dist=(loc_max+1)/2;
 	__syncthreads();
+	META_LOOP(while_loop_1, 1, PROBLEM_SIZE, false);
 	while(loc_max>1){
 		if((i<dist)&&(i+dist<loc_max)){
+			#pragma unroll
+			META_LOOP(m_vars_3, 5, 5, true);
 			for(m=0;m<5;m++){sum_loc[m+5*i]+=sum_loc[m+5*(i+dist)];}
 		}
 		loc_max=dist;
@@ -179,6 +191,7 @@ __global__ static void lu_kernel(const double* v,
 		__syncthreads();
 	}
 	if(i==0){for(m=0;m<5;m++){sum[m+5*(blockIdx.y+gridDim.y*blockIdx.x)]=sum_loc[m];}}
+	}
 }
 
 int main() {
@@ -189,12 +202,10 @@ int main() {
     double *norm_buf; cudaMalloc(&norm_buf, BUF_NORM); cudaMemset(norm_buf, 0, BUF_NORM);
 
     printf("[LOG] lu_l2norm_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = (NX-2 < TPB) ? NX-2 : TPB;
-        size_t smem = (size_t)5*tpb*sizeof(double);
-        dim3 grid(NZ-2, NY-2);
-        lu_kernel<<<grid, tpb, smem>>>(v, norm_buf, NX, NY, NZ);
-    }
+    int tpb = (NX-2 < TPB) ? NX-2 : TPB;
+    size_t smem = (size_t)5*tpb*sizeof(double);
+    dim3 grid(NZ-2, NY-2);
+    lu_kernel<<<grid, tpb, smem>>>(v, norm_buf, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

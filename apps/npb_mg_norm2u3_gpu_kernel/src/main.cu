@@ -40,6 +40,8 @@ __global__ void mg_kernel(double* r,
 		int amount_of_work){
 	int check=blockIdx.x*blockDim.x+threadIdx.x;
 	if(check>=amount_of_work){return;}
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 
 	double* scratch_sum = (double*)(extern_share_data);
 	double* scratch_max = (double*)(scratch_sum+blockDim.x);
@@ -52,6 +54,7 @@ __global__ void mg_kernel(double* r,
 	double my_rnmu=0.0;
 	double a;
 
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(i1<n1-1){
 		double r321=r[i3*n2*n1+i2*n1+i1];
 		s=s+r321*r321;
@@ -65,6 +68,7 @@ __global__ void mg_kernel(double* r,
 	scratch_max[lid]=my_rnmu;
 
 	__syncthreads();
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(lid<i){
 			scratch_sum[lid]+=scratch_sum[lid+i];
@@ -76,6 +80,7 @@ __global__ void mg_kernel(double* r,
 		int idx=blockIdx.y*number_of_blocks_on_x_axis+blockIdx.x;
 		res_sum[idx]=scratch_sum[0];
 		res_max[idx]=scratch_max[0];
+	}
 	}
 }
 
@@ -90,12 +95,10 @@ int main() {
     cudaMalloc(&res_sum, temp_size*sizeof(double)); cudaMemset(res_sum, 0, temp_size*sizeof(double));
     cudaMalloc(&res_max, temp_size*sizeof(double)); cudaMemset(res_max, 0, temp_size*sizeof(double));
     printf("[LOG] mg_norm2u3_gpu_kernel: NM=%d M=%d ITERATIONS=%d\n", NM, M, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        dim3 grid(blocks_x, NM-2);
-        dim3 threads(TPB, 1);
-        size_t smem = (size_t)2*TPB*sizeof(double);
-        mg_kernel<<<grid, threads, smem>>>(r, NM, NM, NM, res_sum, res_max, blocks_x, aw);
-    }
+    dim3 grid(blocks_x, NM-2);
+    dim3 threads(TPB, 1);
+    size_t smem = (size_t)2*TPB*sizeof(double);
+    mg_kernel<<<grid, threads, smem>>>(r, NM, NM, NM, res_sum, res_max, blocks_x, aw);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

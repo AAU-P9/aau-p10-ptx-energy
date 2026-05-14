@@ -131,6 +131,8 @@ __device__ static void exact_gpu_device(const int i,
 	xi=(double)i/(double)(nx-1);
 	eta=(double)j/(double)(ny-1);
 	zeta=(double)k/(double)(nz-1);
+	#pragma unroll
+	META_LOOP(m_vars, 5, 5, true);
 	for(m=0; m<5; m++){
 		u000ijk[m]=ce[0][m]+
 			(ce[1][m]+
@@ -152,6 +154,8 @@ __global__ static void lu_kernel(double* u,
 		const int nx,
 		const int ny,
 		const int nz){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	int i, j, k, m;
 	double xi, eta, zeta, pxi, peta, pzeta;
 	double ue_1jk[5], ue_nx0jk[5], ue_i1k[5], ue_iny0k[5], ue_ij1[5], ue_ijnz[5];	
@@ -169,11 +173,14 @@ __global__ static void lu_kernel(double* u,
 	exact_gpu_device(i, ny-1, k, ue_iny0k, nx, ny, nz);
 	exact_gpu_device(i, j, 0, ue_ij1, nx, ny, nz);
 	exact_gpu_device(i, j, nz-1, ue_ijnz, nx, ny, nz);
+	#pragma unroll
+	META_LOOP(m_vars_1, 5, 5, true);
 	for(m=0; m<5; m++){
 		pxi=(1.0-xi)*ue_1jk[m]+xi*ue_nx0jk[m];
 		peta=(1.0-eta)*ue_i1k[m]+eta*ue_iny0k[m];
 		pzeta=(1.0-zeta)*ue_ij1[m]+zeta*ue_ijnz[m];
 		u(m,i,j,k)=pxi+peta+pzeta-pxi*peta-peta*pzeta-pzeta*pxi+pxi*peta*pzeta;
+	}
 	}
 }
 
@@ -184,11 +191,9 @@ int main() {
     double *u; cudaMalloc(&u, BUF_5NXZ); cudaMemset(u, 0, BUF_5NXZ);
 
     printf("[LOG] lu_setiv_gpu_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        int tpb = NX-2;
-        dim3 grid(NZ-2, NY-2);
-        lu_kernel<<<grid, tpb>>>(u, NX, NY, NZ);
-    }
+    int tpb = NX-2;
+    dim3 grid(NZ-2, NY-2);
+    lu_kernel<<<grid, tpb>>>(u, NX, NY, NZ);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x",  1);

@@ -57,6 +57,7 @@ __device__ int ilog2_device(int n){
 	}
 	lg = 1;
 	nn = 2;
+	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
 	while(nn<n){
 		nn = nn << 1;
 		lg++;
@@ -90,6 +91,7 @@ __device__ void vranlc_device(int n,
 	a1 = (int)t1;
 	a2 = a - T23 * a1;
 	x = *x_seed;
+	META_LOOP(i_sweep, 1, NX, false);
 	for(i=0; i<n; i++){
 		t1 = R23 * x;
 		x1 = (int)t1;
@@ -121,6 +123,7 @@ __device__ void ipow46_device(double a,
 	q = a;
 	r = 1;
 	n = exponent;
+	META_LOOP(while_loop_1, 1, PROBLEM_SIZE, false);
 	while(n>1){
 		n2 = n/2;
 		if(n2*2==n){
@@ -157,6 +160,7 @@ __device__ void cffts3_gpu_fftz2_device(const int is,
 	li = 1 << (m - l);
 	lj = 2 * lk;
 	ku = li;
+	META_LOOP(i_sweep_1, 1, NX, false);
 	for(i=0; i<li; i++){
 		i11 = i * lk;
 		i12 = i11 + n1;
@@ -169,6 +173,7 @@ __device__ void cffts3_gpu_fftz2_device(const int is,
 			u1.real = u[ku+i].real;
 			u1.imag = -u[ku+i].imag;
 		}
+		META_LOOP(k_sweep, 1, NX, false);
 		for(k=0; k<lk; k++){
 			x11real = x[(i11+k)*size_arg+index_arg].real;
 			x11imag = x[(i11+k)*size_arg+index_arg].imag;
@@ -195,6 +200,7 @@ __device__ void cffts3_gpu_cfftz_device(const int is,
 	 * perform one variant of the Stockham FFT.
 	 * ---------------------------------------------------------------------
 	 */
+	META_LOOP(l_sweep, 1, 30, false);
 	for(l=1; l<=m; l+=2){
 		cffts3_gpu_fftz2_device(is, l, m, n, u_device, x, y, index_arg, size_arg);
 		if(l==m){break;}
@@ -206,6 +212,7 @@ __device__ void cffts3_gpu_cfftz_device(const int is,
 	 * ---------------------------------------------------------------------
 	 */
 	if(m%2==1){
+		META_LOOP(j_sweep, 1, NX, false);
 		for(j=0; j<n; j++){
 			x[j*size_arg+index_arg].real = y[j*size_arg+index_arg].real;
 			x[j*size_arg+index_arg].imag = y[j*size_arg+index_arg].imag;
@@ -216,6 +223,8 @@ __device__ void cffts3_gpu_cfftz_device(const int is,
 __global__ void ft_kernel(int iteration, 
 		dcomplex u1[], 
 		dcomplex sums[]){
+	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
 	dcomplex* share_sums = (dcomplex*)(extern_share_data);
 	int j = (blockIdx.x * blockDim.x + threadIdx.x) + 1;
 	int q, r, s;
@@ -230,6 +239,7 @@ __global__ void ft_kernel(int iteration,
 	}
 
 	__syncthreads();
+	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(threadIdx.x<i){
 			share_sums[threadIdx.x] = dcomplex_add(share_sums[threadIdx.x], share_sums[threadIdx.x+i]);
@@ -242,6 +252,7 @@ __global__ void ft_kernel(int iteration,
 		share_sums[0].imag = share_sums[0].imag/(double)(NTOTAL);
 		atomicAdd(&sums[iteration].imag,share_sums[0].imag);
 	}
+	}
 }
 
 int main() {
@@ -253,9 +264,7 @@ int main() {
     int grid = (CHECKSUM_TASKS + TPB - 1) / TPB;
 
     printf("[LOG] ft_checksum_kernel: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    for (int it = 0; it < ITERATIONS; it++) {
-        ft_kernel<<<grid, TPB, TPB * sizeof(dcomplex)>>>(0, u1, sums);
-    }
+    ft_kernel<<<grid, TPB, TPB * sizeof(dcomplex)>>>(0, u1, sums);
     cudaDeviceSynchronize();
 
     EXPORT_N("gridDim_x", (int)grid);
