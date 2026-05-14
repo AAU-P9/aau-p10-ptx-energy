@@ -24,47 +24,53 @@ weights_path = os.path.join(os.path.dirname(__file__), weights_file)
 SKIP_TRAINING = os.path.exists(weights_path)
 
 # Load JSON files from the data folder next to this script
-data_dir = Path("/home/rasmus/aau-p10-ptx-energy/data/generates")
-data_json_files = sorted(data_dir.glob("*.json"))
+datasets = [
+    Path("/home/rasmus/aau-p10-ptx-energy/data/1_inst_b_1024_g_rnd"),
+    Path("/home/rasmus/aau-p10-ptx-energy/data/1_inst_b_1024_g_rnd_2x"),
+]
+kernel_datasets = [Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")]
 
-kernels_dir = Path(__file__).resolve().parent / "kernels"
-kernels_json_files = sorted(kernels_dir.glob("*.json"))
+
+def build_feature_vector(data: dict) -> list[int]:
+    feature_vector = [0] * len(instruction_indices)
+
+    # Keep feature construction identical for training and inference.
+    for instruction, count in data.get("instructionOccurrences", {}).items():
+        if instruction in instruction_indices:
+            feature_vector[instruction_indices[instruction]] = count
+        else:
+            print(f"[Warning] Instruction '{instruction}' not in instructions, skipping.")
+
+    return feature_vector
 
 # Create the feature set from the dataset by using the unique instructions as features
 instruction_indices = {}
-for json_file in data_json_files:
-    with json_file.open("r") as f: 
-        data = json.load(f)
-    for instruction in data.get("instructionOccurrences", {}).keys():
-        if instruction not in instruction_indices:
-            instruction_indices[instruction] = len(instruction_indices)
+all_data_json_files = []
+for data_dir in datasets:
+    data_json_files = sorted(data_dir.glob("*.json"))
+    all_data_json_files.extend(data_json_files)
+    for json_file in data_json_files:
+        with json_file.open("r") as f: 
+            data = json.load(f)
+        for instruction in data.get("instructionOccurrences", {}).keys():
+            if instruction not in instruction_indices:
+                instruction_indices[instruction] = len(instruction_indices)
 
 # Iterate over JSON files and build feature vectors and targets
 kernel_xs = {}
 kernel_ys = {}
 
 missing_instructions = []
-for json_file in data_json_files:
+for json_file in all_data_json_files:
     with json_file.open("r") as f:
         data = json.load(f)
 
     kernel_name = json_file.stem
 
-    # Create feature vector initialized to zeros
-    feature_vector = [0] * len(instruction_indices)
+    feature_vector = build_feature_vector(data)
 
-    # Calculate the itterations from the block and grid size
-    # NOTE: Uncomment if we want to use itterations as a feature instead of baking it into the instruction counts
-    block_multiplier = data.get("blockDim").get("x") * data.get("blockDim").get("y") * data.get("blockDim").get("z")
-    grid_multiplier = data.get("gridDim").get("x") * data.get("gridDim").get("y") * data.get("gridDim").get("z")
-    iters_multiplier = block_multiplier * grid_multiplier
-
-    # Add counts from instruction occurrences if they exist in our fixed set
-    for instruction, count in data.get("instructionOccurrences", {}).items():
-        if instruction in instruction_indices:
-            feature_vector[instruction_indices[instruction]] = count * iters_multiplier
-        else:
-            print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
+    for instruction in data.get("instructionOccurrences", {}).keys():
+        if instruction not in instruction_indices:
             missing_instructions.append(instruction)
 
     kernel_xs[kernel_name] = feature_vector
@@ -152,28 +158,22 @@ for i in range(len(xs)):
 
 print(f"Average prediction error on training data: {error_accum / len(xs):.6f} Joules")
 
-# Verify on the kernels JSON files that the model can predict the power consumption
-for json_file in kernels_json_files:
-    with json_file.open("r") as f:
-        data = json.load(f)
+predictions = []
+# Verify on the kernels JSON files that the model can predict the power consumption'
+for kernel_data_dir in kernel_datasets:
+    kernels_json_files = sorted(kernel_data_dir.glob("*.json"))
+    for json_file in kernels_json_files:
+        with json_file.open("r") as f:
+            data = json.load(f)
 
-    kernel_name = json_file.stem
+        kernel_name = json_file.stem
 
-    # Create feature vector initialized to zeros
-    feature_vector = [0] * len(instruction_indices)
+        feature_vector = np.array(build_feature_vector(data), dtype=np.float32) / raw_xs.max()
+        predicted_power = model.predict(feature_vector.reshape(1, -1), verbose=0)
+        predicted_power = predicted_power[0][0] * raw_ys.max()  # Scale back to original units
 
-    # Add counts from instruction occurrences if they exist in our fixed set
-    for instruction, count in data.get("instructionOccurrences", {}).items():
-        if instruction in instruction_indices:
-            feature_vector[instruction_indices[instruction]] = count
-        else:
-            print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
+        predictions.append((kernel_name, predicted_power, data.get("powerConsumptionJoules")))
 
-    # Apply the same log scaling to the feature vector as we did for training
-    feature_vector = np.array(feature_vector, dtype=np.float32) / raw_xs.max()
-    predicted_power = model.predict(feature_vector.reshape(1, -1), verbose=0)
-    predicted_power = predicted_power[0][0] * raw_ys.max()  # Scale back to original units
-
-    # Print the predicted power consumption for this kernel
-    print(f"'{kernel_name}': Power consumption {data.get("powerConsumptionJoules")} Joules, Predicted: {predicted_power:.6f} Joules")
-          
+print("\nPredicted power consumption for kernels:")
+for kernel_name, predicted_power, actual_power in predictions:
+    print(f"  - {kernel_name}: Predicted = {predicted_power:.6f} J, Actual = {actual_power:.6f} J")
