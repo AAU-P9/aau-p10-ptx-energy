@@ -18,10 +18,8 @@ from keras import Sequential
 from keras.layers import Dense, Input
 
 # Boolean to skip training and load weights instead
-weights_file = "weights.npz"
-
-weights_path = os.path.join(os.path.dirname(__file__), weights_file)
-SKIP_TRAINING = os.path.exists(weights_path)
+SKIP_TRAINING = False
+weights_file = "weights_0_076.npz"
 
 # Load JSON files from the data folder next to this script
 data_dir = Path("/home/rasmus/aau-p10-ptx-energy/data/generates")
@@ -30,20 +28,19 @@ data_json_files = sorted(data_dir.glob("*.json"))
 kernels_dir = Path(__file__).resolve().parent / "kernels"
 kernels_json_files = sorted(kernels_dir.glob("*.json"))
 
-# Create the feature set from the dataset by using the unique instructions as features
 instruction_indices = {}
 for json_file in data_json_files:
     with json_file.open("r") as f: 
         data = json.load(f)
-    for instruction in data.get("instructionOccurrences", {}).keys():
-        if instruction not in instruction_indices:
-            instruction_indices[instruction] = len(instruction_indices)
+        for instruction in data.get("instructionOccurrences", {}).keys():
+            instruction_indices[instruction] = 1       
+
+
+# Create a hashmap with the indicies for each instruction
 
 # Iterate over JSON files and build feature vectors and targets
 kernel_xs = {}
 kernel_ys = {}
-
-missing_instructions = []
 for json_file in data_json_files:
     with json_file.open("r") as f:
         data = json.load(f)
@@ -51,7 +48,7 @@ for json_file in data_json_files:
     kernel_name = json_file.stem
 
     # Create feature vector initialized to zeros
-    feature_vector = [0] * len(instruction_indices)
+    feature_vector = [0] * len(instructions)
 
     # Calculate the itterations from the block and grid size
     # NOTE: Uncomment if we want to use itterations as a feature instead of baking it into the instruction counts
@@ -65,17 +62,9 @@ for json_file in data_json_files:
             feature_vector[instruction_indices[instruction]] = count * iters_multiplier
         else:
             print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
-            missing_instructions.append(instruction)
 
     kernel_xs[kernel_name] = feature_vector
     kernel_ys[kernel_name] = data.get("powerConsumptionJoules")
-
-if missing_instructions:
-    unique_missing = set(missing_instructions)
-    print(f"\n[Summary] Missing instructions not in the fixed set (total {len(missing_instructions)}, unique {len(unique_missing)}):")
-    for instr in unique_missing:
-        print(f"  - {instr}")
-    exit(1)
 
 if not kernel_xs:
     raise RuntimeError(f"No JSON files found in {data_dir}")
@@ -97,22 +86,24 @@ instruction_names = None
 loaded_stats = False
 
 # number of input features = number of unique instructions
+input_features = len(instructions)
 output_units = 1
 
 layers = [
-    Input(shape=(len(instruction_indices),)),
-    Dense(len(instruction_indices) * 8, activation="leaky_relu"),
+    Input(shape=(len(instructions),)),
+    Dense(len(instructions) * 8, activation="leaky_relu"),
     Dense(output_units) 
 ]
 model = Sequential(layers)
 
 model.compile(
-    optimizer=Adam(learning_rate=0.000001),
+    optimizer=Adam(learning_rate=0.0001),
     loss="mse",
 )
 
 if SKIP_TRAINING:
     # Load weights from disk
+    weights_path = os.path.join(os.path.dirname(__file__), weights_file)
     loaded_weights = np.load(weights_path, allow_pickle=True)
     weights_list = [loaded_weights[f"arr_{i}"] for i in range(len(loaded_weights.files))]
     model.set_weights(weights_list)
@@ -135,8 +126,13 @@ else:
 
 
     # Save weights to disk
+    weights_path = os.path.join(os.path.dirname(__file__), "weights.npz")
     np.savez(weights_path, *weights)
     print(f"Weights saved to {weights_path}")
+
+# Print model weights (use last layer to be robust whether Input created a separate layer)
+weights = model.layers[-1].get_weights()
+print(f"Model weights: {weights}")
 
 # Verify on the training data that the model can predict the power consumption
 error_accum = 0.0
@@ -160,14 +156,14 @@ for json_file in kernels_json_files:
     kernel_name = json_file.stem
 
     # Create feature vector initialized to zeros
-    feature_vector = [0] * len(instruction_indices)
+    feature_vector = [0] * len(instructions)
 
     # Add counts from instruction occurrences if they exist in our fixed set
     for instruction, count in data.get("instructionOccurrences", {}).items():
         if instruction in instruction_indices:
             feature_vector[instruction_indices[instruction]] = count
-        else:
-            print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
+        # else:
+        #     print(f"[Warning]: Instruction '{instruction}' from {json_file} not in instructions, skipping.")
 
     # Apply the same log scaling to the feature vector as we did for training
     feature_vector = np.array(feature_vector, dtype=np.float32) / raw_xs.max()

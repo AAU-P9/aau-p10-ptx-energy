@@ -16,47 +16,32 @@ from keras.layers import Dense, Input
 SKIP_TRAINING = False
 weights_file = "weights.npz"
 
-# Load dataset from JSON files in data folder
-data_folder = os.path.join(os.path.dirname(__file__), "data")
-data_json_files = sorted(glob.glob(os.path.join(data_folder, "*.json")))
+# Load JSON files from the data folder next to this script
+data_dir = Path("/home/rasmus/aau-p10-ptx-energy/data/generates")
+data_json_files = sorted(data_dir.glob("*.json"))
 
 kernels_dir = Path(__file__).resolve().parent / "kernels"
 kernels_json_files = sorted(kernels_dir.glob("*.json"))
 
-
-# Instructions - fixed list for consistency
-instructions = [
-    "add.f32",
-    "add.s32",
-    "add.s64",   
-    "bra",
-    "bra.uni",
-    "cvt.s64.s32",
-    "ld.param.u64",
-    "ld.f32",
-    "ld.param.u32",
-    "mov.pred",
-    "mul.f32",
-    "mov.b32",
-    "mov.f32",
-    "mov.u32",
-    "mul.lo.s32",
-    "not.pred",
-    "ret",
-    "setp.lt.s32",
-    "shl.b64",
-    "st.f32",
-]
+# Extract unique instructions from the dataset to create a fixed set of features
+instruction_indices = {}
+for json_file in data_json_files:
+    with json_file.open("r") as f: 
+        data = json.load(f)
+        for instruction in data.get("instructionOccurrences", {}).keys():
+            instruction_indices[instruction] = 1
 
 # Create pairs of instructions to use as features for the model. i.e. "add.f32, addf32", "add.f32, mul.f32"...
+instructions = list(instruction_indices.keys())
 instruction_pairs = [f"{i},{j}" for i in instructions for j in instructions]
 instruction_indices = {pair: idx for idx, pair in enumerate(instruction_pairs)}
-
-print("Instruction pairs [0:5]:\n", instruction_pairs[0:5])
 
 # Load feature vectors and targets from JSON files
 kernel_xs = {}
 kernel_ys = {}
+
+print(len(instruction_pairs))
+exit(1)
 
 for json_file in data_json_files:
     with open(json_file, 'r') as f:
@@ -83,7 +68,6 @@ for json_file in data_json_files:
         kernel_xs[kernel_name] = feature_vector
         kernel_ys[kernel_name] = data.get("powerConsumptionJoules")
 
-
 # Convert the kernel_xs and kernel_ys dictionaries to numpy arrays
 kernel_names = list(kernel_xs.keys())
 raw_xs = np.array(list(kernel_xs.values()))
@@ -105,18 +89,17 @@ instruction_names = None
 loaded_stats = False
 
 # number of input features = number of unique instruction pairs
-input_features = len(instruction_pairs)
 output_units = 1
 
 layers = [
-    Input(shape=(input_features,)),
-    Dense(len(instructions) * 4, activation="relu"),
+    Input(shape=(len(instruction_pairs),)),
+    Dense(len(instructions) * 4, activation="leaky_relu"),
     Dense(output_units)
 ]
 model = Sequential(layers)
 
 model.compile(
-    optimizer=Adam(learning_rate=0.000001),
+    optimizer=Adam(learning_rate=0.0001),
     loss="mse",
 )
 
@@ -132,8 +115,6 @@ else:
 
     # Print the model's weights to verify that it has learned something
     weights = model.get_weights()
-    print("Model weights:\n", weights)
-
 
     # Save weights to disk
     weights_path = os.path.join(os.path.dirname(__file__), "weights.npz")

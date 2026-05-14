@@ -1,0 +1,67 @@
+{
+  "kernelName": null,
+  "powerConsumptionJoules": 1411.6893791159996,
+  "gridDim": {
+    "x": 304,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 1024,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 58688287162368,
+  "instructionOccurrences": {
+    "add.f32": 7336035155968,
+    "add.s32": 7336035467264,
+    "add.s64": 311296,
+    "bra": 311296,
+    "bra.uni": 22008105779200,
+    "cvt.rn.f32.s32": 311296,
+    "cvt.s64.s32": 311296,
+    "ld.param.u64": 311296,
+    "mov.b32": 311296,
+    "mov.f32": 14672071557120,
+    "mov.u32": 7336037023744,
+    "mul.lo.s32": 311296,
+    "not.pred": 311296,
+    "ret": 311296,
+    "setp.lt.s32": 311296,
+    "shl.b64": 311296,
+    "st.f32": 311296
+  },
+  "dependentPairs": {
+    "add.s64,st.f32": 311296,
+    "cvt.s64.s32,shl.b64": 311296,
+    "mov.f32,mov.f32": 311296,
+    "mov.u32,add.s32": 311296,
+    "mov.u32,mov.b32": 311296,
+    "mov.u32,mul.lo.s32": 311296,
+    "not.pred,bra": 311296,
+    "setp.lt.s32,not.pred": 311296,
+    "shl.b64,add.s64": 311296
+  },
+  "independentPairs": {
+    "add.f32,bra.uni": 7336035155968,
+    "add.s32,mov.f32": 7336035467264,
+    "bra,bra.uni": 7336035155968,
+    "bra,cvt.s64.s32": 311296,
+    "bra.uni,add.s32": 7336035155968,
+    "bra.uni,mov.f32": 7336035155968,
+    "bra.uni,mov.u32": 311296,
+    "cvt.rn.f32.s32,mov.u32": 311296,
+    "ld.param.u64,mov.u32": 311296,
+    "mov.b32,mov.f32": 311296,
+    "mov.f32,add.f32": 7336035155968,
+    "mov.f32,cvt.rn.f32.s32": 311296,
+    "mov.f32,mov.u32": 7336035467264,
+    "mov.f32,setp.lt.s32": 311296,
+    "mov.u32,bra.uni": 7336035467264,
+    "mov.u32,mov.f32": 311296,
+    "mov.u32,mov.u32": 311296,
+    "mul.lo.s32,mov.u32": 311296,
+    "st.f32,ret": 311296
+  }
+}
