@@ -11,7 +11,7 @@ from cubindings.cubindings_predictor import run_predictor
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")
 desired_execution_time_s = 5
-debug_enabled = True
+debug_enabled = False
 force_rebuild = False
 
 def run_kernel_configuration(
@@ -34,7 +34,9 @@ def run_kernel_configuration(
         print(f"[INFO] Execution time for kernel '{kernel_name}': {execution_result.power_metric_result.kernel_duration_cpu_s:.6f} seconds")
 
         if (execution_result.power_metric_result.kernel_duration_cpu_s < desired_execution_time_s):
-            raise RuntimeError(f"Execution time for kernel '{kernel_name}' is too short ({execution_result.power_metric_result.kernel_duration_cpu_s:.6f} seconds). Please adjust the kernel configuration to increase the execution time.")
+            print(f"[WARNING] Execution time for kernel '{kernel_name}' is below the desired threshold of {desired_execution_time_s} seconds. Consider adjusting the kernel configuration to increase the execution time for more accurate energy measurements.")
+            print(f"[WARNING] See the output at '{execution_result.path}' for details of the execution and analysis results.")
+            raise RuntimeError(f"Execution time for kernel does not meet the desired threshold of {desired_execution_time_s} seconds.")
 
         run_ptx_analyser(
             execution_result.path,
@@ -85,14 +87,16 @@ def main() -> None:
         force_rebuild=force_rebuild,
     )
 
-    # NPB Kernels
+    # NPB Kernels (BT Add)
 
     run_kernel_configuration(
         kernel_name="npb_bt_add",
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_add/src"),
-        nvcc_args=[f"-DITERATIONS=1000000"],
+        nvcc_args=[f"-DITERATIONS=15000000"],
         force_rebuild=force_rebuild,
     )
+
+    # NPB Kernels (BT Compute)
 
     run_kernel_configuration(
         kernel_name="npb_bt_compute_rhs_1",
@@ -104,28 +108,69 @@ def main() -> None:
     run_kernel_configuration(
         kernel_name="npb_bt_compute_rhs_2",
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_compute_rhs_2/src"),
-        nvcc_args=[f"-DITERATIONS=1000000"],
+        nvcc_args=[f"-DITERATIONS=10000000"],
         force_rebuild=force_rebuild,
     )
 
     run_kernel_configuration(
         kernel_name="npb_bt_compute_rhs_3",
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_compute_rhs_3/src"),
-        nvcc_args=[f"-DITERATIONS=1000000"],
+        nvcc_args=[f"-DITERATIONS=200000"],
         force_rebuild=force_rebuild,
     )
 
     run_kernel_configuration(
         kernel_name="npb_bt_compute_rhs_4",
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_compute_rhs_4/src"),
-        nvcc_args=[f"-DITERATIONS=1000000"],
+        nvcc_args=[f"-DITERATIONS=500000"],
         force_rebuild=force_rebuild,
     )
 
     run_kernel_configuration(
         kernel_name="npb_bt_compute_rhs_5",
         program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_compute_rhs_5/src"),
-        nvcc_args=[f"-DITERATIONS=1000000"],
+        nvcc_args=[f"-DITERATIONS=500000"],
+        force_rebuild=force_rebuild,
+    )
+
+    # NPB Kernels (Solve)
+
+    run_kernel_configuration(
+        kernel_name="npb_bt_x_solve_1",
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_x_solve_1/src"),
+        nvcc_args=[f"-DITERATIONS=5000000"],
+        force_rebuild=force_rebuild,
+    )
+
+    run_kernel_configuration(
+        kernel_name="npb_bt_x_solve_2",
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_x_solve_2/src"),
+        nvcc_args=[f"-DITERATIONS=500000"],
+        force_rebuild=force_rebuild,
+    )
+
+    run_kernel_configuration(
+        kernel_name="npb_bt_x_solve_2",
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_bt_x_solve_2/src"),
+        nvcc_args=[f"-DITERATIONS=500000"],
+        force_rebuild=force_rebuild,
+    )
+
+    # NPB Kernels (CG)
+
+    run_kernel_configuration(
+        kernel_name="npb_cg_kernel_one",
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_cg_kernel_one/src"),
+        nvcc_args=[f"-DITERATIONS=10000000"],
+        force_rebuild=force_rebuild,
+    )
+
+    # NPB Kernels (FT)
+
+    run_kernel_configuration(
+        kernel_name="npb_ft_cffts1_kernel_1",
+        program_path=Path("/home/rasmus/aau-p10-ptx-energy/apps/npb_ft_cffts1_kernel_1/src"),
+        nvcc_args=[f"-DITERATIONS=500000"],
         force_rebuild=force_rebuild,
     )
 
