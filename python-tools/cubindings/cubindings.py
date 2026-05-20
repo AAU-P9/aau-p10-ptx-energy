@@ -69,7 +69,7 @@ def execute_code(
     nvcc_args: list[str] = [], binary_args: list[str] = [],
     enable_metrics: bool = True,
     metrics_sleep_time: int = 5,
-    debug: bool = False,
+    debug_enabled: bool = False,
 ) -> ExecutionResult:
     # Fallback temporary directory if the specified path cannot be created
     if path is None:
@@ -102,7 +102,7 @@ def execute_code(
         binary_args=binary_args,
         enable_metrics=enable_metrics,
         metrics_sleep_time=metrics_sleep_time,
-        debug=debug,
+        debug_enabled=debug_enabled,
     )
 
 def execute_program(
@@ -114,9 +114,9 @@ def execute_program(
     enable_temp: bool =True,
     metrics_sleep_time: int = 5,
     program_name: str = "program.cu",
-    debug: bool = False,
+    debug_enabled: bool = False,
 ) -> ExecutionResult:   
-    pipe = sys.stdout if debug else subprocess.PIPE
+    pipe = sys.stdout if debug_enabled else subprocess.PIPE
 
     if enable_temp:
         tmp_dir = Path(f"/tmp/{time.time()}")
@@ -156,11 +156,17 @@ def execute_program(
             check=False,
         )
         if nvcc_process.returncode != 0:
+            # Write the compilation error to a file for debugging
+            error_log = path / "compilation_error.log"
+            with error_log.open("w") as f:
+                f.write(nvcc_process.stderr or "")
+                
             raise RuntimeError(
                 "NVCC compilation failed:\n"
                 f"{' '.join(nvcc_cmd)}\n"
                 f"{(nvcc_process.stderr or '').strip()}"
             )
+            
         
     # Start monitoring processes if metrics are enabled
     monitor_process = None

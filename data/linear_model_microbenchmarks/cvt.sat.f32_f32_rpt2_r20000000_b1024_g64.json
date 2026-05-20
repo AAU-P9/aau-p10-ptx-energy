@@ -1,0 +1,108 @@
+{
+  "kernelName": "cvt.sat.f32.f32",
+  "powerConsumptionJoules": 363.681864124,
+  "kernelDurationS": 3.058532608,
+  "gridDim": {
+    "x": 64,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 1024,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 220000022,
+  "instructionOccurrences": {
+    "add.s32": 20000001,
+    "add.s64": 2,
+    "bra": 1,
+    "bra.uni": 60000001,
+    "cvt.rn.f32.s32": 2,
+    "cvt.s64.s32": 2,
+    "cvt.sat.f32.f32": 40000000,
+    "ld.param.u64": 1,
+    "mov.b32": 1,
+    "mov.f32": 80000004,
+    "mov.u32": 20000006,
+    "mul.f32": 2,
+    "mul.lo.s32": 1,
+    "not.pred": 1,
+    "ret": 1,
+    "setp.lt.s32": 1,
+    "shl.b64": 2,
+    "st.f32": 2
+  },
+  "dependentPairs": {
+    "add.s32,cvt.rn.f32.s32": 1,
+    "add.s64,st.f32": 2,
+    "cvt.rn.f32.s32,mul.f32": 2,
+    "cvt.s64.s32,shl.b64": 2,
+    "mov.u32,add.s32": 1,
+    "mov.u32,mov.b32": 1,
+    "mov.u32,mul.lo.s32": 1,
+    "not.pred,bra": 1,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 2
+  },
+  "independentPairs": {
+    "add.s32,mov.f32": 20000000,
+    "bra,bra.uni": 20000000,
+    "bra,cvt.s64.s32": 1,
+    "bra.uni,add.s32": 20000000,
+    "bra.uni,mov.f32": 20000000,
+    "bra.uni,mov.u32": 1,
+    "cvt.sat.f32.f32,bra.uni": 20000000,
+    "cvt.sat.f32.f32,mov.f32": 20000000,
+    "ld.param.u64,mov.u32": 1,
+    "mov.b32,mov.f32": 1,
+    "mov.f32,cvt.sat.f32.f32": 40000000,
+    "mov.f32,mov.f32": 20000002,
+    "mov.f32,mov.u32": 20000001,
+    "mov.f32,setp.lt.s32": 1,
+    "mov.u32,bra.uni": 20000001,
+    "mov.u32,mov.f32": 1,
+    "mov.u32,mov.u32": 1,
+    "mul.f32,cvt.rn.f32.s32": 1,
+    "mul.f32,mov.u32": 1,
+    "mul.lo.s32,mov.u32": 1,
+    "st.f32,cvt.s64.s32": 1,
+    "st.f32,ret": 1
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 3,
+      "opcode": "st.f32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 7,
+      "opcode": "st.f32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    }
+  ]
+}

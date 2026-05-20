@@ -49,8 +49,6 @@ def execute_program_cached(
                             pass
                     item.rmdir()
             program_artifact.rmdir()
-        
-        print(program_artifact)
 
         # Copy the benchmark to artifacts
         program_artifact.mkdir(parents=True, exist_ok=True)
@@ -60,5 +58,5 @@ def execute_program_cached(
                 if not destination.exists():
                     destination.write_bytes(item.read_bytes())
     
-        execution_result = execute_program(path=program_artifact, program_name=program_name, nvcc_args=nvcc_args, enable_temp=False, debug=debug_enabled)
+        execution_result = execute_program(path=program_artifact, program_name=program_name, nvcc_args=nvcc_args, enable_temp=False, debug_enabled=debug_enabled)
         return execution_result        

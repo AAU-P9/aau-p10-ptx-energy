@@ -1,0 +1,90 @@
+{
+  "kernelName": "setp.le.s32",
+  "powerConsumptionJoules": 243.38575353749997,
+  "kernelDurationS": 2.149441792,
+  "gridDim": {
+    "x": 64,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 1024,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 160000020,
+  "instructionOccurrences": {
+    "add.s32": 20000001,
+    "add.s64": 1,
+    "bra": 1,
+    "bra.uni": 60000001,
+    "cvt.s64.s32": 1,
+    "ld.param.u64": 1,
+    "mov.b32": 3,
+    "mov.u32": 40000009,
+    "mul.lo.s32": 1,
+    "not.pred": 1,
+    "or.b32": 1,
+    "ret": 1,
+    "selp.s32": 20000000,
+    "setp.le.s32": 20000000,
+    "setp.lt.s32": 1,
+    "shl.b64": 1,
+    "st.u32": 1
+  },
+  "dependentPairs": {
+    "add.s32,or.b32": 1,
+    "add.s64,st.u32": 1,
+    "cvt.s64.s32,shl.b64": 1,
+    "mov.u32,add.s32": 1,
+    "mov.u32,mov.b32": 2,
+    "mov.u32,mul.lo.s32": 1,
+    "not.pred,bra": 1,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 1
+  },
+  "independentPairs": {
+    "add.s32,mov.u32": 20000000,
+    "bra,bra.uni": 20000000,
+    "bra,cvt.s64.s32": 1,
+    "bra.uni,add.s32": 20000000,
+    "bra.uni,mov.u32": 1,
+    "bra.uni,setp.le.s32": 20000000,
+    "ld.param.u64,mov.u32": 1,
+    "mov.b32,mov.b32": 1,
+    "mov.b32,mov.u32": 2,
+    "mov.u32,bra.uni": 20000001,
+    "mov.u32,mov.u32": 20000003,
+    "mov.u32,setp.lt.s32": 1,
+    "mul.lo.s32,mov.u32": 1,
+    "or.b32,mov.u32": 1,
+    "selp.s32,bra.uni": 20000000,
+    "setp.le.s32,selp.s32": 20000000,
+    "st.u32,ret": 1
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 3,
+      "opcode": "st.u32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    }
+  ]
+}
