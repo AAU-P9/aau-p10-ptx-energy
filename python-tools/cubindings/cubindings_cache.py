@@ -20,7 +20,7 @@ def execute_program_cached(
     
     if not force_rebuild and (program_artifact / "output.json").exists():
         if debug_enabled:
-            print("[INFO] Found cached artifact for program, skipping execution.")
+            print(f"[INFO] Found cached artifact for program, skipping execution. Artifact path: {program_artifact}")
 
         exports = extract_exports_from_path(program_artifact)
         power_metric_result = extract_power_metrics(path=program_artifact, exports=exports)

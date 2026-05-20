@@ -134,7 +134,7 @@ void mha(
     float *sq     = shared_buffer;
     float *logits = shared_buffer + dim_per_head;
 
-    META_LOOP(iter_loop, 1, ITERATIONS, false);
+    META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
     for (int iter = 0; iter < iterations; iter++) {
 
     // Load query vector for this candidate/head into shared memory
