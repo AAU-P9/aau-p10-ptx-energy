@@ -144,7 +144,17 @@ impl GetCmpInfo for BasicBlock {
                             iterations_count = *registers.get(&operand.name).unwrap_or(&1);
                         }
                         if let Operand::Immediate { operand, .. } = operand {
-                            iterations_count = operand.value.parse().unwrap();
+                            if let Some(hex) = operand.value.strip_prefix("0d") {
+                                if let Ok(bits) = u64::from_str_radix(hex, 16) {
+                                    iterations_count = f64::from_bits(bits) as u64;
+                                }
+                            } else if let Some(hex) = operand.value.strip_prefix("0f") {
+                                if let Ok(bits) = u32::from_str_radix(hex, 16) {
+                                    iterations_count = f32::from_bits(bits) as u64;
+                                }
+                            } else if let Ok(val) = operand.value.parse() {
+                                iterations_count = val;
+                            }
                         }
                     }
                 }

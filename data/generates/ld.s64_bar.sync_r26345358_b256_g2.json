@@ -1,0 +1,131 @@
+{
+  "kernelName": null,
+  "powerConsumptionJoules": 369.2113937065,
+  "kernelDurationS": 5.6145239039999995,
+  "gridDim": {
+    "x": 2,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 256,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 210762887,
+  "instructionOccurrences": {
+    "add.s32": 26345359,
+    "add.s64": 3,
+    "bar.sync": 26345358,
+    "bra": 1,
+    "bra.uni": 79036075,
+    "cvt.s64.s32": 3,
+    "ld.param.u64": 2,
+    "ld.s64": 26345358,
+    "mov.b32": 2,
+    "mov.b64": 1,
+    "mov.u32": 26345364,
+    "mov.u64": 26345361,
+    "mul.lo.s32": 1,
+    "not.pred": 1,
+    "ret": 1,
+    "setp.lt.s32": 1,
+    "shl.b64": 3,
+    "st.u32": 1,
+    "st.u64": 1
+  },
+  "dependentPairs": {
+    "add.s64,st.u32": 1,
+    "add.s64,st.u64": 1,
+    "cvt.s64.s32,shl.b64": 3,
+    "mov.u32,add.s32": 1,
+    "mov.u32,mov.b32": 1,
+    "mov.u32,mul.lo.s32": 1,
+    "mov.u64,mov.b64": 1,
+    "not.pred,bra": 1,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 3
+  },
+  "independentPairs": {
+    "add.s32,mov.u64": 26345359,
+    "add.s64,mov.b32": 1,
+    "bar.sync,bra.uni": 26345358,
+    "bra,bra.uni": 26345358,
+    "bra,cvt.s64.s32": 1,
+    "bra.uni,add.s32": 26345358,
+    "bra.uni,ld.s64": 26345358,
+    "bra.uni,mov.u32": 1,
+    "ld.param.u64,ld.param.u64": 1,
+    "ld.param.u64,mov.u32": 1,
+    "ld.s64,bar.sync": 26345358,
+    "mov.b32,mov.u32": 1,
+    "mov.b32,mov.u64": 1,
+    "mov.b64,cvt.s64.s32": 1,
+    "mov.u32,bra.uni": 26345359,
+    "mov.u32,mov.u32": 1,
+    "mov.u32,mov.u64": 1,
+    "mov.u64,mov.u32": 26345359,
+    "mov.u64,setp.lt.s32": 1,
+    "mul.lo.s32,mov.u32": 1,
+    "st.u32,ret": 1,
+    "st.u64,cvt.s64.s32": 1
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 0,
+      "instrIdx": 1,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 2,
+      "instrIdx": 1,
+      "opcode": "ld.s64",
+      "occurrences": 26345358,
+      "loopDepth": 1,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 1053814320.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 3,
+      "opcode": "st.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 7,
+      "opcode": "st.u32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    }
+  ]
+}

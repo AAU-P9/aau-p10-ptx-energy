@@ -1,0 +1,92 @@
+{
+  "kernelName": null,
+  "powerConsumptionJoules": 72.43225866450003,
+  "kernelDurationS": 1.354511616,
+  "gridDim": {
+    "x": 16,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 256,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 104078265,
+  "instructionOccurrences": {
+    "add.s32": 13009782,
+    "add.s64": 1,
+    "bra": 1,
+    "bra.uni": 39029344,
+    "cvt.s64.s32": 1,
+    "cvt.u16.u32": 1,
+    "cvt.u32.u16": 1,
+    "ld.param.u64": 1,
+    "mov.b32": 1,
+    "mov.u16": 39029345,
+    "mov.u32": 13009787,
+    "mul.lo.s32": 1,
+    "not.pred": 1,
+    "ret": 1,
+    "setp.lt.s32": 1,
+    "shl.b64": 1,
+    "st.u32": 1
+  },
+  "dependentPairs": {
+    "add.s32,cvt.u16.u32": 1,
+    "add.s64,st.u32": 1,
+    "cvt.s64.s32,shl.b64": 1,
+    "mov.u32,add.s32": 1,
+    "mov.u32,mov.b32": 1,
+    "mov.u32,mul.lo.s32": 1,
+    "not.pred,bra": 1,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 1
+  },
+  "independentPairs": {
+    "add.s32,mov.u16": 13009781,
+    "bra,bra.uni": 13009781,
+    "bra,cvt.u32.u16": 1,
+    "bra.uni,add.s32": 13009781,
+    "bra.uni,mov.u16": 13009781,
+    "bra.uni,mov.u32": 1,
+    "cvt.u16.u32,mov.u32": 1,
+    "cvt.u32.u16,cvt.s64.s32": 1,
+    "ld.param.u64,mov.u32": 1,
+    "mov.b32,mov.u16": 1,
+    "mov.u16,bra.uni": 13009781,
+    "mov.u16,mov.u16": 13009781,
+    "mov.u16,mov.u32": 13009782,
+    "mov.u16,setp.lt.s32": 1,
+    "mov.u32,bra.uni": 13009782,
+    "mov.u32,mov.u16": 1,
+    "mov.u32,mov.u32": 1,
+    "mul.lo.s32,mov.u32": 1,
+    "st.u32,ret": 1
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 4,
+      "opcode": "st.u32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    }
+  ]
+}

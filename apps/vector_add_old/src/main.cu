@@ -6,7 +6,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Arguments for problem size
 #ifndef SIZE_N

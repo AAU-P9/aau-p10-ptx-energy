@@ -1,0 +1,142 @@
+{
+  "kernelName": "npb_cg_kernel_seven",
+  "powerConsumptionJoules": 903.858394288,
+  "kernelDurationS": 12.83481472,
+  "gridDim": {
+    "x": 44,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 32,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 570000020,
+  "instructionOccurrences": {
+    "add.f64": 30000000,
+    "add.s32": 30000001,
+    "add.s64": 90000000,
+    "bra": 2,
+    "bra.uni": 90000004,
+    "cvt.s64.s32": 90000000,
+    "ld.f64": 60000000,
+    "ld.param.f64": 1,
+    "ld.param.u64": 2,
+    "mov.b32": 1,
+    "mov.u32": 30000006,
+    "mul.f64": 30000000,
+    "mul.lo.s32": 1,
+    "not.pred": 2,
+    "ret": 1,
+    "setp.ge.s32": 1,
+    "setp.lt.s32": 1,
+    "shl.b64": 90000000,
+    "st.f64": 30000000
+  },
+  "dependentPairs": {
+    "add.s32,mov.u32": 30000000,
+    "add.s32,setp.ge.s32": 1,
+    "add.s64,ld.f64": 60000000,
+    "add.s64,st.f64": 30000000,
+    "cvt.s64.s32,shl.b64": 90000000,
+    "ld.f64,mul.f64": 30000000,
+    "mov.b32,mov.u32": 1,
+    "mov.u32,add.s32": 1,
+    "mov.u32,mov.b32": 1,
+    "mov.u32,mul.lo.s32": 1,
+    "mov.u32,setp.lt.s32": 1,
+    "mul.f64,add.f64": 30000000,
+    "not.pred,bra": 2,
+    "setp.ge.s32,not.pred": 1,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 90000000
+  },
+  "independentPairs": {
+    "add.f64,cvt.s64.s32": 30000000,
+    "bra,bra.uni": 30000002,
+    "bra,mov.u32": 1,
+    "bra.uni,add.s32": 30000000,
+    "bra.uni,bra.uni": 1,
+    "bra.uni,cvt.s64.s32": 30000000,
+    "bra.uni,mov.u32": 1,
+    "bra.uni,ret": 1,
+    "ld.f64,cvt.s64.s32": 30000000,
+    "ld.param.f64,ld.param.u64": 1,
+    "ld.param.u64,ld.param.u64": 1,
+    "ld.param.u64,mov.u32": 1,
+    "mov.u32,bra.uni": 30000001,
+    "mov.u32,mov.u32": 1,
+    "mul.lo.s32,mov.u32": 1,
+    "st.f64,bra.uni": 30000000
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.f64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 0,
+      "instrIdx": 1,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 0,
+      "instrIdx": 2,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 4,
+      "instrIdx": 4,
+      "opcode": "ld.f64",
+      "occurrences": 30000000,
+      "loopDepth": 1,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 1200000000.0
+    },
+    {
+      "blockId": 4,
+      "instrIdx": 8,
+      "opcode": "ld.f64",
+      "occurrences": 30000000,
+      "loopDepth": 1,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 1200000000.0
+    },
+    {
+      "blockId": 4,
+      "instrIdx": 14,
+      "opcode": "st.f64",
+      "occurrences": 30000000,
+      "loopDepth": 1,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 1200000000.0
+    }
+  ]
+}

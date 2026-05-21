@@ -150,10 +150,9 @@ __global__ void bt_kernel(double* qs_device,
 	int i = blockDim.x * blockIdx.x + threadIdx.x + 1;
 
 	if (k > KMAX-2 || j+1 < 1 || j+1 > JMAX-2 || j >= PROBLEM_SIZE || i > IMAX-2 ){return;}
+	j++;
 	META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
 	for (int _iter = 0; _iter < ITERATIONS; _iter++) {
-
-	j++;
 
 	int m;
 	double tmp1, tmp2;
