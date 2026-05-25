@@ -24,10 +24,7 @@ weights_path = os.path.join(os.path.dirname(__file__), weights_file)
 SKIP_TRAINING = os.path.exists(weights_path)
 
 # Load JSON files from the data folder next to this script
-datasets = [
-    Path("/home/rasmus/aau-p10-ptx-energy/data/1_inst_b_1024_g_rnd"),
-    Path("/home/rasmus/aau-p10-ptx-energy/data/1_inst_b_1024_g_rnd_2x"),
-]
+datasets = [Path("/home/rasmus/aau-p10-ptx-energy/data/linear_model_microbenchmarks")]
 kernel_datasets = [Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")]
 
 
@@ -109,7 +106,7 @@ output_units = 1
 layers = [
     Input(shape=(len(instruction_indices),)),
     Dense(len(instruction_indices) * 8, activation="leaky_relu"),
-    Dense(output_units) 
+    Dense(output_units, kernel_constraint="non_neg") 
 ]
 model = Sequential(layers)
 
