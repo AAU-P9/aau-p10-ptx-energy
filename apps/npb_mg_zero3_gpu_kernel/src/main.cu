@@ -55,7 +55,7 @@ int main() {
     mg_kernel<<<grid, tpb>>>(z, NM, NM, NM, aw);
     cudaDeviceSynchronize();
 
-    EXPORT_N("gridDim_x",  1);
+    EXPORT_N("gridDim_x",  grid);
     EXPORT_N("gridDim_y",  1);
     EXPORT_N("gridDim_z",  1);
     EXPORT_N("blockDim_x", TPB);

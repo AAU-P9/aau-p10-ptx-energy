@@ -9,14 +9,12 @@ from cubindings.cubindings_cache import execute_program_cached
 from cubindings.cubindings_predictor import run_predictor
 
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
-data_output_path = Path("/home/lasse/aau-p10-ptx-energy/data/kernels")
+data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")
 desired_execution_time_s = 10
 debug_enabled = False
-force_rebuild = False
-global_rebuild = True
+force_rebuild = True
 
 short_kernels: list[tuple[str, float]] = []
-
 
 def run_kernel_configuration(
     kernel_name: str,
@@ -32,7 +30,7 @@ def run_kernel_configuration(
         nvcc_args=nvcc_args,
         artifacts_path=artifacts_path,
         debug_enabled=debug_enabled,
-        force_rebuild=force_rebuild or global_rebuild,
+        force_rebuild=force_rebuild,
     )
 
     runtime_s = execution_result.power_metric_result.kernel_duration_cpu_s

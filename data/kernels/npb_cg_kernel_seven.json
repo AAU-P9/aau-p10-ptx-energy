@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_cg_kernel_seven",
-  "powerConsumptionJoules": 903.858394288,
-  "kernelDurationS": 12.83481472,
+  "powerConsumptionJoules": 906.8872232275,
+  "kernelDurationS": 12.834043136000002,
   "gridDim": {
     "x": 44,
     "y": 1,

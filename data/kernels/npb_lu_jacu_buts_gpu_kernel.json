@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_lu_jacu_buts_gpu_kernel",
-  "powerConsumptionJoules": 858.4893265235,
-  "kernelDurationS": 12.932276479999999,
+  "powerConsumptionJoules": 884.3709692789997,
+  "kernelDurationS": 12.99424384,
   "gridDim": {
     "x": 1,
     "y": 1,

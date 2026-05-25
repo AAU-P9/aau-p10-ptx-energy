@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ft_compute_indexmap_kernel",
-  "powerConsumptionJoules": 8237.2415933915,
-  "kernelDurationS": 51.35105792,
+  "powerConsumptionJoules": 8269.400502045999,
+  "kernelDurationS": 51.293684991999996,
   "gridDim": {
     "x": 8192,
     "y": 1,

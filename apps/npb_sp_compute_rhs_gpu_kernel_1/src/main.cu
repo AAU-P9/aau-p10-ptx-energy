@@ -207,10 +207,10 @@ int main() {
     sp_kernel<<<grid, tpb>>>(rho_i, us, vs, ws, speed, qs, square, u, NX, NY, NZ);
     cudaDeviceSynchronize();
 
-    EXPORT_N("gridDim_x",  1);
+    EXPORT_N("gridDim_x",  grid);
     EXPORT_N("gridDim_y",  1);
     EXPORT_N("gridDim_z",  1);
-    EXPORT_N("blockDim_x", TPB);
+    EXPORT_N("blockDim_x", tpb);
     EXPORT_N("blockDim_y", 1);
     EXPORT_N("blockDim_z", 1);
 

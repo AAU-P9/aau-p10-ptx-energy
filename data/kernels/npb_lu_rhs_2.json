@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_lu_rhs_2",
-  "powerConsumptionJoules": 959.8766034585001,
-  "kernelDurationS": 13.126322688000002,
+  "powerConsumptionJoules": 901.6580710064999,
+  "kernelDurationS": 13.021858815999998,
   "gridDim": {
     "x": 1,
     "y": 1,

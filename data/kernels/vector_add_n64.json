@@ -1,7 +1,7 @@
 {
   "kernelName": "vector_add_n64",
-  "powerConsumptionJoules": 1680.1510487555,
-  "kernelDurationS": 10.194418943999999,
+  "powerConsumptionJoules": 1684.0088647444995,
+  "kernelDurationS": 10.153157632000003,
   "gridDim": {
     "x": 64,
     "y": 1,

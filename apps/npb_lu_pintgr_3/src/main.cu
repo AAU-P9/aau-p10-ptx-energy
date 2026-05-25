@@ -211,12 +211,12 @@ int main() {
     lu_kernel<<<grid, tpb2, smem>>>(u, frc, NX, NY, NZ);
     cudaDeviceSynchronize();
 
-    EXPORT_N("gridDim_x",  1);
-    EXPORT_N("gridDim_y",  1);
-    EXPORT_N("gridDim_z",  1);
-    EXPORT_N("blockDim_x", TPB);
-    EXPORT_N("blockDim_y", 1);
-    EXPORT_N("blockDim_z", 1);
+    EXPORT_N("gridDim_x",  grid.x);
+    EXPORT_N("gridDim_y",  grid.y);
+    EXPORT_N("gridDim_z",  grid.z);
+    EXPORT_N("blockDim_x", tpb2.x);
+    EXPORT_N("blockDim_y", tpb2.y);
+    EXPORT_N("blockDim_z", tpb2.z);
 
     METRICS_KERNEL_END
 

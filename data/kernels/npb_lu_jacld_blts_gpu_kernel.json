@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_lu_jacld_blts_gpu_kernel",
-  "powerConsumptionJoules": 875.9285397965001,
-  "kernelDurationS": 13.212612864,
+  "powerConsumptionJoules": 896.4207921114998,
+  "kernelDurationS": 13.273080063999998,
   "gridDim": {
     "x": 1,
     "y": 1,

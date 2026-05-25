@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_sp_txinvr_gpu_kernel",
-  "powerConsumptionJoules": 941.3793677665,
-  "kernelDurationS": 12.854465536000001,
+  "powerConsumptionJoules": 947.4714466815001,
+  "kernelDurationS": 12.823726592,
   "gridDim": {
     "x": 1,
     "y": 1,

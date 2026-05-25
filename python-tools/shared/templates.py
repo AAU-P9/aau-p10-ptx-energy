@@ -165,6 +165,29 @@ def _cvt_widen(vs: str, _pi: int, t: str) -> dict:
     }
 
 
+def _cvt_explicit(dst_t: str, valid: list[str]) -> TemplateFn:
+    def make(vs: str, _pi: int, t: str) -> dict:
+        _require(t, valid, f"cvt.{dst_t}")
+        src_ptx, src_c, src_con, src_sink, _ = _TYPE_INFO[t]
+        dst_ptx, dst_c, dst_con, dst_sink, _ = _TYPE_INFO[dst_t]
+        return {
+            "setup": f"{src_c} a_{vs} = tid; {dst_c} d_{vs} = 0;",
+            "asm":   f'"cvt.{dst_ptx}.{src_ptx} %0, %1;" : "={dst_con}"(d_{vs}) : "{src_con}"(a_{vs})',
+            "sink":  f"(({dst_sink}*)sink)[tid] = d_{vs};",
+        }
+    return make
+
+def _cvta(space: str, valid: list[str]) -> TemplateFn:
+    def make(vs: str, _pi: int, t: str) -> dict:
+        _require(t, valid, f"cvta.{space}")
+        ptx, c, con, sink_c, _ = _TYPE_INFO[t]
+        return {
+            "setup": f"{c} a_{vs} = tid; {c} d_{vs} = 0;",
+            "asm":   f'"cvta.{space}.{ptx} %0, %1;" : "={con}"(d_{vs}) : "{con}"(a_{vs})',
+            "sink":  f"(({sink_c}*)sink)[tid] = d_{vs};",
+        }
+    return make
+
 def _setp(cmp: str, valid: list[str]) -> TemplateFn:
     def make(vs: str, pi: int, t: str) -> dict:
         _require(t, valid, f"setp.{cmp}")
@@ -304,6 +327,12 @@ INSTRUCTION_TEMPLATES: dict[str, TemplateFn] = {
     "bra.uni":       _bra_uni,
     "bar.sync":      _bar_sync,
 
+    "cvt.s64":       _cvt_explicit("s64", ["s32"]),
+    "cvt.u64":       _cvt_explicit("u64", ["u32"]),
+    "cvta.shared":   _cvta("shared", ["u64"]),
+    "cvta.local":    _cvta("local", ["u64"]),
+    "cvta.const":    _cvta("const", ["u64"]),
+
     "add":   _binary_arith("add", _INTS_WIDE + _FLOATS),
     "sub":   _binary_arith("sub", _INTS_WIDE + _FLOATS),
     "mul":   _binary_arith("mul", _FLOATS),
@@ -361,6 +390,11 @@ int main() {{
     EXPORT_N("blockDim_y", 1);
     EXPORT_N("blockDim_z", 1);
     cudaDeviceSynchronize();
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {{
+        std::cerr << "Kernel launch failed: " << cudaGetErrorString(err) << "\\n";
+        exit(1);
+    }}
     cudaFree(sink);
     {host_teardown}
     return 0;

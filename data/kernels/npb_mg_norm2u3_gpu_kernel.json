@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_mg_norm2u3_gpu_kernel",
-  "powerConsumptionJoules": 1287.947711406,
-  "kernelDurationS": 12.710825215999998,
+  "powerConsumptionJoules": 1296.9999550775003,
+  "kernelDurationS": 12.76393472,
   "gridDim": {
     "x": 1,
     "y": 1,

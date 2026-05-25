@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_bt_compute_rhs_7",
-  "powerConsumptionJoules": 6947.068922143,
-  "kernelDurationS": 98.098700544,
+  "powerConsumptionJoules": 6970.5142856195,
+  "kernelDurationS": 98.136363264,
   "gridDim": {
     "x": 1,
     "y": 10,

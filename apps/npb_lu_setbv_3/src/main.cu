@@ -208,7 +208,7 @@ int main() {
     lu_kernel<<<grid, tpb>>>(u, NX, NY, NZ);
     cudaDeviceSynchronize();
 
-    EXPORT_N("gridDim_x",  1);
+    EXPORT_N("gridDim_x",  grid);
     EXPORT_N("gridDim_y",  1);
     EXPORT_N("gridDim_z",  1);
     EXPORT_N("blockDim_x", TPB);

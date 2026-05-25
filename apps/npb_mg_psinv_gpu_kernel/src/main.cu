@@ -88,12 +88,12 @@ int main() {
     mg_kernel<<<grid, threads, smem>>>(r, u, c, NM, NM, NM, aw);
     cudaDeviceSynchronize();
 
-    EXPORT_N("gridDim_x",  1);
-    EXPORT_N("gridDim_y",  1);
-    EXPORT_N("gridDim_z",  1);
-    EXPORT_N("blockDim_x", TPB);
-    EXPORT_N("blockDim_y", 1);
-    EXPORT_N("blockDim_z", 1);
+    EXPORT_N("gridDim_x",  grid.x);
+    EXPORT_N("gridDim_y",  grid.y);
+    EXPORT_N("gridDim_z",  grid.z);
+    EXPORT_N("blockDim_x", threads.x);
+    EXPORT_N("blockDim_y", threads.y);
+    EXPORT_N("blockDim_z", threads.z);
 
     METRICS_KERNEL_END
 

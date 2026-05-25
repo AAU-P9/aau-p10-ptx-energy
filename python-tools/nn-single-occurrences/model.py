@@ -37,7 +37,8 @@ def build_feature_vector(data: dict) -> list[int]:
     # Keep feature construction identical for training and inference.
     for instruction, count in data.get("instructionOccurrences", {}).items():
         if instruction in instruction_indices:
-            feature_vector[instruction_indices[instruction]] = count
+            total_blocks = data.get("gridDim", {}).get("x", 0) * data.get("gridDim", {}).get("y", 0) * data.get("gridDim", {}).get("z", 0) * data.get("blockDim", {}).get("x", 0) * data.get("blockDim", {}).get("y", 0) * data.get("blockDim", {}).get("z", 0)
+            feature_vector[instruction_indices[instruction]] = count * total_blocks
         else:
             print(f"[Warning] Instruction '{instruction}' not in instructions, skipping.")
 

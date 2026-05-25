@@ -171,7 +171,8 @@ def extract_power_metrics(path: Path, exports: ExportJSONResponse) -> PowerMetri
     # Parse timing information from output.json exports
     output_info = _parse_output_exports(exports)
     if output_info["kernel_duration"] <= 0.0:
-        raise ValueError(f"missing/invalid kernel timing fields in exports: {sorted(exports.keys())}")
+        raise ValueError(f"missing/invalid kernel timing fields in exports: {sorted(exports.keys())}, see output path {path}.")
+
     if len(output_info["offsets"]) < 2:
         raise ValueError("insufficient timestamp_offsets samples for regression")
 

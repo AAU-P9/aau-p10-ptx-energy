@@ -69,7 +69,7 @@ def run_benchmark(instr: str, type_name: str, iters: int, grid: int, block: int,
                 debug_enabled=debug_enabled,
                 power_consumption_joules=r.power_metric_result.total_energy_j,
                 kernel_duration_s=r.power_metric_result.kernel_duration_cpu_s,
-                kernel_name=instr,
+                kernel_name=f"{instr}.{type_name}",
             )
 
             shutil.copy(r.path / "analyser_output.json", analyser_output_path)

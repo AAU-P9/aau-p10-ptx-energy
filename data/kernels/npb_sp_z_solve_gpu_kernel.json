@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_sp_z_solve_gpu_kernel",
-  "powerConsumptionJoules": 900.4460212069998,
-  "kernelDurationS": 13.272570112,
+  "powerConsumptionJoules": 862.1368614774999,
+  "kernelDurationS": 13.207570431999999,
   "gridDim": {
     "x": 1,
     "y": 1,

@@ -82,7 +82,7 @@ def estimate_kernel_energy(
 
         avg_per_occurrence = instruction_power_map.get(instruction_name, -1)
         if avg_per_occurrence < 0:
-            # print(f"[WARNING] No weight found for instruction '{instruction_name}' in kernel '{kernel_name}'. Using fallback power {fallback_power:.12f} J/occurrence.")
+            print(f"[WARNING] No weight found for instruction '{instruction_name}' in kernel '{kernel_name}'. Using fallback power {fallback_power:.12f} J/occurrence.")
             continue
 
         estimated_power_joules = count * avg_per_occurrence
@@ -145,7 +145,7 @@ def main() -> None:
         raise FileNotFoundError(f"Kernels input path not found: {kernels_input_path}")
 
     for input_path in kernel_files:
-        with input_path.open("r", encoding="utf-8") as handle:
+        with input_path.open("r", encoding="utf-8") as handle:  
             payload = json.load(handle)
 
             actual_energy = payload.get("powerConsumptionJoules", None)

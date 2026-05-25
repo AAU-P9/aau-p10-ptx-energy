@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ft_compute_initial_conditions_kernel",
-  "powerConsumptionJoules": 1829.1091555325002,
-  "kernelDurationS": 28.036793600000003,
+  "powerConsumptionJoules": 1833.6149837775,
+  "kernelDurationS": 28.042172416,
   "gridDim": {
     "x": 2,
     "y": 1,

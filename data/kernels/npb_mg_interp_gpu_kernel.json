@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_mg_interp_gpu_kernel",
-  "powerConsumptionJoules": 1142.251268322,
-  "kernelDurationS": 13.058700032,
+  "powerConsumptionJoules": 1110.4673721250003,
+  "kernelDurationS": 12.98294912,
   "gridDim": {
     "x": 1,
     "y": 1,
