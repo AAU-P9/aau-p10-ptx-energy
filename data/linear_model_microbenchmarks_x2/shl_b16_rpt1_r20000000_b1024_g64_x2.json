@@ -1,0 +1,99 @@
+{
+  "kernelName": "shl.b16",
+  "powerConsumptionJoules": 573.064980478,
+  "kernelDurationS": 4.737527807999999,
+  "gridDim": {
+    "x": 64,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 1024,
+    "y": 1,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 320000044,
+  "instructionOccurrences": {
+    "add.s32": 40000002,
+    "add.s64": 2,
+    "bra": 2,
+    "bra.uni": 120000002,
+    "cvt.s64.s32": 2,
+    "cvt.u16.u32": 4,
+    "cvt.u32.u16": 4,
+    "ld.param.u64": 2,
+    "mov.b32": 4,
+    "mov.u16": 80000004,
+    "mov.u32": 40000014,
+    "mul.lo.s32": 2,
+    "not.pred": 2,
+    "or.b32": 2,
+    "ret": 2,
+    "setp.lt.s32": 2,
+    "shl.b16": 40000000,
+    "shl.b64": 2,
+    "st.u32": 2
+  },
+  "dependentPairs": {
+    "add.s32,cvt.u16.u32": 2,
+    "add.s64,st.u32": 2,
+    "cvt.s64.s32,shl.b64": 2,
+    "cvt.u16.u32,cvt.u32.u16": 2,
+    "cvt.u32.u16,or.b32": 2,
+    "mov.u32,add.s32": 2,
+    "mov.u32,mov.b32": 2,
+    "mov.u32,mul.lo.s32": 2,
+    "not.pred,bra": 2,
+    "setp.lt.s32,not.pred": 2,
+    "shl.b64,add.s64": 2
+  },
+  "independentPairs": {
+    "add.s32,mov.u16": 40000000,
+    "bra,bra.uni": 40000000,
+    "bra,cvt.u32.u16": 2,
+    "bra.uni,add.s32": 40000000,
+    "bra.uni,mov.u16": 40000000,
+    "bra.uni,mov.u32": 2,
+    "cvt.u16.u32,mov.b32": 2,
+    "cvt.u32.u16,cvt.s64.s32": 2,
+    "ld.param.u64,mov.u32": 2,
+    "mov.b32,mov.u16": 2,
+    "mov.b32,mov.u32": 2,
+    "mov.u16,mov.u32": 40000002,
+    "mov.u16,setp.lt.s32": 2,
+    "mov.u16,shl.b16": 40000000,
+    "mov.u32,bra.uni": 40000002,
+    "mov.u32,cvt.u16.u32": 2,
+    "mov.u32,mov.u16": 2,
+    "mov.u32,mov.u32": 2,
+    "mul.lo.s32,mov.u32": 2,
+    "or.b32,mov.u32": 2,
+    "shl.b16,bra.uni": 40000000,
+    "st.u32,ret": 2
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 3,
+      "instrIdx": 4,
+      "opcode": "st.u32",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.05,
+      "estimatedStallCycles": 20.0,
+      "estimatedTotalStallCycles": 20.0
+    }
+  ]
+}

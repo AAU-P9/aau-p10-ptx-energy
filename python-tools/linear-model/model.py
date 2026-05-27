@@ -32,7 +32,7 @@ def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
             inst_occurences = r1.get("instructionOccurrences", {}).get(r1.get("kernelName", ""), None)
 
             if inst_occurences is None:
-                print(f"[WARNING] No instruction occurrences found for kernel '{r1.get('kernelName', '')}' in file {f1}")
+                # print(f"[WARNING] No instruction occurrences found for kernel '{r1.get('kernelName', '')}' in file {f1}")
                 continue
 
             # The number of executions of the instruction is the number of blocks times the number of occurrences of the instruction per block
@@ -82,7 +82,7 @@ def estimate_kernel_energy(
 
         avg_per_occurrence = instruction_power_map.get(instruction_name, -1)
         if avg_per_occurrence < 0:
-            print(f"[WARNING] No weight found for instruction '{instruction_name}' in kernel '{kernel_name}'. Using fallback power {fallback_power:.12f} J/occurrence.")
+            # print(f"[WARNING] No weight found for instruction '{instruction_name}' in kernel '{kernel_name}'. Using fallback power {fallback_power:.12f} J/occurrence.")
             continue
 
         estimated_power_joules = count * avg_per_occurrence

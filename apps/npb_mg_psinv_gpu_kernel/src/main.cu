@@ -50,7 +50,7 @@ __global__ void mg_kernel(double* r,
 	int lid=threadIdx.x;
 	int i1;	
 
-	META_LOOP(i1_loop, 1, MG_PROBLEM_SIZE, false);
+	META_LOOP(i1_loop, NM / TPB, NM / TPB, false);
 	for(i1=lid; i1<n1; i1+=blockDim.x){
 		r1[i1]=r[i3*n2*n1+(i2-1)*n2+i1]
 			+r[i3*n2*n1+(i2+1)*n1+i1]
@@ -61,7 +61,7 @@ __global__ void mg_kernel(double* r,
 			+r[(i3+1)*n2*n1+(i2-1)*n1+i1]
 			+r[(i3+1)*n2*n1+(i2+1)*n1+i1];
 	} __syncthreads();
-	META_LOOP(i1_loop_1, 1, MG_PROBLEM_SIZE, false);
+	META_LOOP(i1_loop_1, NM / TPB, NM / TPB, false);
 	for(i1=lid+1; i1<n1-1; i1+=blockDim.x){
 		u[i3*n2*n1+i2*n1+i1]=u[i3*n2*n1+i2*n1+i1]
 			+c[0]*r[i3*n2*n1+i2*n1+i1]

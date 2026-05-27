@@ -12,7 +12,7 @@ artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")
 desired_execution_time_s = 10
 debug_enabled = False
-force_rebuild = True
+force_rebuild = False
 
 short_kernels: list[tuple[str, float]] = []
 
