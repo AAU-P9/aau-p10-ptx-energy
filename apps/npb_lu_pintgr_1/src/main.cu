@@ -21,6 +21,10 @@
 #define TPB 32
 #endif
 
+#ifndef VAR_T
+#define VAR_T 16
+#endif
+
 // LU physical constants
 #define C1  1.40e+00
 #define C2  0.40e+00
@@ -186,7 +190,7 @@ __global__ static void lu_kernel(const double* u,
 	int dist=(loc_max+1)/2;
 	i=threadIdx.y*blockDim.x+threadIdx.x;
 	__syncthreads();
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, VAR_T, PROBLEM_SIZE, false);
 	while(loc_max>1){
 		if((i<dist)&&((i+dist)<loc_max)){frc1[i]+=frc1[i+dist];}
 		loc_max=dist;
@@ -205,7 +209,7 @@ int main() {
     double *frc; cudaMalloc(&frc, BUF_NORM); cudaMemset(frc, 0, BUF_NORM);
 
     printf("[LOG] lu_pintgr_1: NX=%d NY=%d NZ=%d ITERATIONS=%d\n", NX, NY, NZ, ITERATIONS);
-    int t = 16;
+    int t = VAR_T;
     size_t smem = (size_t)3*t*t*sizeof(double);
     dim3 tpb2(t, t);
     dim3 grid(NX, NY);

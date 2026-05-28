@@ -176,7 +176,7 @@ __global__ static void lu_kernel(const double* u,
 	i=threadIdx.x;
 
 	using namespace constants_device;
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, PROBLEM_SIZE, PROBLEM_SIZE, false);
 	while(i<nx){
 		nthreads=nx-(i-threadIdx.x);
 		if(nthreads>blockDim.x){nthreads=blockDim.x;}

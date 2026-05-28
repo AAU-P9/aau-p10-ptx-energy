@@ -239,7 +239,7 @@ __global__ void ft_kernel(int iteration,
 	}
 
 	__syncthreads();
-	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep_back, CHECKSUM_TASKS / TPB, PROBLEM_SIZE, false);
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(threadIdx.x<i){
 			share_sums[threadIdx.x] = dcomplex_add(share_sums[threadIdx.x], share_sums[threadIdx.x+i]);

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
 import argparse
+import csv
 import json
 from pathlib import Path
+
+verify_weights = False # When enabled runs the prediction model on the reference weights files to verify that the weights are consistent with the reported power differences. 
 
 def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
     """Build average per-occurrence power (joules) for each instruction by comparing rpt1 and rpt2."""
@@ -59,7 +62,6 @@ def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
 def estimate_kernel_energy(
     item: dict,
     instruction_power_map: dict[str, float],
-    fallback_power: float,
 ) -> float:
     kernel_name = item.get("kernelName") or "Unknown"
     total_blocks = item.get("gridDim", {}).get("x", 0) * item.get("gridDim", {}).get("y", 0) * item.get("gridDim", {}).get("z", 0) * item.get("blockDim", {}).get("x", 0) * item.get("blockDim", {}).get("y", 0) * item.get("blockDim", {}).get("z", 0)
@@ -114,6 +116,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Path to write JSON output",
     )
+    parser.add_argument(
+        "--csv-output-path",
+        type=Path,
+        default=None,
+        help="Path to write CSV output",
+    )
 
     return parser.parse_args()
 
@@ -143,7 +151,12 @@ def main() -> None:
         kernel_files = [kernels_input_path]
     else:
         raise FileNotFoundError(f"Kernels input path not found: {kernels_input_path}")
+    
+    if verify_weights:
+        print(f"[INFO] Verifying weights on reference files in {weights_input_path}...")
+        kernel_files = list(weights_input_path.glob("*_rpt1_*.json"))
 
+    csv_results = []
     for input_path in kernel_files:
         with input_path.open("r", encoding="utf-8") as handle:  
             payload = json.load(handle)
@@ -152,12 +165,23 @@ def main() -> None:
             estimated_energy = estimate_kernel_energy(
                 payload,
                 instruction_power_map,
-                fallback_power,
             )
             
             err = ((estimated_energy - actual_energy) / actual_energy) 
 
             print(f"[RESULT] {input_path.name}: Estimated Energy = {estimated_energy:.6f} J, Actual Energy = {actual_energy:.6f} J, Error = {err:.2%}")
+            
+            csv_results.append({
+                "kernelName": payload.get("kernelName", "Unknown"),
+                "powerConsumptionJoules": actual_energy,
+                "predictedPowerConsumptionJoules": estimated_energy,
+            })
+
+    if args.csv_output_path:
+        with args.csv_output_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["kernelName", "powerConsumptionJoules", "predictedPowerConsumptionJoules"])
+            writer.writeheader()
+            writer.writerows(csv_results)
 
 if __name__ == "__main__":
     main()
