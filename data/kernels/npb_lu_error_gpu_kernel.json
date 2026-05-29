@@ -1,14 +1,14 @@
 {
   "kernelName": "npb_lu_error_gpu_kernel",
-  "powerConsumptionJoules": 901.004118408,
-  "kernelDurationS": 12.697841407999999,
+  "powerConsumptionJoules": 898.0740510209998,
+  "kernelDurationS": 12.689021952000001,
   "gridDim": {
-    "x": 1,
-    "y": 1,
+    "x": 10,
+    "y": 10,
     "z": 1
   },
   "blockDim": {
-    "x": 32,
+    "x": 10,
     "y": 1,
     "z": 1
   },

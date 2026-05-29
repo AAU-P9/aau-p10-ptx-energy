@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_is_create_seq_kernel",
-  "powerConsumptionJoules": 896.986863117,
-  "kernelDurationS": 13.213644799999999,
+  "powerConsumptionJoules": 897.894228417,
+  "kernelDurationS": 13.212697856,
   "gridDim": {
     "x": 32,
     "y": 1,

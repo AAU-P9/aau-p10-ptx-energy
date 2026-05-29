@@ -1,10 +1,10 @@
 {
   "kernelName": "npb_lu_ssor_1",
-  "powerConsumptionJoules": 951.8933894635,
-  "kernelDurationS": 12.437756672,
+  "powerConsumptionJoules": 945.638946449,
+  "kernelDurationS": 12.435075584,
   "gridDim": {
-    "x": 1,
-    "y": 1,
+    "x": 10,
+    "y": 10,
     "z": 1
   },
   "blockDim": {

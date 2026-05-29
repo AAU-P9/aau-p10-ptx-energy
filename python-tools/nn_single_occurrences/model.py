@@ -84,7 +84,7 @@ def make_model(num_features: int) -> tuple[Sequential, int, int]:
     layers = [
         Input(shape=(num_features,)),
         Dense(num_features * 8, activation="leaky_relu"),
-        Dense(num_features * 8, activation="leaky_relu"),
+        Dense(num_features * 4, activation="leaky_relu"),
         Dense(1),
     ]
     model = Sequential(layers)

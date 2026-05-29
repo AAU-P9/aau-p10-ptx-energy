@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_bt_x_solve_3",
-  "powerConsumptionJoules": 786.1380747684999,
-  "kernelDurationS": 11.651367424,
+  "powerConsumptionJoules": 784.8697435545001,
+  "kernelDurationS": 11.655965440000003,
   "gridDim": {
     "x": 3,
     "y": 12,

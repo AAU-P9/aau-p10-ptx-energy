@@ -4,19 +4,22 @@ from hashlib import md5
 
 def execute_program_cached(
     path: Path,
-    program_name: str,
+    program_name: str = "program.cu",
     nvcc_args: list[str] = [],
-    cache_key: str = "madsen",
     artifacts_path: Path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts"),
     debug_enabled: bool = False,
     force_rebuild: bool = False
 ) -> ExecutionResult:
-    # Hash the nvcc arguments to create a unique identifier
-    file_name = md5(f"{path}{''.join(nvcc_args)}".encode()).hexdigest()
+    
+    combined_hash = None
+    with open(path / program_name, "rb") as f:
+        file_contents = f.read()
+        combined_hash = md5(f"{file_contents}{''.join(nvcc_args)}".encode()).hexdigest()
 
-    # Check if their exists an artifact of the program
-    folder_name = f"{cache_key}{file_name}"
-    program_artifact = artifacts_path / folder_name
+    if combined_hash is None:
+        raise RuntimeError("Failed to compute hash for program execution caching.")
+
+    program_artifact = artifacts_path / combined_hash
     
     if not force_rebuild and (program_artifact / "output.json").exists():
         if debug_enabled:

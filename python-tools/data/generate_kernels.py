@@ -6,7 +6,6 @@ from cubindings.cubindings_analyser import (
     run_ptx_analyser,
 )
 from cubindings.cubindings_cache import execute_program_cached
-from cubindings.cubindings_predictor import run_predictor
 
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")
@@ -60,7 +59,7 @@ def run_kernel_configuration(
 
 
 def main() -> None:
-    apps = Path("/home/lasse/aau-p10-ptx-energy/apps")
+    apps = Path("/home/rasmus/aau-p10-ptx-energy/apps")
 
     # Naive Kernels
 

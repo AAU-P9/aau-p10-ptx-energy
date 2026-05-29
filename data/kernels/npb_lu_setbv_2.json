@@ -1,9 +1,9 @@
 {
   "kernelName": "npb_lu_setbv_2",
-  "powerConsumptionJoules": 859.2379781579999,
-  "kernelDurationS": 12.841948928,
+  "powerConsumptionJoules": 857.5693589325,
+  "kernelDurationS": 12.845129984000001,
   "gridDim": {
-    "x": 1,
+    "x": 5,
     "y": 1,
     "z": 1
   },

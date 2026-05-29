@@ -1,14 +1,14 @@
 {
   "kernelName": "npb_lu_erhs_2",
-  "powerConsumptionJoules": 960.212331145,
-  "kernelDurationS": 13.32606976,
+  "powerConsumptionJoules": 968.6085552620001,
+  "kernelDurationS": 13.327989248,
   "gridDim": {
-    "x": 1,
-    "y": 1,
+    "x": 10,
+    "y": 10,
     "z": 1
   },
   "blockDim": {
-    "x": 32,
+    "x": 12,
     "y": 1,
     "z": 1
   },

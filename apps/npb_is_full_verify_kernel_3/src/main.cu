@@ -151,7 +151,7 @@ __global__ void is_kernel(INT_TYPE* key_array,
 
 	__syncthreads();
 
-	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep_back, 10, 10, false); // Log2(TPB) sweeps back to the beginning of the block
 	for(i=blockDim.x/2; i>0; i>>=1){
 		if(threadIdx.x<i){
 			shared_aux[threadIdx.x] += shared_aux[threadIdx.x+i];

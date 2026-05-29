@@ -1,10 +1,10 @@
 {
   "kernelName": "npb_mg_psinv_gpu_kernel",
-  "powerConsumptionJoules": 1453.7449250620002,
-  "kernelDurationS": 12.788060672,
+  "powerConsumptionJoules": 1451.2577125535,
+  "kernelDurationS": 12.806498047999998,
   "gridDim": {
-    "x": 1,
-    "y": 1,
+    "x": 32,
+    "y": 32,
     "z": 1
   },
   "blockDim": {
