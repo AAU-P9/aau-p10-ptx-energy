@@ -1,6 +1,12 @@
+from dataclasses import dataclass
 from pathlib import Path
 from .cubindings import extract_exports_from_path, extract_power_metrics, execute_program, ExecutionResult
 from hashlib import md5
+
+@dataclass
+class CachedExecutionResult:
+    execution_result: ExecutionResult
+    cache_hit: bool
 
 def execute_program_cached(
     path: Path,
@@ -9,7 +15,7 @@ def execute_program_cached(
     artifacts_path: Path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts"),
     debug_enabled: bool = False,
     force_rebuild: bool = False
-) -> ExecutionResult:
+) -> CachedExecutionResult:
     
     combined_hash = None
     with open(path / program_name, "rb") as f:
@@ -28,7 +34,7 @@ def execute_program_cached(
         exports = extract_exports_from_path(program_artifact)
         power_metric_result = extract_power_metrics(path=program_artifact, exports=exports)
 
-        return ExecutionResult(
+        execution_result = ExecutionResult(
             output="",
             error="",
             exports=exports,
@@ -36,6 +42,8 @@ def execute_program_cached(
             path=program_artifact,
             power_metric_result=power_metric_result
         )
+
+        return CachedExecutionResult(execution_result=execution_result, cache_hit=True)
     else:
         # Clear the artifact folder if it exists to ensure a clean state
         if program_artifact.exists():
@@ -62,4 +70,4 @@ def execute_program_cached(
                     destination.write_bytes(item.read_bytes())
     
         execution_result = execute_program(path=program_artifact, program_name=program_name, nvcc_args=nvcc_args, enable_temp=False, debug_enabled=debug_enabled)
-        return execution_result        
+        return CachedExecutionResult(execution_result=execution_result, cache_hit=False)

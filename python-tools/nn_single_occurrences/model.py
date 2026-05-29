@@ -41,29 +41,29 @@ def load_preproc_stats(path: str) -> tuple[Dict[str, int], float, float, Dict[st
     else:
         names = loaded["instruction_names"].tolist()
         instruction_indices = {name: i for i, name in enumerate(names)}
-    
+
     return instruction_indices
 
 
-def save_preproc_stats(path: str, instruction_indices: Dict[str, int], raw_x_max: float, raw_y_max: float, dim_maxes: Dict[str, float] = None) -> None:
+def save_preproc_stats(
+    path: str,
+    instruction_indices: Dict[str, int],
+) -> None:
     sorted_items = sorted(instruction_indices.items(), key=lambda item: item[1])
     keys = np.array([k for k, _ in sorted_items], dtype=object)
     vals = np.array([v for _, v in sorted_items], dtype=np.int32)
-    
+
     savez_dict = {
         "instruction_indices_keys": keys,
         "instruction_indices_values": vals,
     }
-    
-    for dim, val in dim_maxes.items():
-        savez_dict[dim] = np.array(val, dtype=np.float32)
-    
+
     np.savez(path, **savez_dict)
 
 def normalize_data(data: dict, instruction_indices: Dict[str, int], missing_instructions: Set[str]) -> List[float]:
     features = [0.0] * len(instruction_indices)
 
-    total_blocks = data.get("gridDim", {}).get("x", 1) * data.get("gridDim", {}).get("y", 1) * data.get("gridDim", {}).get("z", 1) * data.get("blockDim", {}).get("x", 1) * data.get("blockDim", {}).get("y", 1) * data.get("blockDim", {}).get("z", 1)
+    total_threads = data.get("gridDim", {}).get("x", 1) * data.get("gridDim", {}).get("y", 1) * data.get("gridDim", {}).get("z", 1) * data.get("blockDim", {}).get("x", 1) * data.get("blockDim", {}).get("y", 1) * data.get("blockDim", {}).get("z", 1)
     total_instructions = data.get("totalInstructions", 1)
 
     for instruction, count in data.get("instructionOccurrences", {}).items():
@@ -73,7 +73,7 @@ def normalize_data(data: dict, instruction_indices: Dict[str, int], missing_inst
             missing_instructions.add(instruction)
 
     scale_constant = 1e11 # Scale into a numeric range the NN can actually process
-    target = (data.get("powerConsumptionJoules", 0.0) / (total_blocks * total_instructions)) * scale_constant
+    target = (data.get("powerConsumptionJoules", 0.0) / (total_threads * total_instructions)) * scale_constant
 
     return features, target
 

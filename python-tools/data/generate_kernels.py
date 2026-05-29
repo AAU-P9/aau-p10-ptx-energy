@@ -14,6 +14,7 @@ debug_enabled = False
 force_rebuild = False
 
 short_kernels: list[tuple[str, float]] = []
+analyzed_kernels: list[str] = []
 
 def run_kernel_configuration(
     kernel_name: str,
@@ -23,7 +24,7 @@ def run_kernel_configuration(
     force_rebuild=False,
 ) -> None:
     print(f"[INFO] Estimating duration for kernel '{kernel_name}'")
-    execution_result = execute_program_cached(
+    cache_execution_result = execute_program_cached(
         path=program_path,
         program_name=program_name,
         nvcc_args=nvcc_args,
@@ -31,6 +32,8 @@ def run_kernel_configuration(
         debug_enabled=debug_enabled,
         force_rebuild=force_rebuild,
     )
+
+    execution_result = cache_execution_result.execution_result
 
     runtime_s = execution_result.power_metric_result.kernel_duration_cpu_s
     print(f"[RUNTIME] kernel='{kernel_name}' duration={runtime_s:.3f}s")
@@ -42,15 +45,20 @@ def run_kernel_configuration(
         short_kernels.append((kernel_name, runtime_s))
         return
 
-    run_ptx_analyser(
-        execution_result.path,
-        program_name=program_name,
-        kernel_params=build_kernel_params(execution_result.exports),
-        debug_enabled=debug_enabled,
-        power_consumption_joules=execution_result.power_metric_result.total_energy_j,
-        kernel_name=kernel_name,
-        kernel_duration_s=runtime_s,
-    )
+    if cache_execution_result.cache_hit:
+        print(f"[INFO] Cache hit for kernel '{kernel_name}', skipping analyser execution.")
+    else:
+        run_ptx_analyser(
+            execution_result.path,
+            program_name=program_name,
+            kernel_params=build_kernel_params(execution_result.exports),
+            debug_enabled=debug_enabled,
+            power_consumption_joules=execution_result.power_metric_result.total_energy_j,
+            kernel_name=kernel_name,
+            kernel_duration_s=runtime_s,
+        )
+
+        analyzed_kernels.append(kernel_name)
 
     shutil.copy(
         execution_result.path / "analyser_output.json",
@@ -874,6 +882,12 @@ def main() -> None:
     else:
         print("\n[SUMMARY] All kernels met the threshold.")
 
+    if analyzed_kernels:
+        print("\n[SUMMARY] Re-ran Analyzer kernels:")
+        for name, dur in analyzed_kernels:
+            print(f"  {name}: {dur:.3f}s")
+    else:
+        print("\n[SUMMARY] No kernels were re-run with the Analyzer.")
 
 if __name__ == "__main__":
     main()
