@@ -3,20 +3,20 @@ import json
 import time
 import numpy as np
 
-from .model import DATASETS, WEIGHTS_PATH, make_model, normalize_data, save_weights
+from .model import DATASETS, WEIGHTS_PATH, STATS_PATH, make_model, normalize_data, save_weights, save_preproc_stats
 
 
 def main():
-    instruction_indices: dict[str, int] = {}
-    # build instruction index map
+    feature_indices: dict[str, int] = {}
+    # Build feature vocabulary from raw instruction tokens.
     for data_dir in DATASETS:
         data_json_files = sorted(data_dir.glob("*.json"))
         for json_file in data_json_files:
             with json_file.open("r") as f:
                 data = json.load(f)
             for instruction in data.get("instructionOccurrences", {}).keys():
-                if instruction not in instruction_indices:
-                    instruction_indices[instruction] = len(instruction_indices)
+                if instruction not in feature_indices:
+                    feature_indices[instruction] = len(feature_indices)
 
     # collect feature vectors and targets
     all_files = []
@@ -28,13 +28,13 @@ def main():
 
     kernel_xs = {}
     kernel_ys = {}
-    missing = set()
+    missing_features = set()
     
     for json_file in all_files:
         with json_file.open("r") as f:
             data = json.load(f)
         name = json_file.stem
-        features, target = normalize_data(data, instruction_indices, missing)
+        features, target = normalize_data(data, feature_indices, missing_features)
         kernel_xs[name] = features
         kernel_ys[name] = target
 
@@ -43,7 +43,7 @@ def main():
     xs = np.array(list(kernel_xs.values()), dtype=np.float32)
     ys = np.array(list(kernel_ys.values()), dtype=np.float32)
 
-    model, batch_size, epochs = make_model(len(instruction_indices))
+    model, batch_size, epochs = make_model(len(feature_indices))
 
     print("Starting training...")
 
@@ -74,7 +74,7 @@ def main():
             with json_file.open("r") as f:
                 data = json.load(f)
             
-            total_blocks = (
+            total_threads = (
                 data.get("gridDim", {}).get("x", 1) * 
                 data.get("gridDim", {}).get("y", 1) * 
                 data.get("gridDim", {}).get("z", 1) * 
@@ -83,7 +83,7 @@ def main():
                 data.get("blockDim", {}).get("z", 1)
             )
             total_instructions = data.get("totalInstructions", 1)
-            scale_factor = total_blocks * total_instructions
+            scale_factor = total_threads * total_instructions
             
             pred_joules = (pred_normalized / 1e11) * scale_factor
             actual_joules = data.get("powerConsumptionJoules", 0.0)
@@ -107,6 +107,7 @@ def main():
         print(f"  MAPE:                         {mape:.2f}%")
 
     save_weights(model, str(WEIGHTS_PATH))
+    save_preproc_stats(feature_indices, str(STATS_PATH))
 
 if __name__ == "__main__":
     main()

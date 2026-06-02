@@ -27,59 +27,60 @@ STATS_PATH = BASE_DIR / STATS_FILE
 # Default data locations (keep original dataset locations)
 DATASETS = [
     Path("/home/rasmus/aau-p10-ptx-energy/data/linear_model_microbenchmarks"),
-    Path("/home/rasmus/aau-p10-ptx-energy/data/linear_model_microbenchmarks_2x"),
 ]
+
 KERNEL_DATASETS = [Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")]
 
+SCALE_CONSTANT = 1e11 # Scale into a numeric range the NN can actually process
 
-def load_preproc_stats(path: str) -> tuple[Dict[str, int], float, float, Dict[str, float]]:
+def load_preproc_stats(path: str) -> Dict[str, int]:
     loaded = np.load(path, allow_pickle=True)
-    if "instruction_indices_keys" in loaded.files and "instruction_indices_values" in loaded.files:
-        keys = loaded["instruction_indices_keys"].tolist()
-        values = loaded["instruction_indices_values"].tolist()
-        instruction_indices = {k: int(v) for k, v in zip(keys, values)}
+    if "feature_indicies_keys" in loaded.files and "feature_indices_values" in loaded.files:
+        keys = loaded["feature_indicies_keys"].tolist()
+        values = loaded["feature_indices_values"].tolist()
+        feature_indices = {k: int(v) for k, v in zip(keys, values)}
     else:
+        # Legacy fallback used instruction names as feature identifiers.
         names = loaded["instruction_names"].tolist()
-        instruction_indices = {name: i for i, name in enumerate(names)}
+        feature_indices = {name: i for i, name in enumerate(names)}
 
-    return instruction_indices
+    return feature_indices
 
 
 def save_preproc_stats(
+    feature_indices: Dict[str, int],
     path: str,
-    instruction_indices: Dict[str, int],
 ) -> None:
-    sorted_items = sorted(instruction_indices.items(), key=lambda item: item[1])
+    sorted_items = sorted(feature_indices.items(), key=lambda item: item[1])
     keys = np.array([k for k, _ in sorted_items], dtype=object)
     vals = np.array([v for _, v in sorted_items], dtype=np.int32)
 
     savez_dict = {
-        "instruction_indices_keys": keys,
-        "instruction_indices_values": vals,
+        "feature_indicies_keys": keys,
+        "feature_indices_values": vals,
     }
 
     np.savez(path, **savez_dict)
 
-def normalize_data(data: dict, instruction_indices: Dict[str, int], missing_instructions: Set[str]) -> List[float]:
-    features = [0.0] * len(instruction_indices)
+def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features: Set[str]) -> List[float]:
+    feature_vector = [0.0] * len(feature_indices)
 
     total_threads = data.get("gridDim", {}).get("x", 1) * data.get("gridDim", {}).get("y", 1) * data.get("gridDim", {}).get("z", 1) * data.get("blockDim", {}).get("x", 1) * data.get("blockDim", {}).get("y", 1) * data.get("blockDim", {}).get("z", 1)
     total_instructions = data.get("totalInstructions", 1)
 
     for instruction, count in data.get("instructionOccurrences", {}).items():
-        if instruction in instruction_indices:
-            features[instruction_indices[instruction]] = float(count) / total_instructions
+        if instruction in feature_indices:
+            feature_vector[feature_indices[instruction]] = float(count) / total_instructions
         else:
-            missing_instructions.add(instruction)
+            missing_features.add(instruction)
 
-    scale_constant = 1e11 # Scale into a numeric range the NN can actually process
-    target = (data.get("powerConsumptionJoules", 0.0) / (total_threads * total_instructions)) * scale_constant
+    target = (data.get("powerConsumptionJoules", 0.0) / (total_threads * total_instructions)) * SCALE_CONSTANT
 
-    return features, target
+    return feature_vector, target
 
 def make_model(num_features: int) -> tuple[Sequential, int, int]:
     batch_size = 4
-    epochs = 500
+    epochs = 1000
 
     layers = [
         Input(shape=(num_features,)),

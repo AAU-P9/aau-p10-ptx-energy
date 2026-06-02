@@ -143,7 +143,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * do all the elements of the cell unless last 
 	 * ---------------------------------------------------------------------
 	 */
-	META_LOOP(i_sweep, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep, IMAX - 1, IMAX - 1, false);
 	for(i=1; i<=isize-1; i++){
 		#pragma unroll
 		META_LOOP(n_update_2, 5, 5, true);
@@ -302,7 +302,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * after u(istart) will be sent to next cell
 	 * ---------------------------------------------------------------------
 	 */
-	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep_back, PROBLEM_SIZE - 1, PROBLEM_SIZE, false);
 	for(i=isize-1; i>=0; i--){
 		#pragma unroll
 		META_LOOP(n_update_9, M_SIZE, M_SIZE, true);

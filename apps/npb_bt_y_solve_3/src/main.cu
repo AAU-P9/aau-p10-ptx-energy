@@ -142,7 +142,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * do all the elements of the cell unless last 
 	 * ---------------------------------------------------------------------
 	 */
-	META_LOOP(j_sweep, 1, PROBLEM_SIZE, false);
+	META_LOOP(j_sweep, JMAX - 1, JMAX - 1, false);
 	for(j=1; j<=jsize-1; j++){
 
 		/* load data */
@@ -310,7 +310,7 @@ __global__ void bt_kernel(double* rhs_device,
 	 * after u(jstart) will be sent to next cell
 	 * ---------------------------------------------------------------------
 	 */
-	META_LOOP(j_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(j_sweep_back, JMAX - 1, JMAX - 1, false);
 	for(j=jsize-1; j>=0; j--){
 		#pragma unroll
 		META_LOOP(n_update_9, M_SIZE, M_SIZE, true);

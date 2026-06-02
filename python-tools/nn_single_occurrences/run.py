@@ -3,9 +3,10 @@ import argparse
 import csv
 import json
 from pathlib import Path
+
 import numpy as np
 
-from .model import STATS_PATH, WEIGHTS_PATH, make_model, load_preproc_stats, load_weights, normalize_data, KERNEL_DATASETS, DATASETS
+from .model import KERNEL_DATASETS, SCALE_CONSTANT, STATS_PATH, WEIGHTS_PATH, load_preproc_stats, load_weights, make_model, normalize_data
 
 def main():
     p = argparse.ArgumentParser(description="Run model on a dataset of kernel JSON files")
@@ -16,22 +17,22 @@ def main():
     args = p.parse_args()
 
     stats_path = str(args.stats)
-    instruction_indices = load_preproc_stats(stats_path)
+    feature_indices = load_preproc_stats(stats_path)
 
-    model, _, __ = make_model(len(instruction_indices))
+    model, _, __ = make_model(len(feature_indices))
     load_weights(model, str(args.weights))
 
     data_dir = args.data_dir or KERNEL_DATASETS[0]
     data_dir = Path(data_dir)
     files = sorted(data_dir.glob("*.json"))
 
-    missing = set()
+    missing_features = set()
     predictions = []
     for f in files:
         with f.open("r") as fh:
             data = json.load(fh)
         
-        fv, _ = normalize_data(data, instruction_indices, missing)
+        fv, _ = normalize_data(data, feature_indices, missing_features)
         fv = np.array(fv, dtype=np.float32)
         
         total_blocks = (
@@ -43,18 +44,26 @@ def main():
             data.get("blockDim", {}).get("z", 1)
         )
         total_instructions = data.get("totalInstructions", 1)
-        scale_factor = total_blocks * total_instructions
+        total_threads = total_blocks * total_instructions
 
         pred_normalized = model.predict(fv.reshape(1, -1), verbose=0)[0][0]
         # Divide out the neural network's scaling constant at the end
-        pred = (pred_normalized / 1e11) * scale_factor
+        pred = (pred_normalized / SCALE_CONSTANT) * total_threads
         
         kernel_name = data.get("kernelName", f.stem)
         predictions.append((kernel_name, pred, data.get("powerConsumptionJoules"), int((fv != 0).sum())))
 
     print("\nPredicted power consumption for kernels:")
     for name, pred, actual, num_nonzero in predictions:
-        print(f"  - {name}: Predicted = {pred:.6f} J, Actual = {actual:.6f} J, Features = {num_nonzero}/{len(instruction_indices)}")
+        print(f"  - {name}: Predicted = {pred:.6f} J, Actual = {actual:.6f} J, Features = {num_nonzero}/{len(feature_indices)}")
+
+    if predictions:
+        actuals = np.asarray([actual for _, _, actual, _ in predictions], dtype=np.float64)
+        preds = np.asarray([pred for _, pred, _, _ in predictions], dtype=np.float64)
+        abs_errors = np.abs(preds - actuals)
+        mae = float(np.mean(abs_errors))
+        mape = float(np.mean(abs_errors / np.clip(actuals, 1e-9, None)) * 100.0)
+        print(f"\nAggregate error: MAE = {mae:.6f} J, MAPE = {mape:.2f}%")
 
     if args.csv_output_path:
         with args.csv_output_path.open("w", newline="", encoding="utf-8") as f:
@@ -67,9 +76,9 @@ def main():
                     "predictedPowerConsumptionJoules": pred
                 })
 
-    if missing:
-        print("\n[WARNING] Missing instructions encountered:")
-        for instr in sorted(missing):
+    if missing_features:
+        print("\n[WARNING] Missing feature identifiers encountered from instructionOccurrences:")
+        for instr in sorted(missing_features):
             print(f"  - {instr}")
 
 

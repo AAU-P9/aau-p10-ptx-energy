@@ -1,6 +1,7 @@
 import shutil
 from pathlib import Path
 
+from cubindings.cubindings import ExecutionResult
 from cubindings.cubindings_analyser import (
     build_kernel_params,
     run_ptx_analyser,
@@ -14,7 +15,7 @@ debug_enabled = False
 force_rebuild = False
 
 short_kernels: list[tuple[str, float]] = []
-analyzed_kernels: list[str] = []
+analyzed_kernels: list[tuple[str, ExecutionResult]] = []
 
 def run_kernel_configuration(
     kernel_name: str,
@@ -58,7 +59,7 @@ def run_kernel_configuration(
             kernel_duration_s=runtime_s,
         )
 
-        analyzed_kernels.append(kernel_name)
+        analyzed_kernels.append((kernel_name, execution_result))
 
     shutil.copy(
         execution_result.path / "analyser_output.json",
@@ -884,8 +885,8 @@ def main() -> None:
 
     if analyzed_kernels:
         print("\n[SUMMARY] Re-ran Analyzer kernels:")
-        for name, dur in analyzed_kernels:
-            print(f"  {name}: {dur:.3f}s")
+        for kernel_name, execution_result in analyzed_kernels:
+            print(f"  {kernel_name}, Path: {execution_result.path}")
     else:
         print("\n[SUMMARY] No kernels were re-run with the Analyzer.")
 
