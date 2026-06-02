@@ -39,10 +39,6 @@ def load_preproc_stats(path: str) -> Dict[str, int]:
         keys = loaded["feature_indicies_keys"].tolist()
         values = loaded["feature_indices_values"].tolist()
         feature_indices = {k: int(v) for k, v in zip(keys, values)}
-    else:
-        # Legacy fallback used instruction names as feature identifiers.
-        names = loaded["instruction_names"].tolist()
-        feature_indices = {name: i for i, name in enumerate(names)}
 
     return feature_indices
 
