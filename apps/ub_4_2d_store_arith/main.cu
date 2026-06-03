@@ -45,7 +45,7 @@ matrix(int *A){
 	int result_point_col	= blockIdx.x*blockDim.x + threadIdx.x;
 
 	/* Overload loop*/
-  META_LOOP(overload_loop, 2000, 2000, false);
+  META_LOOP(overload_loop, ITERATIONS, ITERATIONS, false);
 	for(i=0; i< ITERATIONS; i++){
 		localValue+= i%threadIdx.x;
 	}//for

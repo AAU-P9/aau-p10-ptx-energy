@@ -26,7 +26,7 @@ def main():
     data_dir = Path(data_dir)
     files = sorted(data_dir.glob("*.json"))
 
-    missing_features = set()
+    missing_features: list[tuple[str, str]] = []
     predictions = []
     for f in files:
         with f.open("r") as fh:
@@ -82,8 +82,8 @@ def main():
 
     if missing_features:
         print("\n[WARNING] Missing feature identifiers encountered from pairs (dependentPairs/independentPairs):")
-        for instr in sorted(missing_features):
-            print(f"  - {instr}")
+        for (kernel, instr) in sorted(missing_features):
+            print(f"  - {instr}: {kernel}")
 
 
 if __name__ == "__main__":

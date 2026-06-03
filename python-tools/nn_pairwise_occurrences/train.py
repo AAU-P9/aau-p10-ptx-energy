@@ -33,7 +33,7 @@ def main():
 
     kernel_xs = {}
     kernel_ys = {}
-    missing_features = set()
+    missing_features: list[tuple[str, str]] = []
     
     for json_file in all_files:
         with json_file.open("r") as f:

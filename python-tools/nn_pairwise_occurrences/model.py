@@ -58,7 +58,7 @@ def save_preproc_stats(
 
     np.savez(path, **savez_dict)
 
-def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features: Set[str]) -> tuple[list[float], float]:
+def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features: list[tuple[str, str]]) -> tuple[list[float], float]:
     feature_vector = [0.0] * len(feature_indices)
 
     total_threads = (
@@ -87,7 +87,7 @@ def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features
         if pair in feature_indices:
             feature_vector[feature_indices[pair]] = float(count) / total_pairs
         else:
-            missing_features.add(pair)
+            missing_features.append((data.get("kernelName", "Unknown"), pair))
 
     target = (data.get("powerConsumptionJoules", 0.0) / (total_threads * total_pairs)) * SCALE_CONSTANT
 

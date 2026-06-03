@@ -26,7 +26,7 @@ def main():
     data_dir = Path(data_dir)
     files = sorted(data_dir.glob("*.json"))
 
-    missing_features = set()
+    missing_features: list[tuple[str, str]] = []
     predictions = []
     for f in files:
         with f.open("r") as fh:

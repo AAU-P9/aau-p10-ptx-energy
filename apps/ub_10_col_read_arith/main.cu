@@ -47,13 +47,13 @@ matrix(int *A){
 	int result_point_col	= blockIdx.x*blockDim.x + threadIdx.x;
 
 	/* Accessing to all elements of the matrix*/
-  META_LOOP(col_reduce, 96, 96, false);
+  META_LOOP(col_reduce, M, M, false);
 	for (i=0; i < M; i++){
 		sum_aux+= A[i*M + result_point_row];
 	}// loop i
 
 	/* Overload loop*/
-  META_LOOP(overload_loop, 2000, 2000, false);
+  META_LOOP(overload_loop, ITERATIONS, ITERATIONS, false);
 	for(i=0; i< ITERATIONS; i++){
 		sum_aux+= i%threadIdx.x;
 	}//for

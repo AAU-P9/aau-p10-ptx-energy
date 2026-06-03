@@ -47,7 +47,7 @@ matrix(int *A){
 	  int i;
 	  int localIndex;
 	  int localValue=0;
-    META_LOOP(block_reduce, 1024, 1024, false);
+    META_LOOP(block_reduce, blockSize, blockSize, false);
 	  for (i=0; i<blockSize;i++){
 		  localIndex= blockGLobalId*blockSize + i;
 		  localValue+= A[localIndex];

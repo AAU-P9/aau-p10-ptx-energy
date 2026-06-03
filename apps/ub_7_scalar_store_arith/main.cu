@@ -42,7 +42,7 @@ matrix(int *A){
     int localValue=0;
 
     /* Overload loop*/
-    META_LOOP(overload_loop, 2000, 2000, false);
+    META_LOOP(overload_loop, ITERATIONS, ITERATIONS, false);
     for(i=0; i< ITERATIONS; i++){
       localValue+= i%(threadIdx.x + 1);
     }//for

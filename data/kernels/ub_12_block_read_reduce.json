@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_12_block_read_reduce",
-  "powerConsumptionJoules": 903.5445829995,
-  "kernelDurationS": 12.004909824000002,
+  "powerConsumptionJoules": 886.594912543,
+  "kernelDurationS": 11.981323007999999,
   "gridDim": {
     "x": 96,
     "y": 1,

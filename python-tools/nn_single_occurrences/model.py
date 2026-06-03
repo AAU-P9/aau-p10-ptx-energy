@@ -71,7 +71,7 @@ def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features
         if instruction in feature_indices:
             feature_vector[feature_indices[instruction]] = float(count) / total_instructions
         else:
-            missing_features.add(instruction)
+            missing_features.append((data.get("kernelName", "Unknown"), instruction))
 
     target = (data.get("powerConsumptionJoules", 0.0) / (total_threads * total_instructions)) * SCALE_CONSTANT
 
