@@ -311,6 +311,14 @@ fn count_instructions_recursive(
                     block_id, min_iters, max_iters
                 );
                 branch_iterations_count = min_iters.clone().into();
+
+                if branch_iterations_count == 0 {
+                    println!(
+                        "[META_LOOP_WARNING] Loop in block {} has zero iterations according to meta directive, defaulting to 1",
+                        block_id
+                    );
+                }
+
                 last_meta_loop.take();
             }
 
