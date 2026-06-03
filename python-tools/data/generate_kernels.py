@@ -216,7 +216,7 @@ def main() -> None:
     run_kernel_configuration(
         kernel_name="ub_3_1d_store_empty_loop",
         program_path=apps / "ub_3_1d_store_empty_loop",
-        nvcc_args=["-DREPEAT_TIMES=1550000"],
+        nvcc_args=["-DREPEAT_TIMES=20000000"],
         force_rebuild=force_rebuild,
     )
 

@@ -29,7 +29,7 @@
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
 #ifndef REPEAT_TIMES
-#define REPEAT_TIMES 1250000
+#define REPEAT_TIMES 500
 #endif
 
 template <const int BM, const int BN, const int BK, const int TM>
@@ -56,6 +56,12 @@ sgemm1DBlocktiling(int M, int N, int K, float alpha,
   META_LAYOUT(C, LAYOUT_ROW_MAJOR, "M x N");
   META_ASSUME("BM == 64 && BN == 64 && BK == 8 && TM == 8");
   META_ASSUME("blockDim.x == 512");
+
+  /* in-kernel repeat loop (was external relaunch loop) */
+  auto _A0 = A; auto _B0 = B; auto _C0 = C;
+  META_LOOP(repeat_loop, REPEAT_TIMES, REPEAT_TIMES, false);
+  for (int _rep = 0; _rep < REPEAT_TIMES; ++_rep) {
+    A = _A0; B = _B0; C = _C0;
 
   // If we flip x and y here we get ~30% less performance for large matrices.
   // The current, 30% faster configuration ensures that blocks with sequential
@@ -122,6 +128,7 @@ sgemm1DBlocktiling(int M, int N, int K, float alpha,
         alpha * threadResults[resIdx] +
         beta * C[(threadRow * TM + resIdx) * N + threadCol];
   }
+  }
 }
 
 // Matrix dimensions
@@ -145,24 +152,6 @@ std::vector<float> h_C(M *N);
 dim3 threadsPerBlock(32, 32); // 32x32 = 1024 threads per block
 dim3 blocksPerGrid((M + threadsPerBlock.x - 1) / threadsPerBlock.x,
                    (N + threadsPerBlock.y - 1) / threadsPerBlock.y);
-
-void benchmark()
-{
-
-  const uint BM = 64;
-  const uint BN = 64;
-  const uint BK = 8;
-  const uint TM = 8;
-  dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
-  dim3 blockDim((BM * BN) / TM);
-  sgemm1DBlocktiling<BM, BN, BK, TM>
-      <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_A, beta, d_C);
-
-  for (int i = 0; i < REPEAT_TIMES; i++)
-  {
-    sgemm1DBlocktiling<BM, BN, BK, TM><<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
-  }
-}
 
 int main(int argc, char *argv[])
 {
@@ -198,7 +187,18 @@ int main(int argc, char *argv[])
   // Launch CUDA workload with profiling replay loop
   // The profiler needs multiple passes to collect all metrics
   METRICS_KERNEL_START
-  benchmark();
+  {
+    const uint BM = 64;
+    const uint BN = 64;
+    const uint BK = 8;
+    const uint TM = 8;
+    dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
+    dim3 blockDim((BM * BN) / TM);
+
+    // single launch; kernel loops REPEAT_TIMES internally
+    sgemm1DBlocktiling<BM, BN, BK, TM>
+        <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
+  }
   cudaDeviceSynchronize();
 
   EXPORT_N("gridDim_x", CEIL_DIV(N, 64));

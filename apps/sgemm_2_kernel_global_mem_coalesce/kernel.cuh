@@ -6,6 +6,10 @@
 #include <cublas_v2.h>
 #include "ptx_meta.h"
 
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+
 template <const uint BLOCKSIZE>
 __global__ void KERNEL_LAUNCH_BOUNDS(BLOCKSIZE * BLOCKSIZE, 1)
 sgemm_global_mem_coalesce(int M, int N, int K, float alpha,
@@ -28,6 +32,11 @@ sgemm_global_mem_coalesce(int M, int N, int K, float alpha,
   META_LAYOUT(C, LAYOUT_ROW_MAJOR, "M x N");
   META_ASSUME("BLOCKSIZE == 32 && blockDim.x == 1024");
 
+  /* in-kernel repeat loop (was external relaunch loop) */
+  auto _A0 = A; auto _B0 = B; auto _C0 = C;
+  META_LOOP(repeat_loop, REPEAT_TIMES, REPEAT_TIMES, false);
+  for (int _rep = 0; _rep < REPEAT_TIMES; ++_rep) {
+    A = _A0; B = _B0; C = _C0;
   const int cRow = blockIdx.x * BLOCKSIZE + (threadIdx.x / BLOCKSIZE);
   const int cCol = blockIdx.y * BLOCKSIZE + (threadIdx.x % BLOCKSIZE);
 
@@ -41,5 +50,6 @@ sgemm_global_mem_coalesce(int M, int N, int K, float alpha,
     C[cRow * N + cCol] = alpha * tmp + beta * C[cRow * N + cCol];
   }
 
+  }
   META_END_KERNEL(sgemm_global_mem_coalesce);
 }

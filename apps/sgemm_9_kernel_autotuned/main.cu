@@ -96,25 +96,6 @@ float alpha = 0.5, beta = 3.0; // GEMM input parameters, C=α*AB+β*C
 float *A = nullptr, *B = nullptr, *C = nullptr; // host matrices
 float *dA = nullptr, *dB = nullptr, *dC = nullptr;
 
-void benchmark() {
-
-#ifndef REPEAT_TIMES
-#define REPEAT_TIMES 500
-#endif
-  int repeat_times = REPEAT_TIMES;
-  for (int size : SIZE) {
-    m = n = k = size;
-
-    cudaMemcpy(C, dC, sizeof(float) * m * n, cudaMemcpyDeviceToHost);
-
-    for (int j = 0; j < repeat_times; j++) {
-      // We don't reset dC between runs to save time
-      run_kernel(m, n, k, alpha, dA, dB, beta, dC);
-      cudaCheck(cudaDeviceSynchronize());
-    }
-    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
-  }
-}
 
 int main(int argc, char *argv[]) {
   A = (float *)malloc(sizeof(float) * max_size * max_size);
@@ -137,7 +118,24 @@ int main(int argc, char *argv[]) {
                        cudaMemcpyHostToDevice));
 
   METRICS_KERNEL_START
-  benchmark();
+  // inlined former benchmark(); kernel loops REPEAT_TIMES internally
+
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+  int repeat_times = 1; // kernel now loops REPEAT_TIMES internally
+  for (int size : SIZE) {
+    m = n = k = size;
+
+    cudaMemcpy(C, dC, sizeof(float) * m * n, cudaMemcpyDeviceToHost);
+
+    for (int j = 0; j < repeat_times; j++) {
+      // We don't reset dC between runs to save time
+      run_kernel(m, n, k, alpha, dA, dB, beta, dC);
+      cudaCheck(cudaDeviceSynchronize());
+    }
+    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
+  }
   cudaDeviceSynchronize();
   EXPORT_N("gridDim_x", CEIL_DIV(SIZE_MATRIX, 128));
   EXPORT_N("gridDim_y", CEIL_DIV(SIZE_MATRIX, 128));

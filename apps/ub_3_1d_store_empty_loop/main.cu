@@ -14,7 +14,7 @@
 #define KERNEL_NUMBER 99
 #define ITERATIONS 0
 #ifndef REPEAT_TIMES
-#define REPEAT_TIMES 10000
+#define REPEAT_TIMES 10000000
 #endif
 #define VIRTUALWINDOW	100
 #define _N 96
@@ -49,15 +49,22 @@ matrix(int *A){
 	/* To get the global thread ID in the grid independently of the block shape*/
 	int finalResultPos=	(blockGLobalId*_blockSize)+ (threadIdx.y*blockDim.x+threadIdx.x);
 
+	/* volatile so each repeated store is a real store, not dead-code eliminated*/
+	volatile int *vA = A;
 
-	/* Overload loop*/
-  META_LOOP(overload_loop, 0, 0, false);
-	for(i=0; i< ITERATIONS; i++){
-		localValue+= i%threadIdx.x;
-	}//for
+	/* Repeat loop: do the work in-kernel instead of relaunching*/
+  META_LOOP(repeat_loop, REPEAT_TIMES, REPEAT_TIMES, false);
+	for(int r=0; r< REPEAT_TIMES; r++){
 
-	/* Stotring the final result*/
-	A[finalResultPos]= localValue;
+		/* Overload loop*/
+  	META_LOOP(overload_loop, 0, 0, false);
+		for(i=0; i< ITERATIONS; i++){
+			localValue+= i%threadIdx.x;
+		}//for
+
+		/* Stotring the final result*/
+		vA[finalResultPos]= localValue + r;
+	}//for r
 
   META_END_KERNEL(matrix);
 }//__global__
@@ -86,14 +93,6 @@ void inicialization(int *matrix){
 	}//for i
 
 }//inicializationMatrix
-
-void benchmark()
-{
-  for (int i = 0; i < REPEAT_TIMES; i++) {
-    matrix<<<dimGrid,dimBlock>>>(dA);
-    cudaDeviceSynchronize();
-  }
-}
 
 int main(int argc, char *argv[])
 {
@@ -126,7 +125,16 @@ int main(int argc, char *argv[])
 
   /* Copying the matrix elements to device memory*/
   cudaMemcpy(dA, A, sizeof(int) * (_N * _M), cudaMemcpyHostToDevice);
-  benchmark();
+  matrix<<<dimGrid,dimBlock>>>(dA);
+  cudaDeviceSynchronize();
+
+  EXPORT_N("gridDim_x",  dimGrid.x);
+  EXPORT_N("gridDim_y",  dimGrid.y);
+  EXPORT_N("gridDim_z",  dimGrid.z);
+  EXPORT_N("blockDim_x", dimBlock.x);
+  EXPORT_N("blockDim_y", dimBlock.y);
+  EXPORT_N("blockDim_z", dimBlock.z);
+
   METRICS_KERNEL_END
 
   free(A);

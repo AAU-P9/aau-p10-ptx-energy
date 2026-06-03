@@ -1,66 +1,69 @@
 {
   "kernelName": "ub_3_1d_store_empty_loop",
-  "powerConsumptionJoules": 823.9985278850002,
-  "kernelDurationS": 11.498141183999998,
+  "powerConsumptionJoules": 1692.3141575575,
+  "kernelDurationS": 11.830524416,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 96,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 1,
+    "y": 1024,
+    "z": 1
   },
   "parameters": [],
-  "totalInstructions": 24,
+  "totalInstructions": 420000025,
   "instructionOccurrences": {
-    "add.s32": 3,
-    "add.s64": 1,
-    "bra": 1,
-    "bra.uni": 1,
-    "cvt.s64.s32": 1,
+    "add.s32": 40000003,
+    "add.s64": 20000000,
+    "bra": 20000001,
+    "bra.uni": 80000001,
+    "cvt.s64.s32": 20000000,
     "ld.param.u64": 1,
-    "mov.b32": 2,
-    "mov.u32": 11,
+    "mov.b32": 20000002,
+    "mov.b64": 1,
+    "mov.u32": 140000011,
     "mul.lo.s32": 3,
-    "not.pred": 1,
+    "not.pred": 20000001,
     "rem.u32": 0,
     "ret": 1,
-    "setp.lt.s32": 1,
-    "shl.b64": 1,
-    "st.u32": 1
+    "setp.lt.s32": 20000001,
+    "shl.b64": 20000000,
+    "st.volatile.u32": 20000000
   },
   "dependentPairs": {
     "add.s32,add.s32": 1,
-    "add.s32,mov.u32": 0,
     "add.s32,mul.lo.s32": 1,
-    "add.s64,st.u32": 1,
-    "cvt.s64.s32,shl.b64": 1,
-    "mov.b32,mov.u32": 1,
+    "add.s64,st.volatile.u32": 20000000,
+    "cvt.s64.s32,shl.b64": 20000000,
     "mov.u32,add.s32": 2,
-    "mov.u32,mov.b32": 1,
+    "mov.u32,mov.b32": 20000001,
     "mov.u32,mul.lo.s32": 2,
     "mov.u32,rem.u32": 0,
-    "mov.u32,setp.lt.s32": 1,
-    "not.pred,bra": 1,
+    "not.pred,bra": 20000001,
     "rem.u32,add.s32": 0,
-    "setp.lt.s32,not.pred": 1,
-    "shl.b64,add.s64": 1
+    "setp.lt.s32,not.pred": 20000001,
+    "shl.b64,add.s64": 20000000
   },
   "independentPairs": {
     "add.s32,bra.uni": 0,
-    "add.s32,mov.b32": 1,
-    "bra,bra.uni": 0,
-    "bra,cvt.s64.s32": 1,
-    "bra.uni,add.s32": 0,
-    "bra.uni,mov.u32": 1,
+    "add.s32,cvt.s64.s32": 20000000,
+    "add.s32,mov.b64": 1,
+    "add.s32,mov.u32": 20000000,
+    "bra,add.s32": 20000000,
+    "bra,bra.uni": 20000000,
+    "bra,ret": 1,
+    "bra.uni,add.s32": 20000000,
+    "bra.uni,mov.u32": 40000001,
     "ld.param.u64,mov.u32": 1,
-    "mov.b32,mov.u32": 1,
-    "mov.u32,bra.uni": 1,
-    "mov.u32,mov.u32": 4,
+    "mov.b32,mov.u32": 20000002,
+    "mov.b64,mov.b32": 1,
+    "mov.u32,bra.uni": 40000001,
+    "mov.u32,mov.u32": 60000004,
+    "mov.u32,setp.lt.s32": 20000001,
     "mul.lo.s32,mov.u32": 3,
-    "st.u32,ret": 1
+    "st.volatile.u32,bra.uni": 20000000
   },
   "memoryProfiles": [
     {
@@ -75,15 +78,15 @@
       "estimatedTotalStallCycles": 5.0
     },
     {
-      "blockId": 3,
-      "instrIdx": 3,
-      "opcode": "st.u32",
-      "occurrences": 1,
-      "loopDepth": 0,
+      "blockId": 5,
+      "instrIdx": 4,
+      "opcode": "st.volatile.u32",
+      "occurrences": 20000000,
+      "loopDepth": 1,
       "addressPattern": "tidLinear",
-      "estimatedMissRate": 0.05,
-      "estimatedStallCycles": 20.0,
-      "estimatedTotalStallCycles": 20.0
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 800000000.0
     }
   ]
 }

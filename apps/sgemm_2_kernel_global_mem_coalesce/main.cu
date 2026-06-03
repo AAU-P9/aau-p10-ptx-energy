@@ -57,23 +57,6 @@ void run_sgemm_coalesce(int M, int N, int K, float alpha, float *A, float *B,
       <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
 }
 
-void benchmark() {
-
-#ifndef REPEAT_TIMES
-#define REPEAT_TIMES 500
-#endif
-  int repeat_times = REPEAT_TIMES;
-  for (int size : SIZE) {
-    m = n = k = size;
-
-    for (int j = 0; j < repeat_times; j++) {
-      // We don't reset dC between runs to save time
-      run_sgemm_coalesce(m, n, k, alpha, dA, dB, beta, dC);
-      cudaCheck(cudaDeviceSynchronize());
-    }
-    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
-  }
-}
 
 int main(int argc, char *argv[]) {
 
@@ -97,7 +80,22 @@ int main(int argc, char *argv[]) {
                        cudaMemcpyHostToDevice));
 
   METRICS_KERNEL_START
-  benchmark();
+  // inlined former benchmark(); kernel loops REPEAT_TIMES internally
+
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+  int repeat_times = 1; // kernel now loops REPEAT_TIMES internally
+  for (int size : SIZE) {
+    m = n = k = size;
+
+    for (int j = 0; j < repeat_times; j++) {
+      // We don't reset dC between runs to save time
+      run_sgemm_coalesce(m, n, k, alpha, dA, dB, beta, dC);
+      cudaCheck(cudaDeviceSynchronize());
+    }
+    cudaCheck(cudaGetLastError()); // Check for async errors during kernel run
+  }
   cudaDeviceSynchronize();
   EXPORT_N("gridDim_x", CEIL_DIV(SIZE_MATRIX, 32));
   EXPORT_N("gridDim_y", CEIL_DIV(SIZE_MATRIX, 32));

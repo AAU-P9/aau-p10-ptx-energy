@@ -7,6 +7,10 @@
 #include <cublas_v2.h>
 #include "ptx_meta.h"
 
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
 template <const int BM, const int BN, const int BK, const int TM>
@@ -40,6 +44,11 @@ sgemm1DBlocktiling(int M, int N, int K, float alpha,
   // The slower configuration would share columns of A, but access into B would
   // be non-sequential. So the faster configuration has better spatial locality
   // and hence a greater L2 hit rate.
+  /* in-kernel repeat loop (was external relaunch loop) */
+  auto _A0 = A; auto _B0 = B; auto _C0 = C;
+  META_LOOP(repeat_loop, REPEAT_TIMES, REPEAT_TIMES, false);
+  for (int _rep = 0; _rep < REPEAT_TIMES; ++_rep) {
+    A = _A0; B = _B0; C = _C0;
   const uint cRow = blockIdx.y;
   const uint cCol = blockIdx.x;
 
@@ -102,5 +111,6 @@ sgemm1DBlocktiling(int M, int N, int K, float alpha,
         beta * C[(threadRow * TM + resIdx) * N + threadCol];
   }
 
+  }
   META_END_KERNEL(sgemm1DBlocktiling);
 }
