@@ -12,7 +12,9 @@
 #define currentGpu     0
 #define INITIALIZATION 1
 #define KERNEL_NUMBER 99
+#ifndef ITERATIONS
 #define ITERATIONS 2000
+#endif
 #define VIRTUALWINDOW	100
 #define _N 96
 #define _M 96
@@ -119,7 +121,15 @@ int main(int argc, char *argv[])
 
   /* Copying the matrix elements to device memory*/
   cudaMemcpy(dA, A, sizeof(int) * (_N * _M), cudaMemcpyHostToDevice);
-  benchmark();
+  matrix<<<dimGrid,dimBlock>>>(dA);
+  cudaDeviceSynchronize();
+
+  EXPORT_N("gridDim_x", dimGrid.x);
+  EXPORT_N("gridDim_y", dimGrid.y);
+  EXPORT_N("gridDim_z", dimGrid.z);
+  EXPORT_N("blockDim_x", dimBlock.x);
+  EXPORT_N("blockDim_y", dimBlock.y);
+  EXPORT_N("blockDim_z", dimBlock.z);
   METRICS_KERNEL_END
 
   free(A);

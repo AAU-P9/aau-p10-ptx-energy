@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 #define DATA_LEN (1024 * 1024)
 #define STRIDE 128  // 128 * 4B = 512B between warp-adjacent threads
 

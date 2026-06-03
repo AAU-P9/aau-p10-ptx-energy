@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Mixed FP32 + INT32 at 50/50 ratio.
 // On Ada, INT32 and FP32 can co-issue on separate datapaths.

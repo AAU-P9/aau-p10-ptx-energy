@@ -21,7 +21,9 @@
 // NVML headers
 #include <nvml.h>
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000
+#endif
 
 #ifndef SIZE_M
 #define SIZE_M 256

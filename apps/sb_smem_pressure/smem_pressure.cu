@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 #define SMEM_FLOATS 3072  // 12KB per block -> limits to ~4 blocks/SM on AD103
 
 // Shared memory stress: repeated read/write with bank conflict pattern.

@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 #define DATA_LEN (1024 * 1024)  // 1M floats = 4MB
 
 // Coalesced global memory reads: sequential access pattern.

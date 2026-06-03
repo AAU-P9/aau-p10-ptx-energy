@@ -20,13 +20,17 @@
 #include <cuda_runtime.h>
 #include "ptx_meta.h"
 #include <vector>
-#include "../../include/simple_cuda_utils.h"
+#include "simple_cuda_utils.h"
 #include "cupti_timing.h"
 
 // NVML headers
 #include <nvml.h>
 
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
+
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 1000
+#endif
 
 template <const int BM, const int BN, const int BK, const int TM>
 __global__ void KERNEL_LAUNCH_BOUNDS((BM * BN) / TM, 1)
@@ -154,7 +158,7 @@ void benchmark()
   sgemm1DBlocktiling<BM, BN, BK, TM>
       <<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_A, beta, d_C);
 
-  for (int i = 0; i < 1000; i++)
+  for (int i = 0; i < REPEAT_TIMES; i++)
   {
     sgemm1DBlocktiling<BM, BN, BK, TM><<<blocksPerGrid, threadsPerBlock>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
   }
@@ -195,6 +199,15 @@ int main(int argc, char *argv[])
   // The profiler needs multiple passes to collect all metrics
   METRICS_KERNEL_START
   benchmark();
+  cudaDeviceSynchronize();
+
+  EXPORT_N("gridDim_x", CEIL_DIV(N, 64));
+  EXPORT_N("gridDim_y", CEIL_DIV(M, 64));
+  EXPORT_N("gridDim_z", 1);
+  EXPORT_N("blockDim_x", (64 * 64) / 8);
+  EXPORT_N("blockDim_y", 1);
+  EXPORT_N("blockDim_z", 1);
+
   METRICS_KERNEL_END
 
   // Copy result back to host

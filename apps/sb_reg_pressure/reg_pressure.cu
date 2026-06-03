@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Register pressure: 32 live float variables -> ~40+ regs/thread.
 // On AD103 (65536 regs/SM), at 256 threads/block this caps at

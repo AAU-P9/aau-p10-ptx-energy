@@ -147,6 +147,7 @@ def execute_program(
     nvcc_cmd.append("--keep")
 
     if enable_compilation:
+        _t0 = time.time()
         nvcc_process = subprocess.run(
             nvcc_cmd,
             cwd=path, # Set the current working directory to the temporary directory
@@ -155,6 +156,7 @@ def execute_program(
             text=True,
             check=False,
         )
+        print(f"[TIMING] compile={time.time()-_t0:.2f}s")
         if nvcc_process.returncode != 0:
             # Write the compilation error to a file for debugging
             error_log = path / "compilation_error.log"
@@ -249,7 +251,9 @@ def execute_program(
     try:
         if enable_metrics:
             # Sleep for the specified duration to ensure subprocesses have time to collect data
+            _t1 = time.time()
             time.sleep(metrics_sleep_time)
+            print(f"[TIMING] monitor_sleep={time.time()-_t1:.2f}s")
 
             if pmd2_process is not None and pmd2_process.poll() is not None:
                 stderr_out = pmd2_process.stderr.read()
@@ -258,6 +262,7 @@ def execute_program(
                     print(f"pmd2-cli stderr: {stderr_out}", file=sys.stderr)
 
         # Run the compiled program and capture its output
+        _t2 = time.time()
         execution_process = subprocess.run(
             bin_cmd,
             cwd=path, # Set the current working directory to the temporary directory
@@ -266,6 +271,7 @@ def execute_program(
             text=True,
             check=False,
         )
+        print(f"[TIMING] execution={time.time()-_t2:.2f}s")
 
         if execution_process.returncode != 0:
             print(
@@ -280,6 +286,7 @@ def execute_program(
         
     finally:
         if enable_metrics:
+            _t3 = time.time()
             _terminate_process_group(monitor_process)
             _terminate_process_group(pmd2_process)
             if pmd2_process is not None and pmd2_log.stat().st_size == 0:
@@ -288,6 +295,7 @@ def execute_program(
                 if stderr_out:
                     print(f"pmd2-cli stderr: {stderr_out}", file=sys.stderr)
             power_metric_result = extract_power_metrics(path, exports)
+            print(f"[TIMING] cleanup+power={time.time()-_t3:.2f}s")
 
     # Return the execution result
     return ExecutionResult(

@@ -82,14 +82,14 @@ def build_kernel_params(exports: ExportJSONResponse, parameters: list[dict[str, 
     return json.dumps(
         {
             "gridDim": {
-                "x": exports["gridDim_x"],
-                "y": exports["gridDim_y"],
-                "z": exports["gridDim_z"],
+                "x": exports.get("gridDim_x", 0),
+                "y": exports.get("gridDim_y", 0),
+                "z": exports.get("gridDim_z", 0),
             },
             "blockDim": {
-                "x": exports["blockDim_x"],
-                "y": exports["blockDim_y"],
-                "z": exports["blockDim_z"],
+                "x": exports.get("blockDim_x", 0),
+                "y": exports.get("blockDim_y", 0),
+                "z": exports.get("blockDim_z", 0),
             },
             "parameters": parameters,
         }

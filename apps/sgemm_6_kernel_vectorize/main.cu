@@ -24,8 +24,8 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <vector>
-#include "kernel.cuh"
-#include "../../include/simple_cuda_utils.h"
+#include "ptx_meta.h"
+#include "simple_cuda_utils.h"
 #include "cupti_timing.h"
 
 // NVML headers
@@ -43,6 +43,10 @@
 
 #ifndef SIZE_K
 #define SIZE_K 1024
+#endif
+
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
 #endif
 
 template <const int BM, const int BN, const int BK, const int TM, const int TN>
@@ -189,9 +193,18 @@ int main(int argc, char *argv[]) {
   const uint BN = 128;
   dim3 gridDim(CEIL_DIV(N, BN), CEIL_DIV(M, BM));
   dim3 blockDim((BM * BN) / (TM * TN));
-  sgemmVectorize<BM, BN, BK, TM, TN>
-      <<<gridDim, blockDim>>>(M, N, K, alpha, A, B, beta, C);
+  for (int _rep = 0; _rep < REPEAT_TIMES; _rep++) {
+    sgemmVectorize<BM, BN, BK, TM, TN>
+        <<<gridDim, blockDim>>>(M, N, K, alpha, dA, dB, beta, dC);
+  }
+  cudaDeviceSynchronize();
 
+  EXPORT_N("gridDim_x", gridDim.x);
+  EXPORT_N("gridDim_y", gridDim.y);
+  EXPORT_N("gridDim_z", gridDim.z);
+  EXPORT_N("blockDim_x", blockDim.x);
+  EXPORT_N("blockDim_y", blockDim.y);
+  EXPORT_N("blockDim_z", blockDim.z);
 
   METRICS_KERNEL_END
 

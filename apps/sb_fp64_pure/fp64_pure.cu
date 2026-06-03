@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Pure FP64 arithmetic: DMAD/DADD/DMUL chain.
 // On AD103, FP64 is 1:64 of FP32 throughput — expect very different

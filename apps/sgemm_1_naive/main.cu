@@ -43,6 +43,10 @@
 
 #define BLOCK_SIZE 32
 
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
 inline void randomize_matrix(float *mat, int n) {
@@ -64,13 +68,15 @@ __global__ void sgemm_naive(int _M, int _N, int _K, float alpha, const float *A,
 
   // if statement is necessary to make things work under tile quantization
   if (x < _M && y < _N) {
-    float tmp = 0.0;
-    META_LOOP(main_loop, SIZE_K, SIZE_K, false);
-    for (int i = 0; i < _K; ++i) {
-      tmp += A[x * _K + i] * B[i * _N + y];
+    META_LOOP(iter_loop, REPEAT_TIMES, REPEAT_TIMES, false);
+    for (int _rep = 0; _rep < REPEAT_TIMES; _rep++) {
+      float tmp = 0.0;
+      META_LOOP(main_loop, SIZE_K, SIZE_K, false);
+      for (int i = 0; i < _K; ++i) {
+        tmp += A[x * _K + i] * B[i * _N + y];
+      }
+      C[x * _N + y] = alpha * tmp + beta * C[x * _N + y];
     }
-    // C = α*(A@B)+β*C
-    C[x * _N + y] = alpha * tmp + beta * C[x * _N + y];
   }
 }
 

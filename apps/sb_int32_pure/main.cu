@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Pure INT32 arithmetic: IMAD/IADD/bitwise chain.
 // On Ada, INT32 can co-issue with FP32 on separate datapath.

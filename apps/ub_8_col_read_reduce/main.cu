@@ -12,7 +12,9 @@
 #define currentGpu     0
 #define INITIALIZATION 1
 #define KERNEL_NUMBER 99
-#define ITERATIONS 0
+#ifndef ITERATIONS
+#define ITERATIONS 30000000
+#endif
 #define VIRTUALWINDOW	100
 #define N 96
 #define M 96
@@ -35,22 +37,20 @@ matrix(int *A){
   META_ASSUME("blockDim.x == 1 && blockDim.y == 1024");
   META_ASSUME("read access is column-major: A[i*M + row]");
 
-	/* Index and local variables*/
-	int i;
-	int sum_aux= 0;
-
-	/* Local variables to access to output matrix*/
 	int result_point_row	= blockIdx.y*blockDim.y + threadIdx.y;
 	int result_point_col	= blockIdx.x*blockDim.x + threadIdx.x;
+	if (result_point_row >= N || result_point_col >= M) return;
 
-	/* Accessing to all elements of the matrix*/
-  META_LOOP(col_reduce, 96, 96, false);
-	for (i=0; i < M; i++){
-		sum_aux+= A[i*M + result_point_row];
-	}// loop i
-
-	/* Stotring the final result*/
-	A[result_point_row*M + result_point_col]= sum_aux;
+  META_LOOP(iter_loop, ITERATIONS, ITERATIONS, false);
+  for (int _iter = 0; _iter < ITERATIONS; _iter++) {
+	  int i;
+	  int sum_aux= 0;
+    META_LOOP(col_reduce, 96, 96, false);
+	  for (i=0; i < M; i++){
+		  sum_aux+= A[i*M + result_point_row];
+	  }
+	  A[result_point_row*M + result_point_col]= sum_aux;
+  }
 
   META_END_KERNEL(matrix);
 }//__global__
@@ -121,7 +121,15 @@ int main(int argc, char *argv[])
 
   /* Copying the matrix elements to device memory*/
   cudaMemcpy(dA, A, sizeof(int) * (N * M), cudaMemcpyHostToDevice);
-  benchmark();
+  matrix<<<dimGrid,dimBlock>>>(dA);
+  cudaDeviceSynchronize();
+
+  EXPORT_N("gridDim_x", dimGrid.x);
+  EXPORT_N("gridDim_y", dimGrid.y);
+  EXPORT_N("gridDim_z", dimGrid.z);
+  EXPORT_N("blockDim_x", dimBlock.x);
+  EXPORT_N("blockDim_y", dimBlock.y);
+  EXPORT_N("blockDim_z", dimBlock.z);
   METRICS_KERNEL_END
 
   free(A);

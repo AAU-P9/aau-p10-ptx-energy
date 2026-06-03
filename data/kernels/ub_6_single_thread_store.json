@@ -1,0 +1,97 @@
+{
+  "kernelName": "ub_6_single_thread_store",
+  "powerConsumptionJoules": 1112.2892377265,
+  "kernelDurationS": 12.330621695999998,
+  "gridDim": {
+    "x": 96,
+    "y": 1,
+    "z": 1
+  },
+  "blockDim": {
+    "x": 1,
+    "y": 1024,
+    "z": 1
+  },
+  "parameters": [],
+  "totalInstructions": 570000009,
+  "instructionOccurrences": {
+    "add.s32": 60000000,
+    "add.s64": 15000000,
+    "bra": 30000001,
+    "bra.uni": 105000001,
+    "cvt.u64.u32": 15000000,
+    "ld.param.u64": 1,
+    "mov.b32": 1,
+    "mov.pred": 60000000,
+    "mov.u32": 150000003,
+    "mul.lo.s32": 45000000,
+    "not.pred": 30000001,
+    "ret": 1,
+    "setp.eq.s32": 30000000,
+    "setp.lt.s32": 1,
+    "shl.b64": 15000000,
+    "st.u32": 15000000
+  },
+  "dependentPairs": {
+    "add.s32,add.s32": 15000000,
+    "add.s32,cvt.u64.u32": 15000000,
+    "add.s32,mov.u32": 15000000,
+    "add.s32,mul.lo.s32": 15000000,
+    "cvt.u64.u32,shl.b64": 15000000,
+    "mov.b32,mov.u32": 1,
+    "mov.pred,not.pred": 15000000,
+    "mov.u32,add.s32": 30000000,
+    "mov.u32,mov.b32": 1,
+    "mov.u32,mul.lo.s32": 30000000,
+    "mov.u32,setp.eq.s32": 30000000,
+    "mov.u32,setp.lt.s32": 1,
+    "mov.u32,st.u32": 15000000,
+    "not.pred,bra": 15000001,
+    "setp.eq.s32,mov.pred": 15000000,
+    "setp.lt.s32,not.pred": 1,
+    "shl.b64,add.s64": 15000000
+  },
+  "independentPairs": {
+    "add.s64,mov.u32": 15000000,
+    "bra,bra.uni": 45000000,
+    "bra,ret": 1,
+    "bra.uni,add.s32": 15000000,
+    "bra.uni,bra.uni": 15000000,
+    "bra.uni,mov.pred": 15000000,
+    "bra.uni,mov.u32": 45000001,
+    "ld.param.u64,mov.u32": 1,
+    "mov.pred,bra": 15000000,
+    "mov.pred,bra.uni": 15000000,
+    "mov.pred,not.pred": 15000000,
+    "mov.u32,bra.uni": 15000001,
+    "mov.u32,mov.u32": 30000000,
+    "mul.lo.s32,mov.u32": 45000000,
+    "not.pred,mov.pred": 15000000,
+    "setp.eq.s32,mov.pred": 15000000,
+    "st.u32,bra.uni": 15000000
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    },
+    {
+      "blockId": 5,
+      "instrIdx": 17,
+      "opcode": "st.u32",
+      "occurrences": 15000000,
+      "loopDepth": 1,
+      "addressPattern": "tidLinear",
+      "estimatedMissRate": 0.2,
+      "estimatedStallCycles": 40.0,
+      "estimatedTotalStallCycles": 600000000.0
+    }
+  ]
+}

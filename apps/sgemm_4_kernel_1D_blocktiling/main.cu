@@ -22,7 +22,7 @@
 
 // CUDA headers
 #include "cupti_timing.h"
-#include "../../include/simple_cuda_utils.h"
+#include "simple_cuda_utils.h"
 #include "kernel.cuh"
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -50,7 +50,10 @@ void run_kernel(int M, int N, int K, float alpha, float *A, float *B,
 }
 
 // cuBLAS FLOPs ceiling is reached at 8192
-std::vector<int> SIZE = {128, 
+#ifndef SIZE_MATRIX
+#define SIZE_MATRIX 1024
+#endif
+std::vector<int> SIZE = {SIZE_MATRIX, 
     /*256, 512, 1024, 2048, 4096,*/
                          /*  8192 */
                         };
@@ -65,7 +68,10 @@ float *dA = nullptr, *dB = nullptr, *dC = nullptr;
 
 void benchmark() {
 
-  int repeat_times = 500;
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 500
+#endif
+  int repeat_times = REPEAT_TIMES;
   for (int size : SIZE) {
     m = n = k = size;
 
@@ -102,6 +108,13 @@ int main(int argc, char *argv[]) {
 
   METRICS_KERNEL_START
   benchmark();
+  cudaDeviceSynchronize();
+  EXPORT_N("gridDim_x", CEIL_DIV(SIZE_MATRIX, 64));
+  EXPORT_N("gridDim_y", CEIL_DIV(SIZE_MATRIX, 64));
+  EXPORT_N("gridDim_z", 1);
+  EXPORT_N("blockDim_x", 512);
+  EXPORT_N("blockDim_y", 1);
+  EXPORT_N("blockDim_z", 1);
   METRICS_KERNEL_END
 
   // Free up CPU and GPU space

@@ -60,9 +60,9 @@ void bufferCompleted(CUcontext ctx, uint32_t streamId, uint8_t *buffer, size_t s
                 uint64_t *start_ptr = (uint64_t *)((uint8_t*)record + 16);
                 uint64_t *end_ptr = (uint64_t *)((uint8_t*)record + 24);
 
-                start_time = *start_ptr;
-                end_time = *end_ptr;
-                kernel_duration = *end_ptr - *start_ptr;
+                if (start_time == 0 || *start_ptr < start_time) start_time = *start_ptr;
+                if (*end_ptr > end_time) end_time = *end_ptr;
+                kernel_duration = end_time - start_time;
             }
         }
     }

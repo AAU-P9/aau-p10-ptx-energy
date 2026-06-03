@@ -5,7 +5,9 @@
 #include "cupti_timing.h"
 #include "ptx_meta.h"
 
+#ifndef ITERATIONS
 #define ITERATIONS 10000000
+#endif
 
 // Warp divergence: 50% of lanes take if-branch, 50% take else-branch.
 // Both paths do equal FP32 work but different operations -> warp serializes.
