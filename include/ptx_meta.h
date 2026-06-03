@@ -172,8 +172,13 @@
 #define META_SHARED(name, elem_type, total_bytes) \
     _PTX_META("SHARED_MEM " _STR(name) " " _STR(elem_type) " " _STR(total_bytes))
 
+// min_iters/max_iters are emitted via "n" (immediate) operands so the
+// compiler evaluates template params / constexpr to REAL numbers. Stringify
+// (_STR) only sees preprocessor tokens, so template params like BK would
+// leak through as symbolic text. Operands require compile-time int constants.
 #define META_LOOP(label, min_iters, max_iters, unrolled) \
-    _PTX_META("LOOP " _STR(label) " " _STR(min_iters) " " _STR(max_iters) " " _STR(unrolled))
+    asm volatile("// @META:3 LOOP " _STR(label) " %0 %1 " _STR(unrolled) \
+                 :: "n"((int)(min_iters)), "n"((int)(max_iters)))
 
 #define META_LAYOUT(name, order, dims) \
     _PTX_META("LAYOUT " _STR(name) " " _STR(order) " " dims)

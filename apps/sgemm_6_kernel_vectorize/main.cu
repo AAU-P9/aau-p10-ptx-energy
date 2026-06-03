@@ -7,8 +7,7 @@
 
 // Cache Break Counter
 // Increment me to to break the cache.
-// Count: 1
-
+// Count: 6
 #include <atomic>
 #include <chrono>
 #include <sstream>
