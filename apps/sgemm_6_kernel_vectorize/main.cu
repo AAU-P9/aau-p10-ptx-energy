@@ -3,6 +3,12 @@
  *  Author: Trasgo Research Group
  *  Source: https://trasgo.infor.uva.es/ubench/
  */
+
+
+// Cache Break Counter
+// Increment me to to break the cache.
+// Count: 1
+
 #include <atomic>
 #include <chrono>
 #include <sstream>
@@ -103,21 +109,21 @@ sgemmVectorize(int M, int N, int K, float alpha, float *A,
     B += BK * N; // move BK rows down
 
     // calculate per-thread results
-    META_LOOP(dot_loop, SIZE_BK, SIZE_BK, false);
+    META_LOOP(dot_loop, BK, BK, false);
     for (uint dotIdx = 0; dotIdx < BK; ++dotIdx) {
       // block into registers
-      META_LOOP(reg_load_loop, SIZE_TM, SIZE_TM, false);
+      META_LOOP(reg_load_loop, TM, TM, false);
       for (uint i = 0; i < TM; ++i) {
         regM[i] = As[dotIdx * BM + threadRow * TM + i];
       }
-      META_LOOP(reg_load_loop, SIZE_TN, SIZE_TN, false);
+      META_LOOP(reg_load_loop, TN, TN, false);
       for (uint i = 0; i < TN; ++i) {
         regN[i] = Bs[dotIdx * BN + threadCol * TN + i];
       }
 
-      META_LOOP(mac_loop, SIZE_TM, SIZE_TM, false);
+      META_LOOP(mac_loop, TM, TM, false);
       for (uint resIdxM = 0; resIdxM < TM; ++resIdxM) {
-        META_LOOP(mac_loop_inner, SIZE_TN, SIZE_TN, false);
+        META_LOOP(mac_loop_inner, TN, TN, false);
         for (uint resIdxN = 0; resIdxN < TN; ++resIdxN) {
           threadResults[resIdxM * TN + resIdxN] +=
               regM[resIdxM] * regN[resIdxN];
@@ -128,9 +134,9 @@ sgemmVectorize(int M, int N, int K, float alpha, float *A,
   }
 
   // write out the results
-  META_LOOP(write_back_loop, SIZE_TM, SIZE_TM, false);
+  META_LOOP(write_back_loop, TM, TM, false);
   for (uint resIdxM = 0; resIdxM < TM; resIdxM += 1) {
-    META_LOOP(write_back_loop_inner, SIZE_TN / 4, SIZE_TN / 4, false);
+    META_LOOP(write_back_loop_inner, TN / 4, TN / 4, false);
     for (uint resIdxN = 0; resIdxN < TN; resIdxN += 4) {
       // load C vector into registers
       float4 tmp = reinterpret_cast<float4 *>(
