@@ -29,7 +29,7 @@
 #define CEIL_DIV(M, N) (((M) + (N)-1) / (N))
 
 #ifndef REPEAT_TIMES
-#define REPEAT_TIMES 1000
+#define REPEAT_TIMES 1250000
 #endif
 
 template <const int BM, const int BN, const int BK, const int TM>
@@ -160,7 +160,7 @@ void benchmark()
 
   for (int i = 0; i < REPEAT_TIMES; i++)
   {
-    sgemm1DBlocktiling<BM, BN, BK, TM><<<blocksPerGrid, threadsPerBlock>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
+    sgemm1DBlocktiling<BM, BN, BK, TM><<<gridDim, blockDim>>>(M, N, K, alpha, d_A, d_B, beta, d_C);
   }
 }
 

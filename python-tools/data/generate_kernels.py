@@ -13,7 +13,7 @@ artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
 data_output_path = _project_root / "data/kernels"
 desired_execution_time_s = 10
 debug_enabled = False
-force_rebuild = True
+force_rebuild = False
 
 short_kernels: list[tuple[str, float]] = []
 analyzed_kernels: list[tuple[str, ExecutionResult]] = []
@@ -216,7 +216,7 @@ def main() -> None:
     run_kernel_configuration(
         kernel_name="ub_3_1d_store_empty_loop",
         program_path=apps / "ub_3_1d_store_empty_loop",
-        nvcc_args=[],
+        nvcc_args=["-DREPEAT_TIMES=1550000"],
         force_rebuild=force_rebuild,
     )
 
@@ -279,11 +279,11 @@ def main() -> None:
     run_kernel_configuration(
         kernel_name="ub_12_block_read_reduce",
         program_path=apps / "ub_12_block_read_reduce",
-        nvcc_args=["-DITERATIONS=35000"],
+        nvcc_args=["-DITERATIONS=50000"],
         force_rebuild=force_rebuild,
     )
 
-    # SGEMM Kernels
+    # SGEMM Kernelsfsgemm_1D_blocktilingz
     # SIZE_M/N/K = matrix dimensions; REPEAT_TIMES = host-side repeat loop; SIZE_MATRIX = sweep size
 
     run_kernel_configuration(
@@ -301,7 +301,7 @@ def main() -> None:
     run_kernel_configuration(
         kernel_name="sgemm_1D_blocktiling",
         program_path=apps / "sgemm_1D_blocktiling",
-        nvcc_args=["-DREPEAT_TIMES=1500000"],
+        nvcc_args=["-DREPEAT_TIMES=5000"],
         force_rebuild=force_rebuild,
     )
 

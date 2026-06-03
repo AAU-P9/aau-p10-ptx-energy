@@ -13,6 +13,9 @@
 #define INITIALIZATION 0
 #define KERNEL_NUMBER 99
 #define ITERATIONS 0
+#ifndef REPEAT_TIMES
+#define REPEAT_TIMES 10000
+#endif
 #define VIRTUALWINDOW	100
 #define _N 96
 #define _M 96
@@ -86,7 +89,7 @@ void inicialization(int *matrix){
 
 void benchmark()
 {
-  for (int i = 0; i < 10000; i++) {
+  for (int i = 0; i < REPEAT_TIMES; i++) {
     matrix<<<dimGrid,dimBlock>>>(dA);
     cudaDeviceSynchronize();
   }

@@ -73,6 +73,13 @@ int main() {
 
     cudaMemcpy(h_out, d_out, dataBytes, cudaMemcpyDeviceToHost);
 
+    EXPORT_N("gridDim_x",  grid_size);
+    EXPORT_N("gridDim_y",  1);
+    EXPORT_N("gridDim_z",  1);
+    EXPORT_N("blockDim_x", block_size);
+    EXPORT_N("blockDim_y", 1);
+    EXPORT_N("blockDim_z", 1);
+
     METRICS_KERNEL_END
 
     cudaFree(d_data);
