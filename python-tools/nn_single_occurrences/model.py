@@ -64,6 +64,9 @@ def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features
     total_threads = data.get("gridDim", {}).get("x", 1) * data.get("gridDim", {}).get("y", 1) * data.get("gridDim", {}).get("z", 1) * data.get("blockDim", {}).get("x", 1) * data.get("blockDim", {}).get("y", 1) * data.get("blockDim", {}).get("z", 1)
     total_instructions = data.get("totalInstructions", 1)
 
+    if total_threads <= 0:
+        raise ValueError(f"Invalid total threads in kernel '{data.get('kernelName', 'Unknown')}': {total_threads} (must be positive)")
+
     for instruction, count in data.get("instructionOccurrences", {}).items():
         if instruction in feature_indices:
             feature_vector[feature_indices[instruction]] = float(count) / total_instructions
@@ -76,7 +79,7 @@ def normalize_data(data: dict, feature_indices: Dict[str, int], missing_features
 
 def make_model(num_features: int) -> tuple[Sequential, int, int]:
     batch_size = 4
-    epochs = 1000
+    epochs = 500
 
     layers = [
         Input(shape=(num_features,)),
