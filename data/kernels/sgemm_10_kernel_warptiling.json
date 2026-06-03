@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_10_kernel_warptiling",
-  "powerConsumptionJoules": 1018.3686162454999,
-  "kernelDurationS": 12.402306304,
+  "powerConsumptionJoules": 1011.1182989129999,
+  "kernelDurationS": 12.419004928000001,
   "gridDim": {
     "x": 8,
     "y": 8,

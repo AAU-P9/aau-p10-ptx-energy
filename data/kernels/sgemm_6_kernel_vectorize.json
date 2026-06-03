@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_6_kernel_vectorize",
-  "powerConsumptionJoules": 2180.7871233964997,
-  "kernelDurationS": 22.845202688,
+  "powerConsumptionJoules": 2178.595763909,
+  "kernelDurationS": 22.807842303999998,
   "gridDim": {
     "x": 8,
     "y": 8,

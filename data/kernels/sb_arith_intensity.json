@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_arith_intensity",
-  "powerConsumptionJoules": 2504.858677963,
-  "kernelDurationS": 12.663910655999999,
+  "powerConsumptionJoules": 2488.6617487314998,
+  "kernelDurationS": 12.661012736,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4096,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 17000058,

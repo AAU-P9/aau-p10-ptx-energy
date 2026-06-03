@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_gmem_strided",
-  "powerConsumptionJoules": 5253.714788575,
-  "kernelDurationS": 19.520495871999998,
+  "powerConsumptionJoules": 5115.7631772095,
+  "kernelDurationS": 19.017596928000003,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4096,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 24500054,

@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_fp32_int32_mix",
-  "powerConsumptionJoules": 862.2966322545,
-  "kernelDurationS": 13.253226496,
+  "powerConsumptionJoules": 860.4793220785,
+  "kernelDurationS": 13.253683456,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 1050000077,

@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_8_col_read_reduce",
-  "powerConsumptionJoules": 1119.8674687510002,
-  "kernelDurationS": 15.620900352,
+  "powerConsumptionJoules": 1112.2038491515,
+  "kernelDurationS": 15.622529023999999,
   "gridDim": {
     "x": 96,
     "y": 1,

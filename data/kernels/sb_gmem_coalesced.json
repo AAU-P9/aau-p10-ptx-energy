@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_gmem_coalesced",
-  "powerConsumptionJoules": 2481.1328950864995,
-  "kernelDurationS": 11.574304256000001,
+  "powerConsumptionJoules": 2461.0104969155,
+  "kernelDurationS": 11.561427456,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4096,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 28000053,

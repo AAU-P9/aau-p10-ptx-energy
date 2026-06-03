@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_divergence_50pct",
-  "powerConsumptionJoules": 858.8960580595001,
-  "kernelDurationS": 13.060883967999999,
+  "powerConsumptionJoules": 846.8353098389998,
+  "kernelDurationS": 13.071241471999997,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 1184000061,

@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_2_kernel_global_mem_coalesce",
-  "powerConsumptionJoules": 1760.2593388050002,
-  "kernelDurationS": 12.340351488,
+  "powerConsumptionJoules": 1708.176402524,
+  "kernelDurationS": 12.335429376,
   "gridDim": {
     "x": 32,
     "y": 32,

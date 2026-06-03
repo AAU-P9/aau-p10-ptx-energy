@@ -1,7 +1,7 @@
 {
   "kernelName": "flip_flop_mha",
-  "powerConsumptionJoules": 1033.2161389555,
-  "kernelDurationS": 13.842508032000001,
+  "powerConsumptionJoules": 1027.942141491,
+  "kernelDurationS": 13.863098112,
   "gridDim": {
     "x": 32,
     "y": 1,

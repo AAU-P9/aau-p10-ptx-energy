@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_int32_pure",
-  "powerConsumptionJoules": 876.5461090934999,
-  "kernelDurationS": 13.112116480000001,
+  "powerConsumptionJoules": 875.5864664154999,
+  "kernelDurationS": 13.114225408000003,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 1064000057,

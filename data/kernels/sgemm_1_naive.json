@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_1_naive",
-  "powerConsumptionJoules": 1645.1952382425002,
-  "kernelDurationS": 12.19993472,
+  "powerConsumptionJoules": 1623.491063464,
+  "kernelDurationS": 12.165451007999998,
   "gridDim": {
     "x": 32,
     "y": 32,

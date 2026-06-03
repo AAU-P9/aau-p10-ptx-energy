@@ -1,16 +1,16 @@
 {
   "kernelName": "sb_reg_pressure",
-  "powerConsumptionJoules": 834.245471005,
-  "kernelDurationS": 12.844494848,
+  "powerConsumptionJoules": 834.8050746745,
+  "kernelDurationS": 12.838638847999999,
   "gridDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 4,
+    "y": 1,
+    "z": 1
   },
   "blockDim": {
-    "x": 0,
-    "y": 0,
-    "z": 0
+    "x": 256,
+    "y": 1,
+    "z": 1
   },
   "parameters": [],
   "totalInstructions": 1010000174,

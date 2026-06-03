@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_1_2d_store",
-  "powerConsumptionJoules": 1341.1823460614999,
-  "kernelDurationS": 11.767848960000002,
+  "powerConsumptionJoules": 1329.56190356,
+  "kernelDurationS": 11.758161152,
   "gridDim": {
     "x": 96,
     "y": 1,
