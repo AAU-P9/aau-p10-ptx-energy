@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_sp_exact_rhs_gpu_kernel_4",
-  "powerConsumptionJoules": 908.3156215845001,
-  "kernelDurationS": 13.291135999999998,
+  "powerConsumptionJoules": 908.2415732479999,
+  "kernelDurationS": 13.287491328000002,
   "gridDim": {
     "x": 12,
     "y": 12,

@@ -49,7 +49,7 @@ __global__ void bt_kernel(double* d,
 	share_data[threadIdx.x] = p[thread_id] * q[thread_id];
 
 	__syncthreads();
-	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep_back, 5, 5, false);  // log2(TPB=32) reduction steps
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(local_id<i){share_data[local_id]+=share_data[local_id+i];}
 		__syncthreads();

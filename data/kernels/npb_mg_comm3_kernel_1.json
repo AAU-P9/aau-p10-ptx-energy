@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_mg_comm3_kernel_1",
-  "powerConsumptionJoules": 987.8436053915,
-  "kernelDurationS": 13.212225024,
+  "powerConsumptionJoules": 997.0179828799999,
+  "kernelDurationS": 13.206968320000001,
   "gridDim": {
     "x": 1,
     "y": 32,

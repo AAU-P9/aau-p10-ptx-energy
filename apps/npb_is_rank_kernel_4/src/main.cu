@@ -118,7 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, 1, 64, false);  // randlc power loop, log2(nq)
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){
@@ -154,7 +154,7 @@ __global__ void is_kernel(INT_TYPE* source,
 	for(INT_TYPE i=start; i<end; i+=blockDim.x){
 		shared_data[position] = source[i + threadIdx.x];
 
-		META_LOOP(offset_loop, 1, blockDim.x, false);
+		META_LOOP(offset_loop, 5, 5, false);  // log2(TPB=32) scan steps
 		for(INT_TYPE offset=1; offset<blockDim.x; offset<<=1){
 			__syncthreads();
 			INT_TYPE t = shared_data[position] + shared_data[position - offset];

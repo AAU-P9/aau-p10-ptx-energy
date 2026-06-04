@@ -54,7 +54,7 @@ __global__ void mg_kernel(double* r,
 	double my_rnmu=0.0;
 	double a;
 
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, 1, NM, false);  // strided gather, i1 < n1-1 <= NM
 	while(i1<n1-1){
 		double r321=r[i3*n2*n1+i2*n1+i1];
 		s=s+r321*r321;
@@ -68,7 +68,7 @@ __global__ void mg_kernel(double* r,
 	scratch_max[lid]=my_rnmu;
 
 	__syncthreads();
-	META_LOOP(i_sweep_back, 1, PROBLEM_SIZE, false);
+	META_LOOP(i_sweep_back, 5, 5, false);  // log2(TPB=32) reduction steps
 	for(int i=blockDim.x/2; i>0; i>>=1){
 		if(lid<i){
 			scratch_sum[lid]+=scratch_sum[lid+i];

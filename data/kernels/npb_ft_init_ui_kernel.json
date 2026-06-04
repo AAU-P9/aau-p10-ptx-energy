@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ft_init_ui_kernel",
-  "powerConsumptionJoules": 4274.8838897225,
-  "kernelDurationS": 34.032125183999995,
+  "powerConsumptionJoules": 4256.0483208565,
+  "kernelDurationS": 33.82645376,
   "gridDim": {
     "x": 8192,
     "y": 1,

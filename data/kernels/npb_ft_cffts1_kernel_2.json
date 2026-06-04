@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ft_cffts1_kernel_2",
-  "powerConsumptionJoules": 44089.8290432395,
-  "kernelDurationS": 576.38169984,
+  "powerConsumptionJoules": 44050.04885056699,
+  "kernelDurationS": 577.8393024000001,
   "gridDim": {
     "x": 128,
     "y": 1,

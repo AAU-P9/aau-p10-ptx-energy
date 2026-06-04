@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_9_kernel_autotuned",
-  "powerConsumptionJoules": 1245.0198104200003,
-  "kernelDurationS": 12.914987776,
+  "powerConsumptionJoules": 1261.8952259584996,
+  "kernelDurationS": 12.986778368000001,
   "gridDim": {
     "x": 8,
     "y": 8,

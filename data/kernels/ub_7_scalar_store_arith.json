@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_7_scalar_store_arith",
-  "powerConsumptionJoules": 1613.5817930580001,
-  "kernelDurationS": 12.301795584,
+  "powerConsumptionJoules": 1625.298539453,
+  "kernelDurationS": 12.334389247999999,
   "gridDim": {
     "x": 96,
     "y": 1,

@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_11_kernel_double_buffering",
-  "powerConsumptionJoules": 1109.258487309,
-  "kernelDurationS": 14.106637056,
+  "powerConsumptionJoules": 1107.0955818795,
+  "kernelDurationS": 14.154920192000002,
   "gridDim": {
     "x": 4,
     "y": 8,

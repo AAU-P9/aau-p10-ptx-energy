@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_lu_setiv_gpu_kernel",
-  "powerConsumptionJoules": 973.4578144364999,
-  "kernelDurationS": 13.075363839999998,
+  "powerConsumptionJoules": 941.4080710595001,
+  "kernelDurationS": 13.028679424000002,
   "gridDim": {
     "x": 10,
     "y": 10,

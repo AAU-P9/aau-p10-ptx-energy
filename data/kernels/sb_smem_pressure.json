@@ -1,7 +1,7 @@
 {
   "kernelName": "sb_smem_pressure",
-  "powerConsumptionJoules": 878.2380486265,
-  "kernelDurationS": 13.313804032,
+  "powerConsumptionJoules": 874.5787929104999,
+  "kernelDurationS": 13.27011584,
   "gridDim": {
     "x": 4,
     "y": 1,

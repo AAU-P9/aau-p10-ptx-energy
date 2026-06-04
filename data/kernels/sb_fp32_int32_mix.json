@@ -1,7 +1,7 @@
 {
   "kernelName": "sb_fp32_int32_mix",
-  "powerConsumptionJoules": 860.4793220785,
-  "kernelDurationS": 13.253683456,
+  "powerConsumptionJoules": 858.7812842425,
+  "kernelDurationS": 13.18740992,
   "gridDim": {
     "x": 4,
     "y": 1,

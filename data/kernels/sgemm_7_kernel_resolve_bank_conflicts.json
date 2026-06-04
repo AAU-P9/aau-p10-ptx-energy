@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_7_kernel_resolve_bank_conflicts",
-  "powerConsumptionJoules": 1181.2463335959999,
-  "kernelDurationS": 12.39322496,
+  "powerConsumptionJoules": 1203.993750453,
+  "kernelDurationS": 12.417477375999999,
   "gridDim": {
     "x": 8,
     "y": 8,

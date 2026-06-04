@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_mg_rprj3_gpu_kernel",
-  "powerConsumptionJoules": 1008.9227803824999,
-  "kernelDurationS": 12.720785664,
+  "powerConsumptionJoules": 1018.4190535114999,
+  "kernelDurationS": 12.729437952000001,
   "gridDim": {
     "x": 16,
     "y": 16,

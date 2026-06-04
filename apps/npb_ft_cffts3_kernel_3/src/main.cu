@@ -57,7 +57,7 @@ __device__ int ilog2_device(int n){
 	}
 	lg = 1;
 	nn = 2;
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, 1, 16, false);  // ilog2 while(nn<n), log2(max dim)
 	while(nn<n){
 		nn = nn << 1;
 		lg++;
@@ -123,7 +123,7 @@ __device__ void ipow46_device(double a,
 	q = a;
 	r = 1;
 	n = exponent;
-	META_LOOP(while_loop_1, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop_1, 1, 32, false);  // ipow46 while(n>1), log2(exponent)
 	while(n>1){
 		n2 = n/2;
 		if(n2*2==n){

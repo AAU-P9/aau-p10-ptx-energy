@@ -1,7 +1,7 @@
 {
   "kernelName": "sb_gmem_strided",
-  "powerConsumptionJoules": 5115.7631772095,
-  "kernelDurationS": 19.017596928000003,
+  "powerConsumptionJoules": 5109.904551297,
+  "kernelDurationS": 18.949742848,
   "gridDim": {
     "x": 4096,
     "y": 1,

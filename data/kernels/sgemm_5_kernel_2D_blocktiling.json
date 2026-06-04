@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_5_kernel_2D_blocktiling",
-  "powerConsumptionJoules": 1178.9294217554998,
-  "kernelDurationS": 12.363699712,
+  "powerConsumptionJoules": 1166.3672762390001,
+  "kernelDurationS": 12.332180992000001,
   "gridDim": {
     "x": 8,
     "y": 8,

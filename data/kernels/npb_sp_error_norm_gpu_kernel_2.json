@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_sp_error_norm_gpu_kernel_2",
-  "powerConsumptionJoules": 807.1107781999999,
-  "kernelDurationS": 12.496984064,
+  "powerConsumptionJoules": 831.789490517,
+  "kernelDurationS": 12.50613248,
   "gridDim": {
     "x": 1,
     "y": 1,

@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ft_evolve_kernel",
-  "powerConsumptionJoules": 4820.2043440219995,
-  "kernelDurationS": 30.084502271999998,
+  "powerConsumptionJoules": 4760.9801463250005,
+  "kernelDurationS": 29.780065536000002,
   "gridDim": {
     "x": 8192,
     "y": 1,

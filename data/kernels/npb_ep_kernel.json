@@ -1,7 +1,7 @@
 {
   "kernelName": "npb_ep_kernel",
-  "powerConsumptionJoules": 796.4012590735001,
-  "kernelDurationS": 11.532841728000001,
+  "powerConsumptionJoules": 743.2890799135001,
+  "kernelDurationS": 11.437699327999999,
   "gridDim": {
     "x": 8,
     "y": 1,

@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_4_2d_store_arith",
-  "powerConsumptionJoules": 1661.8224426499999,
-  "kernelDurationS": 12.142805503999998,
+  "powerConsumptionJoules": 1658.0975567254998,
+  "kernelDurationS": 12.124791040000002,
   "gridDim": {
     "x": 96,
     "y": 1,

@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_3_kernel_shared_mem_blocking",
-  "powerConsumptionJoules": 1917.7084398229997,
-  "kernelDurationS": 11.893327872,
+  "powerConsumptionJoules": 1876.4333875010002,
+  "kernelDurationS": 11.871282943999999,
   "gridDim": {
     "x": 32,
     "y": 32,

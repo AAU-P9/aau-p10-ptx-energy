@@ -118,7 +118,7 @@ __device__ double find_my_seed_device(INT_TYPE kn,
 	t1 = s;
 	t2 = a;
 	kk = nq;
-	META_LOOP(while_loop, 1, PROBLEM_SIZE, false);
+	META_LOOP(while_loop, 1, 64, false);  // randlc power loop, log2(nq)
 	while(kk > 1){
 		ik = kk / 2;
 		if(2*ik==kk){

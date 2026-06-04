@@ -1,7 +1,7 @@
 {
   "kernelName": "sb_fp32_pure",
-  "powerConsumptionJoules": 842.4250795080001,
-  "kernelDurationS": 12.976292607999998,
+  "powerConsumptionJoules": 847.3759826415002,
+  "kernelDurationS": 12.92233728,
   "gridDim": {
     "x": 4,
     "y": 1,

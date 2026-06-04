@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_6_single_thread_store",
-  "powerConsumptionJoules": 1096.7247509865,
-  "kernelDurationS": 12.346932224,
+  "powerConsumptionJoules": 1105.364233666,
+  "kernelDurationS": 12.327943424,
   "gridDim": {
     "x": 96,
     "y": 1,

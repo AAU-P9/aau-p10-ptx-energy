@@ -1,7 +1,7 @@
 {
   "kernelName": "ub_10_col_read_arith",
-  "powerConsumptionJoules": 1649.2582112920002,
-  "kernelDurationS": 12.13331712,
+  "powerConsumptionJoules": 1675.496491176,
+  "kernelDurationS": 12.150905087999998,
   "gridDim": {
     "x": 96,
     "y": 1,

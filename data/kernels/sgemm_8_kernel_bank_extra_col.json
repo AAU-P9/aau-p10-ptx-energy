@@ -1,7 +1,7 @@
 {
   "kernelName": "sgemm_8_kernel_bank_extra_col",
-  "powerConsumptionJoules": 1189.171576267,
-  "kernelDurationS": 12.351467519999998,
+  "powerConsumptionJoules": 1196.0771637425,
+  "kernelDurationS": 12.363245824,
   "gridDim": {
     "x": 8,
     "y": 8,
