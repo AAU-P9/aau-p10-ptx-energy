@@ -11,7 +11,7 @@ from shared.templates import (
 
 debug_enabled = False
 
-data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/linear_model_microbenchmarks")
+data_output_path = Path("/home/rasmus/aau-p10-ptx-energy/data/microbenchmarks")
 data_output_path.mkdir(parents=True, exist_ok=True)
 
 # All possible types that might be supported

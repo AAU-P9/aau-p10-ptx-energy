@@ -26,7 +26,7 @@ STATS_PATH = BASE_DIR / STATS_FILE
 
 # Default data locations (keep original dataset locations)
 DATASETS = [
-    Path("/home/rasmus/aau-p10-ptx-energy/data/linear_model_microbenchmarks"),
+    Path("/home/rasmus/aau-p10-ptx-energy/data/microbenchmarks"),
 ]
 
 KERNEL_DATASETS = [Path("/home/rasmus/aau-p10-ptx-energy/data/kernels")]
