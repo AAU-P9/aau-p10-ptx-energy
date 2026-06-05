@@ -1,0 +1,62 @@
+{
+  "kernelName": "baseline_kernel",
+  "powerConsumptionJoules": 132.16048835299998,
+  "kernelDurationS": 1.3385543680000005,
+  "gridDim": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "blockDim": {
+    "x": 0,
+    "y": 0,
+    "z": 0
+  },
+  "parameters": [],
+  "totalInstructions": 18,
+  "instructionOccurrences": {
+    "add.s32": 1,
+    "bra": 1,
+    "bra.uni": 4,
+    "ld.param.u64": 1,
+    "mov.b32": 3,
+    "mov.b64": 1,
+    "mov.u32": 5,
+    "not.pred": 1,
+    "ret": 1,
+    "setp.lt.s32": 1
+  },
+  "dependentPairs": {
+    "add.s32,mov.u32": 1,
+    "ld.param.u64,mov.b64": 1,
+    "mov.b32,mov.b32": 1,
+    "mov.b32,mov.u32": 1,
+    "mov.u32,mov.b32": 2,
+    "mov.u32,setp.lt.s32": 1,
+    "not.pred,bra": 1,
+    "setp.lt.s32,not.pred": 1
+  },
+  "independentPairs": {
+    "bra,bra.uni": 1,
+    "bra,ret": 1,
+    "bra.uni,add.s32": 1,
+    "bra.uni,bra.uni": 1,
+    "bra.uni,mov.u32": 1,
+    "mov.b32,mov.u32": 1,
+    "mov.b64,mov.u32": 1,
+    "mov.u32,bra.uni": 2
+  },
+  "memoryProfiles": [
+    {
+      "blockId": 0,
+      "instrIdx": 0,
+      "opcode": "ld.param.u64",
+      "occurrences": 1,
+      "loopDepth": 0,
+      "addressPattern": "invariant",
+      "estimatedMissRate": 0.03,
+      "estimatedStallCycles": 5.0,
+      "estimatedTotalStallCycles": 5.0
+    }
+  ]
+}

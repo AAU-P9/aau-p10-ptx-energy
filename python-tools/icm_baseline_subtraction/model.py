@@ -7,7 +7,7 @@ from pathlib import Path
 
 verify_weights = False # When enabled runs the prediction model on the reference weights files to verify that the weights are consistent with the reported power differences. 
 
-def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
+def load_instruction_power_map(baseline_file_path: Path, weights_input_path: Path) -> dict[str, float]:
     """Build average per-occurrence power (joules) for each instruction by comparing rpt1 and rpt2."""
     instruction_weights = {}
 
@@ -15,33 +15,39 @@ def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
         print(f"[WARNING] {weights_input_path} is not a directory.")
         return instruction_weights
 
+    # Find the baseline json file
+    if not baseline_file_path.is_file():
+        raise FileNotFoundError(f"Baseline file not found: {baseline_file_path}")
+    
+    try:
+        with baseline_file_path.open("r", encoding="utf-8") as handle:
+            baseline = json.load(handle)
+
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"[ERROR] Failed to load baseline file {baseline_file_path}: {e}")
+        return instruction_weights
+    
+
     # Find all rpt1 files
     rpt1_files = list(weights_input_path.glob("*_rpt1_*.json"))
     
     for f1 in rpt1_files:
-        filename = f1.name
-        f2 = f1.with_name(filename.replace("_rpt1_", "_rpt2_"))
-        
-        if not f2.is_file():
-            continue
-            
         try:
+            filename = f1.name
+
             with f1.open("r", encoding="utf-8") as handle:
                 r1 = json.load(handle)
-            with f2.open("r", encoding="utf-8") as handle:
-                r2 = json.load(handle)
 
-            total_blocks = r1.get("gridDim").get("x", 0) * r1.get("gridDim").get("y", 0) * r1.get("gridDim").get("z", 0) * r1.get("blockDim").get("x", 0) * r1.get("blockDim").get("y", 0) * r1.get("blockDim").get("z", 0)
+            total_threads = r1.get("gridDim").get("x", 0) * r1.get("gridDim").get("y", 0) * r1.get("gridDim").get("z", 0) * r1.get("blockDim").get("x", 0) * r1.get("blockDim").get("y", 0) * r1.get("blockDim").get("z", 0)
             inst_occurences = r1.get("instructionOccurrences", {}).get(r1.get("kernelName", ""), None)
 
             if inst_occurences is None:
-                # print(f"[WARNING] No instruction occurrences found for kernel '{r1.get('kernelName', '')}' in file {f1}")
-                continue
+                raise KeyError(f"Instruction occurrences for kernel '{r1.get('kernelName', '')}' not found in file {filename}")
 
+            power_diff = r1.get("powerConsumptionJoules", 0.0) - baseline.get("powerConsumptionJoules", 0.0 )
             # The number of executions of the instruction is the number of blocks times the number of occurrences of the instruction per block
-            inst_executions = total_blocks * inst_occurences
+            inst_executions = total_threads * inst_occurences
 
-            power_diff = r2.get("powerConsumptionJoules", 0.0) - r1.get("powerConsumptionJoules", 0.0)
             weight = power_diff / inst_executions
 
             err_pct = r1.get("powerConsumptionJoules", 0.0) / (weight * inst_executions) - 1.0
@@ -50,7 +56,7 @@ def load_instruction_power_map(weights_input_path: Path) -> dict[str, float]:
 
             print(f"[DEBUG] {filename}: power_diff={power_diff:.6f} J, inst_executions={inst_executions}, weight={weight:.12f} J/occurrence, err_pct={err_pct:.2%}")
         except (json.JSONDecodeError, KeyError) as e:
-            print(f"[ERROR] Failed to process files {f1} and {f2}: {e}")
+            print(f"[ERROR] Failed to process file {f1}: {e}")
             continue
 
     for instruction, weight in instruction_weights.items():
@@ -99,6 +105,12 @@ def parse_args() -> argparse.Namespace:
         description="Estimate instruction-level power from PTX analysis JSON.",
     )
     parser.add_argument(
+        "--baseline-input-path",
+        type=Path,
+        required=True,
+        help="The baseline input JSON file",
+    )
+    parser.add_argument(
         "--weights-input-path",
         type=Path,
         required=True,
@@ -128,13 +140,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    baseline_input_path = args.baseline_input_path
     weights_input_path = args.weights_input_path
     kernels_input_path = args.kernels_input_path
 
     if not weights_input_path.is_dir():
         raise FileNotFoundError(f"Weights input directory not found: {weights_input_path}")
 
-    instruction_power_map = load_instruction_power_map(weights_input_path)
+    instruction_power_map = load_instruction_power_map(baseline_input_path, weights_input_path)
 
     fallback_power = (
         sum(instruction_power_map.values()) / len(instruction_power_map)

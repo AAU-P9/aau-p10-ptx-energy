@@ -10,10 +10,10 @@ from cubindings.cubindings_cache import execute_program_cached
 
 _project_root = Path(__file__).parents[2]
 artifacts_path = Path("/home/p10/aau-p10-ptx-energy/experiments/artifacts")
-data_output_path = _project_root / "data/kernels"
+data_output_path = _project_root / "data/baseline"
 desired_execution_time_s = 10
 debug_enabled = False
-force_rebuild = True
+force_rebuild = False
 
 short_kernels: list[tuple[str, float]] = []
 analyzed_kernels: list[tuple[str, ExecutionResult]] = []
@@ -65,6 +65,8 @@ def run_kernel_configuration(
 
         analyzed_kernels.append((kernel_name, execution_result))
 
+    print(f"[INFO] The output can be found at {execution_result.path}")
+
     shutil.copy(
         execution_result.path / "analyser_output.json",
         data_output_path / f"{kernel_name}.json",
@@ -73,6 +75,15 @@ def run_kernel_configuration(
 
 def main() -> None:
     apps = _project_root / "apps"
+
+    # Baseline Kernel
+    # Uncomment to include, only used for the baseline subtraction experiment model
+    # run_kernel_configuration(
+    #     kernel_name="baseline_kernel",
+    #     program_path=apps / "nop/src",
+    #     nvcc_args=[f"-DITERATIONS={20000000}"],
+    #     force_rebuild=force_rebuild,
+    # )
 
     # Naive Kernels
 

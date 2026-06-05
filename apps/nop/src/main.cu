@@ -1,6 +1,6 @@
 #include "cupti_timing.h"
 
-#define ITERATIONS 40_000_000
+#define ITERATIONS 20000000
 
 __global__ void ptx_kernel(int *out)
 {
@@ -30,7 +30,7 @@ int main()
     // Get CPU/GPU offsets
 
     // Run kernel
-    ptx_kernel<<<1,4>>>(d);
+    ptx_kernel<<<64,1024>>>(d);
     cudaDeviceSynchronize();
 
     // Possibly read back results (not necessary for timing, but included for completeness)
